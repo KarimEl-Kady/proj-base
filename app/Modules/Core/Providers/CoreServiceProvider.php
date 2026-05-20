@@ -2,7 +2,14 @@
 
 namespace App\Modules\Core\Providers;
 
+use App\Modules\Core\Commands\MakeControllerCommand;
+use App\Modules\Core\Commands\MakeEventCommand;
+use App\Modules\Core\Commands\MakeModelCommand;
 use App\Modules\Core\Commands\MakeModuleCommand;
+use App\Modules\Core\Commands\MakeRepositoryCommand;
+use App\Modules\Core\Commands\MakeRequestCommand;
+use App\Modules\Core\Commands\MakeResourceCommand;
+use App\Modules\Core\Commands\MakeServiceCommand;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +33,13 @@ class CoreServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 MakeModuleCommand::class,
+                MakeModelCommand::class,
+                MakeRepositoryCommand::class,
+                MakeServiceCommand::class,
+                MakeControllerCommand::class,
+                MakeRequestCommand::class,
+                MakeResourceCommand::class,
+                MakeEventCommand::class,
             ]);
         }
 
