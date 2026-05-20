@@ -22,8 +22,12 @@ class MakeEventCommand extends Command
 
     protected string $moduleName;
 
+    protected string $stubsPath;
+
     public function handle(): int
     {
+        $this->stubsPath = base_path('app/Modules/Core/Stubs/standalone');
+
         $this->moduleName = Str::studly($this->argument('module'));
         $name = Str::studly($this->argument('name'));
         $modelName = $this->option('model');
@@ -46,110 +50,55 @@ class MakeEventCommand extends Command
 
     protected function makeEvent(string $name, ?string $modelName, ?string $channels): void
     {
-        $eventClass = $name;
-        $listenerClass = "{$name}Listener";
-        $channelsArray = $channels ? array_map('trim', explode(',', $channels)) : [];
-
-        $uses = $modelName ? "\nuse {$this->namespace}\\Models\\{$modelName};" : '';
+        $modelImport = $modelName ? "\nuse {$this->namespace}\\Models\\{$modelName};" : '';
         $constructor = $modelName
-            ? <<<PHP
-
-    public function __construct(
-        public readonly {$modelName} \${Str::camel($modelName)}
-    ) {}
-PHP
+            ? "\n\n    public function __construct(\n        public readonly {$modelName} \$".Str::camel($modelName)."\n    ) {}"
             : '';
 
-        $channelMethods = '';
-        if (! empty($channelsArray)) {
-            $channelMethods = "\n    public function broadcastOn(): array\n    {\n        return [\n            ".implode(",\n            ", array_map(fn ($c) => "new Channel('{$c}')", $channelsArray))."\n        ];\n    }";
+        $broadcastMethod = '';
+        if ($channels) {
+            $channelsArray = array_map('trim', explode(',', $channels));
+            $channelCalls = implode(",\n            ", array_map(fn ($c) => "new Channel('{$c}')", $channelsArray));
+            $broadcastMethod = "\n    public function broadcastOn(): array\n    {\n        return [\n            {$channelCalls}\n        ];\n    }";
         }
 
-        $content = <<<PHP
-<?php
+        $content = $this->renderStub('event', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => $name,
+            '{{ modelImport }}' => $modelImport,
+            '{{ constructor }}' => $constructor,
+            '{{ broadcastMethod }}' => $broadcastMethod,
+        ]);
 
-namespace {$this->namespace}\\Events{$uses}
-
-use Illuminate\\Broadcasting\\Channel;
-use Illuminate\\Broadcasting\\InteractsWithSockets;
-use Illuminate\\Contracts\\Broadcasting\\ShouldBroadcast;
-use Illuminate\\Foundation\\Events\\Dispatchable;
-use Illuminate\\Queue\\SerializesModels;
-
-class {$eventClass} implements ShouldBroadcast
-{
-    use Dispatchable, InteractsWithSockets, SerializesModels;
-
-    {$constructor}{$channelMethods}
-}
-
-PHP;
-
-        $this->write("Events/{$eventClass}.php", $content);
-        $this->info("Event [{$eventClass}] created in [{$this->moduleName}] module.");
+        $this->write("Events/{$name}.php", $content);
+        $this->info("Event [{$name}] created in [{$this->moduleName}] module.");
     }
 
     protected function makeListener(string $name): void
     {
-        $eventClass = $name;
-        $listenerClass = "{$name}Listener";
+        $content = $this->renderStub('listener', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$name}Listener",
+            '{{ eventClass }}' => $name,
+        ]);
 
-        $content = <<<PHP
-<?php
-
-namespace {$this->namespace}\\Listeners;
-
-use {$this->namespace}\\Events\\{$eventClass};
-use Illuminate\\Contracts\\Queue\\ShouldQueue;
-
-class {$listenerClass} implements ShouldQueue
-{
-    public function handle({$eventClass} \$event): void
-    {
-        //
+        $this->write("Listeners/{$name}Listener.php", $content);
+        $this->info("Listener [{$name}Listener] created in [{$this->moduleName}] module.");
     }
-}
 
-PHP;
+    protected function renderStub(string $name, array $replacements = []): string
+    {
+        $path = $this->stubsPath.'/'.$name.'.stub';
+        $content = File::get($path);
 
-        $this->write("Listeners/{$listenerClass}.php", $content);
-        $this->info("Listener [{$listenerClass}] created in [{$this->moduleName}] module.");
+        return str_replace(array_keys($replacements), array_values($replacements), $content);
     }
 
     protected function write(string $relativePath, string $content): void
     {
         $path = $this->modulePath.'/'.$relativePath;
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, $this->cleanContent($content));
+        File::put($path, $content);
         $this->line("  Created: {$relativePath}");
-    }
-
-    protected function cleanContent(string $content): string
-    {
-        $lines = explode("\n", $content);
-        if (count($lines) <= 1) {
-            return $content;
-        }
-        $minIndent = PHP_INT_MAX;
-        foreach ($lines as $line) {
-            if (trim($line) === '') {
-                continue;
-            }
-            if (preg_match('/^(\s+)/', $line, $m)) {
-                $minIndent = min($minIndent, strlen($m[1]));
-            } else {
-                $minIndent = 0;
-                break;
-            }
-        }
-        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
-            foreach ($lines as &$line) {
-                if ($line !== '') {
-                    $line = substr($line, $minIndent);
-                }
-            }
-        }
-
-        return implode("\n", $lines)."\n";
     }
 }

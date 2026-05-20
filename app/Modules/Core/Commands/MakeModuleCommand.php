@@ -33,8 +33,12 @@ class MakeModuleCommand extends Command
 
     protected string $namespace;
 
+    protected string $stubsPath;
+
     public function handle(): int
     {
+        $this->stubsPath = base_path('app/Modules/Core/Stubs/module');
+
         $this->moduleName = Str::studly($this->argument('name'));
         $this->pluralKebab = Str::plural(Str::kebab($this->moduleName));
         $this->pluralSnake = Str::plural(Str::snake($this->moduleName));
@@ -81,449 +85,129 @@ class MakeModuleCommand extends Command
         }
     }
 
-    // ── ServiceProvider ─────────────────────────────────────────────
-
     protected function makeServiceProvider(): void
     {
-        $name = "{$this->moduleName}ServiceProvider";
+        $content = $this->renderStub('service-provider', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}ServiceProvider",
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Providers;
-
-        use Illuminate\\Support\\ServiceProvider;
-
-        class {$name} extends ServiceProvider
-        {
-            public function boot(): void
-            {
-                //
-            }
-        }
-
-        PHP;
-
-        $this->write("Providers/{$name}.php", $content);
+        $this->write("Providers/{$this->moduleName}ServiceProvider.php", $content);
     }
-
-    // ── Model ────────────────────────────────────────────────────────
 
     protected function makeModel(): void
     {
-        $name = $this->moduleName;
+        $content = $this->renderStub('model', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => $this->moduleName,
+            '{{ table }}' => $this->tableName,
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Models;
-
-        use App\\Modules\\Core\\Models\\Model;
-        use App\\Modules\\Core\\Traits\\HasTenantScope;
-
-        class {$name} extends Model
-        {
-            use HasTenantScope;
-
-            protected \$table = '{$this->tableName}';
-
-            protected function casts(): array
-            {
-                return [
-                    //
-                ];
-            }
-        }
-
-        PHP;
-
-        $this->write("Models/{$name}.php", $content);
+        $this->write("Models/{$this->moduleName}.php", $content);
     }
-
-    // ── Repository ───────────────────────────────────────────────────
 
     protected function makeRepository(): void
     {
-        $name = "{$this->moduleName}Repository";
-        $modelName = $this->moduleName;
+        $content = $this->renderStub('repository', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}Repository",
+            '{{ modelName }}' => $this->moduleName,
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Repositories;
-
-        use App\\Modules\\Core\\Repositories\\BaseRepository;
-        use {$this->namespace}\\Models\\{$modelName};
-
-        class {$name} extends BaseRepository
-        {
-            public function __construct({$modelName} \$model)
-            {
-                parent::__construct(\$model);
-            }
-        }
-
-        PHP;
-
-        $this->write("Repositories/{$name}.php", $content);
+        $this->write("Repositories/{$this->moduleName}Repository.php", $content);
     }
-
-    // ── Service ──────────────────────────────────────────────────────
 
     protected function makeService(): void
     {
-        $name = "{$this->moduleName}Service";
-        $repoName = "{$this->moduleName}Repository";
-        $modelName = $this->moduleName;
+        $content = $this->renderStub('service', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}Service",
+            '{{ modelName }}' => $this->moduleName,
+            '{{ repositoryName }}' => "{$this->moduleName}Repository",
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Services;
-
-        use App\\Modules\\Core\\Services\\BaseService;
-        use {$this->namespace}\\Models\\{$modelName};
-        use {$this->namespace}\\Repositories\\{$repoName};
-
-        class {$name} extends BaseService
-        {
-            public function __construct({$repoName} \$repository)
-            {
-                parent::__construct(\$repository);
-            }
-        }
-
-        PHP;
-
-        $this->write("Services/{$name}.php", $content);
+        $this->write("Services/{$this->moduleName}Service.php", $content);
     }
-
-    // ── API Controller ───────────────────────────────────────────────
 
     protected function makeApiController(): void
     {
-        $name = "{$this->moduleName}Controller";
-        $serviceName = "{$this->moduleName}Service";
-        $resourceName = "{$this->moduleName}Resource";
-        $createRequest = "Create{$this->moduleName}Request";
-        $updateRequest = "Update{$this->moduleName}Request";
-        $humanName = Str::headline($this->pluralKebab);
+        $content = $this->renderStub('api-controller', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}Controller",
+            '{{ serviceName }}' => "{$this->moduleName}Service",
+            '{{ serviceVar }}' => $this->serviceVar,
+            '{{ resourceName }}' => "{$this->moduleName}Resource",
+            '{{ createRequest }}' => "Create{$this->moduleName}Request",
+            '{{ updateRequest }}' => "Update{$this->moduleName}Request",
+            '{{ pluralKebab }}' => $this->pluralKebab,
+            '{{ pluralSnake }}' => $this->pluralSnake,
+            '{{ paramName }}' => $this->paramName,
+            '{{ humanName }}' => Str::headline($this->pluralKebab),
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Controllers\\Api;
-
-        use App\\Modules\\Core\\Controllers\\Controller;
-        use {$this->namespace}\\Requests\\{$createRequest};
-        use {$this->namespace}\\Requests\\{$updateRequest};
-        use {$this->namespace}\\Resources\\{$resourceName};
-        use {$this->namespace}\\Services\\{$serviceName};
-        use Illuminate\\Http\\JsonResponse;
-        use Spatie\\RouteAttributes\\Attributes\\Delete;
-        use Spatie\\RouteAttributes\\Attributes\\Get;
-        use Spatie\\RouteAttributes\\Attributes\\Middleware;
-        use Spatie\\RouteAttributes\\Attributes\\Post;
-        use Spatie\\RouteAttributes\\Attributes\\Prefix;
-        use Spatie\\RouteAttributes\\Attributes\\Put;
-
-        #[Prefix('api/v1/{$this->pluralKebab}')]
-        #[Middleware('api')]
-        class {$name} extends Controller
-        {
-            public function __construct(
-                protected {$serviceName} \${$this->serviceVar}
-            ) {}
-
-            #[Get('/', name: 'api.{$this->pluralSnake}.index')]
-            public function index(): JsonResponse
-            {
-                \$users = \$this->{$this->serviceVar}->paginate(20);
-
-                return \$this->jsonResponse(
-                    {$resourceName}::collection(\$users)->response()->getData(true),
-                    '{$humanName} retrieved successfully.'
-                );
-            }
-
-            #[Post('/', name: 'api.{$this->pluralSnake}.store')]
-            public function store({$createRequest} \$request): JsonResponse
-            {
-                \$user = \$this->{$this->serviceVar}->create(\$request->validated());
-
-                return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
-                    '{$this->moduleName} created successfully.',
-                    201
-                );
-            }
-
-            #[Get('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.show')]
-            public function show(string \$id): JsonResponse
-            {
-                \$user = \$this->{$this->serviceVar}->findOrFail(\$id);
-
-                return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
-                    '{$this->moduleName} retrieved successfully.'
-                );
-            }
-
-            #[Put('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.update')]
-            public function update({$updateRequest} \$request, string \$id): JsonResponse
-            {
-                \$user = \$this->{$this->serviceVar}->update(\$id, \$request->validated());
-
-                return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
-                    '{$this->moduleName} updated successfully.'
-                );
-            }
-
-            #[Delete('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.destroy')]
-            public function destroy(string \$id): JsonResponse
-            {
-                \$this->{$this->serviceVar}->delete(\$id);
-
-                return \$this->jsonResponse(null, '{$this->moduleName} deleted successfully.');
-            }
-        }
-
-        PHP;
-
-        $this->write("Controllers/Api/{$name}.php", $content);
+        $this->write("Controllers/Api/{$this->moduleName}Controller.php", $content);
     }
-
-    // ── Web Controller ───────────────────────────────────────────────
 
     protected function makeWebController(): void
     {
-        $name = "{$this->moduleName}Controller";
-        $serviceName = "{$this->moduleName}Service";
-        $createRequest = "Create{$this->moduleName}Request";
-        $updateRequest = "Update{$this->moduleName}Request";
+        $content = $this->renderStub('web-controller', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}Controller",
+            '{{ serviceName }}' => "{$this->moduleName}Service",
+            '{{ serviceVar }}' => $this->serviceVar,
+            '{{ createRequest }}' => "Create{$this->moduleName}Request",
+            '{{ updateRequest }}' => "Update{$this->moduleName}Request",
+            '{{ pluralKebab }}' => $this->pluralKebab,
+            '{{ pluralSnake }}' => $this->pluralSnake,
+            '{{ singularKebab }}' => $this->singularKebab,
+            '{{ paramName }}' => $this->paramName,
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Controllers\\Web;
-
-        use App\\Modules\\Core\\Controllers\\Controller;
-        use {$this->namespace}\\Requests\\{$createRequest};
-        use {$this->namespace}\\Requests\\{$updateRequest};
-        use {$this->namespace}\\Services\\{$serviceName};
-        use Illuminate\\Http\\RedirectResponse;
-        use Illuminate\\View\\View;
-        use Spatie\\RouteAttributes\\Attributes\\Delete;
-        use Spatie\\RouteAttributes\\Attributes\\Get;
-        use Spatie\\RouteAttributes\\Attributes\\Middleware;
-        use Spatie\\RouteAttributes\\Attributes\\Post;
-        use Spatie\\RouteAttributes\\Attributes\\Prefix;
-        use Spatie\\RouteAttributes\\Attributes\\Put;
-
-        #[Prefix('{$this->pluralKebab}')]
-        #[Middleware('web')]
-        class {$name} extends Controller
-        {
-            public function __construct(
-                protected {$serviceName} \${$this->serviceVar}
-            ) {}
-
-            #[Get('/', name: '{$this->pluralSnake}.index')]
-            public function index(): View
-            {
-                \$records = \$this->{$this->serviceVar}->paginate(20);
-
-                return view('{$this->singularKebab}::index', compact('records'));
-            }
-
-            #[Get('/create', name: '{$this->pluralSnake}.create')]
-            public function create(): View
-            {
-                return view('{$this->singularKebab}::create');
-            }
-
-            #[Post('/', name: '{$this->pluralSnake}.store')]
-            public function store({$createRequest} \$request): RedirectResponse
-            {
-                \$this->{$this->serviceVar}->create(\$request->validated());
-
-                return redirect()->route('{$this->pluralSnake}.index')
-                    ->with('success', '{$this->moduleName} created successfully.');
-            }
-
-            #[Get('/{{$this->paramName}}', name: '{$this->pluralSnake}.show')]
-            public function show(string \$id): View
-            {
-                \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
-
-                return view('{$this->singularKebab}::show', compact('record'));
-            }
-
-            #[Get('/{{$this->paramName}}/edit', name: '{$this->pluralSnake}.edit')]
-            public function edit(string \$id): View
-            {
-                \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
-
-                return view('{$this->singularKebab}::edit', compact('record'));
-            }
-
-            #[Put('/{{$this->paramName}}', name: '{$this->pluralSnake}.update')]
-            public function update({$updateRequest} \$request, string \$id): RedirectResponse
-            {
-                \$this->{$this->serviceVar}->update(\$id, \$request->validated());
-
-                return redirect()->route('{$this->pluralSnake}.show', \$id)
-                    ->with('success', '{$this->moduleName} updated successfully.');
-            }
-
-            #[Delete('/{{$this->paramName}}', name: '{$this->pluralSnake}.destroy')]
-            public function destroy(string \$id): RedirectResponse
-            {
-                \$this->{$this->serviceVar}->delete(\$id);
-
-                return redirect()->route('{$this->pluralSnake}.index')
-                    ->with('success', '{$this->moduleName} deleted successfully.');
-            }
-        }
-
-        PHP;
-
-        $this->write("Controllers/Web/{$name}.php", $content);
+        $this->write("Controllers/Web/{$this->moduleName}Controller.php", $content);
     }
-
-    // ── Requests ─────────────────────────────────────────────────────
 
     protected function makeRequests(): void
     {
-        $createName = "Create{$this->moduleName}Request";
-        $updateName = "Update{$this->moduleName}Request";
+        $createContent = $this->renderStub('create-request', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "Create{$this->moduleName}Request",
+        ]);
 
-        $createContent = <<<PHP
-        <?php
+        $this->write("Requests/Create{$this->moduleName}Request.php", $createContent);
 
-        namespace {$this->namespace}\\Requests;
+        $updateContent = $this->renderStub('update-request', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "Update{$this->moduleName}Request",
+        ]);
 
-        use Illuminate\\Foundation\\Http\\FormRequest;
-
-        class {$createName} extends FormRequest
-        {
-            public function authorize(): bool
-            {
-                return true;
-            }
-
-            public function rules(): array
-            {
-                return [
-                    //
-                ];
-            }
-        }
-
-        PHP;
-
-        $this->write("Requests/{$createName}.php", $createContent);
-
-        $updateContent = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Requests;
-
-        use Illuminate\\Foundation\\Http\\FormRequest;
-
-        class {$updateName} extends FormRequest
-        {
-            public function authorize(): bool
-            {
-                return true;
-            }
-
-            public function rules(): array
-            {
-                return [
-                    //
-                ];
-            }
-        }
-
-        PHP;
-
-        $this->write("Requests/{$updateName}.php", $updateContent);
+        $this->write("Requests/Update{$this->moduleName}Request.php", $updateContent);
     }
-
-    // ── Resource ─────────────────────────────────────────────────────
 
     protected function makeResource(): void
     {
-        $name = "{$this->moduleName}Resource";
+        $content = $this->renderStub('resource', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => "{$this->moduleName}Resource",
+        ]);
 
-        $content = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Resources;
-
-        use App\\Modules\\Core\\Resources\\BaseResource;
-        use Illuminate\\Http\\Request;
-
-        class {$name} extends BaseResource
-        {
-            public function toArray(Request \$request): array
-            {
-                return [
-                    'id' => \$this->uuid,
-                    'created_at' => \$this->created_at?->toISOString(),
-                    'updated_at' => \$this->updated_at?->toISOString(),
-                ];
-            }
-        }
-
-        PHP;
-
-        $this->write("Resources/{$name}.php", $content);
+        $this->write("Resources/{$this->moduleName}Resource.php", $content);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────
+    protected function renderStub(string $name, array $replacements = []): string
+    {
+        $path = $this->stubsPath.'/'.$name.'.stub';
+        $content = File::get($path);
+
+        return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
 
     protected function write(string $relativePath, string $content): void
     {
         $path = $this->modulePath.'/'.$relativePath;
 
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, $this->cleanContent($content));
+        File::put($path, $content);
 
         $this->line("  Created: {$relativePath}");
-    }
-
-    protected function cleanContent(string $content): string
-    {
-        $lines = explode("\n", $content);
-
-        if (count($lines) <= 1) {
-            return $content;
-        }
-
-        $minIndent = PHP_INT_MAX;
-        foreach ($lines as $line) {
-            if (trim($line) === '') {
-                continue;
-            }
-            if (preg_match('/^(\s+)/', $line, $m)) {
-                $minIndent = min($minIndent, strlen($m[1]));
-            } else {
-                $minIndent = 0;
-                break;
-            }
-        }
-
-        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
-            foreach ($lines as &$line) {
-                if ($line !== '') {
-                    $line = substr($line, $minIndent);
-                }
-            }
-        }
-
-        return implode("\n", $lines)."\n";
     }
 }

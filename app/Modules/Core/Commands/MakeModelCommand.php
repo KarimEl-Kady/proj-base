@@ -21,8 +21,12 @@ class MakeModelCommand extends Command
 
     protected string $moduleName;
 
+    protected string $stubsPath;
+
     public function handle(): int
     {
+        $this->stubsPath = base_path('app/Modules/Core/Stubs/standalone');
+
         $this->moduleName = Str::studly($this->argument('module'));
         $modelName = Str::studly($this->argument('name'));
         $fillable = $this->option('fillable');
@@ -39,34 +43,15 @@ class MakeModelCommand extends Command
         $tableName = Str::snake(Str::plural($modelName));
         $fillableArray = $fillable ? $this->parseFillable($fillable) : [];
         $fillableString = $fillableArray
-            ? "['".implode("', '", $fillableArray)."']"
-            : '[]';
+            ? "'".implode("', '", $fillableArray)."'"
+            : '';
 
-        $content = <<<PHP
-<?php
-
-namespace {$this->namespace}\\Models;
-
-use App\\Modules\\Core\\Models\\Model;
-use App\\Modules\\Core\\Traits\\HasTenantScope;
-use Illuminate\\Database\\Eloquent\\Attributes\\Fillable;
-
-#[Fillable({$fillableString})]
-class {$modelName} extends Model
-{
-    use HasTenantScope;
-
-    protected \$table = '{$tableName}';
-
-    protected function casts(): array
-    {
-        return [
-            //
-        ];
-    }
-}
-
-PHP;
+        $content = $this->renderStub('model', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => $modelName,
+            '{{ table }}' => $tableName,
+            '{{ fillable }}' => $fillableString,
+        ]);
 
         $this->write("Models/{$modelName}.php", $content);
         $this->info("Model [{$modelName}] created in [{$this->moduleName}] module.");
@@ -79,40 +64,19 @@ PHP;
         return array_map('trim', explode(',', $fields));
     }
 
+    protected function renderStub(string $name, array $replacements = []): string
+    {
+        $path = $this->stubsPath.'/'.$name.'.stub';
+        $content = File::get($path);
+
+        return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
+
     protected function write(string $relativePath, string $content): void
     {
         $path = $this->modulePath.'/'.$relativePath;
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, $this->cleanContent($content));
+        File::put($path, $content);
         $this->line("  Created: {$relativePath}");
-    }
-
-    protected function cleanContent(string $content): string
-    {
-        $lines = explode("\n", $content);
-        if (count($lines) <= 1) {
-            return $content;
-        }
-        $minIndent = PHP_INT_MAX;
-        foreach ($lines as $line) {
-            if (trim($line) === '') {
-                continue;
-            }
-            if (preg_match('/^(\s+)/', $line, $m)) {
-                $minIndent = min($minIndent, strlen($m[1]));
-            } else {
-                $minIndent = 0;
-                break;
-            }
-        }
-        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
-            foreach ($lines as &$line) {
-                if ($line !== '') {
-                    $line = substr($line, $minIndent);
-                }
-            }
-        }
-
-        return implode("\n", $lines)."\n";
     }
 }
