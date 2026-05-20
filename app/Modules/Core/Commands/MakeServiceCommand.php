@@ -21,8 +21,12 @@ class MakeServiceCommand extends Command
 
     protected string $moduleName;
 
+    protected string $stubsPath;
+
     public function handle(): int
     {
+        $this->stubsPath = base_path('app/Modules/Core/Stubs/standalone');
+
         $this->moduleName = Str::studly($this->argument('module'));
         $name = Str::studly($this->argument('name'));
         $repoName = $this->option('repository') ?: Str::replace_last('Service', '', $name).'Repository';
@@ -37,24 +41,12 @@ class MakeServiceCommand extends Command
             return self::FAILURE;
         }
 
-        $content = <<<PHP
-<?php
-
-namespace {$this->namespace}\\Services;
-
-use App\\Modules\\Core\\Services\\BaseService;
-use {$this->namespace}\\Models\\{$modelName};
-use {$this->namespace}\\Repositories\\{$repoName};
-
-class {$name} extends BaseService
-{
-    public function __construct({$repoName} \$repository)
-    {
-        parent::__construct(\$repository);
-    }
-}
-
-PHP;
+        $content = $this->renderStub('service', [
+            '{{ namespace }}' => $this->namespace,
+            '{{ className }}' => $name,
+            '{{ modelName }}' => $modelName,
+            '{{ repositoryName }}' => $repoName,
+        ]);
 
         $this->write("Services/{$name}.php", $content);
         $this->info("Service [{$name}] created in [{$this->moduleName}] module.");
@@ -62,40 +54,19 @@ PHP;
         return self::SUCCESS;
     }
 
+    protected function renderStub(string $name, array $replacements = []): string
+    {
+        $path = $this->stubsPath.'/'.$name.'.stub';
+        $content = File::get($path);
+
+        return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
+
     protected function write(string $relativePath, string $content): void
     {
         $path = $this->modulePath.'/'.$relativePath;
         File::ensureDirectoryExists(dirname($path));
-        File::put($path, $this->cleanContent($content));
+        File::put($path, $content);
         $this->line("  Created: {$relativePath}");
-    }
-
-    protected function cleanContent(string $content): string
-    {
-        $lines = explode("\n", $content);
-        if (count($lines) <= 1) {
-            return $content;
-        }
-        $minIndent = PHP_INT_MAX;
-        foreach ($lines as $line) {
-            if (trim($line) === '') {
-                continue;
-            }
-            if (preg_match('/^(\s+)/', $line, $m)) {
-                $minIndent = min($minIndent, strlen($m[1]));
-            } else {
-                $minIndent = 0;
-                break;
-            }
-        }
-        if ($minIndent > 0 && $minIndent < PHP_INT_MAX) {
-            foreach ($lines as &$line) {
-                if ($line !== '') {
-                    $line = substr($line, $minIndent);
-                }
-            }
-        }
-
-        return implode("\n", $lines)."\n";
     }
 }

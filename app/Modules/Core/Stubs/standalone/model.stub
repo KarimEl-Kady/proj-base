@@ -1,0 +1,22 @@
+<?php
+
+namespace {{ namespace }}\Models;
+
+use App\Modules\Core\Models\Model;
+use App\Modules\Core\Traits\HasTenantScope;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+
+#[Fillable({{ fillable }})]
+class {{ className }} extends Model
+{
+    use HasTenantScope;
+
+    protected $table = '{{ table }}';
+
+    protected function casts(): array
+    {
+        return [
+            //
+        ];
+    }
+}
