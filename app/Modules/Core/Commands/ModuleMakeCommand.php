@@ -23,7 +23,8 @@ class ModuleMakeCommand extends Command
                             {name? : Component name (for migrations use snake_case, e.g. create_posts_table)}
                             {--web : Generate a web controller instead of an API controller}
                             {--fetch : Generate a request extending FetchRequest (listing filters) instead of BaseRequest}
-                            {--unit : Generate a unit test (Tests/Unit) instead of a feature test}';
+                            {--unit : Generate a unit test (Tests/Unit) instead of a feature test}
+                            {--fillable= : For models: comma-separated fillable columns}';
 
     protected $description = 'Generate a single component inside an existing module (interactive when arguments are omitted)';
 
@@ -118,6 +119,20 @@ class ModuleMakeCommand extends Command
     {
         $table = Str::plural(Str::snake($name));
 
+        $fillable = (string) ($this->option('fillable')
+            ?? ($this->interactive ? text('Fillable columns (comma-separated, optional)', placeholder: 'e.g. title,slug,body') : ''));
+
+        $fillableAttr = '';
+        $fillableImport = '';
+
+        if (trim($fillable) !== '') {
+            $columns = collect(explode(',', $fillable))
+                ->map(fn (string $column) => "'".trim($column)."'")
+                ->implode(', ');
+            $fillableAttr = "#[Fillable([{$columns}])]\n";
+            $fillableImport = "use Illuminate\\Database\\Eloquent\\Attributes\\Fillable;\n";
+        }
+
         return $this->write("Models/{$name}.php", <<<PHP
         <?php
 
@@ -125,8 +140,8 @@ class ModuleMakeCommand extends Command
 
         use App\\Modules\\Core\\Models\\Model;
         use App\\Modules\\Core\\Traits\\HasTenantScope;
-
-        class {$name} extends Model
+        {$fillableImport}
+        {$fillableAttr}class {$name} extends Model
         {
             use HasTenantScope;
 

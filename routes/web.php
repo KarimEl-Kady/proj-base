@@ -12,6 +12,5 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Route::view (not a closure) so `route:cache` works — keep it that way.
+Route::view('/', 'welcome')->name('home');

@@ -16,15 +16,16 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret'])]
 class User extends Model implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract
 {
     /** @use HasFactory<UserFactory> */
     use Authenticatable, Authorizable, CanResetPassword, MustVerifyEmail;
 
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
     use HasTenantScope;
 
     protected $table = 'users';
@@ -37,6 +38,13 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_secret !== null && $this->two_factor_confirmed_at !== null;
     }
 }

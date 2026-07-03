@@ -14,5 +14,6 @@
 */
 
 return [
+    'Auth' => true,
     'User' => true,
 ];

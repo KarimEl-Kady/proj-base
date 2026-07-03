@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Modules\Auth\Controllers\Api;
+
+use App\Modules\Auth\Requests\LoginRequest;
+use App\Modules\Auth\Requests\RegisterRequest;
+use App\Modules\Auth\Services\AuthService;
+use App\Modules\Core\Controllers\Controller;
+use App\Modules\User\Models\User;
+use App\Modules\User\Resources\UserResource;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Spatie\RouteAttributes\Attributes\Get;
+use Spatie\RouteAttributes\Attributes\Middleware;
+use Spatie\RouteAttributes\Attributes\Post;
+use Spatie\RouteAttributes\Attributes\Prefix;
+
+#[Prefix('api/v1/auth')]
+#[Middleware('api')]
+class AuthController extends Controller
+{
+    public function __construct(
+        protected AuthService $authService
+    ) {}
+
+    #[Post('/register', name: 'api.auth.register', middleware: 'throttle:10,1')]
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        abort_unless(config('project.features.registration', true), 403, 'Registration is disabled.');
+
+        $result = $this->authService->register($request->validated());
+
+        return $this->jsonResponse(
+            $this->authPayload($result),
+            'Registered successfully.',
+            201
+        );
+    }
+
+    #[Post('/login', name: 'api.auth.login', middleware: 'throttle:10,1')]
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $result = $this->authService->login(
+            $request->validated('email'),
+            $request->validated('password'),
+            $request->validated('code'),
+            $request->validated('device', 'api'),
+        );
+
+        return $this->jsonResponse($this->authPayload($result), 'Logged in successfully.');
+    }
+
+    #[Post('/logout', name: 'api.auth.logout', middleware: 'auth:sanctum')]
+    public function logout(Request $request): JsonResponse
+    {
+        $this->authService->logout($request->user());
+
+        return $this->jsonResponse(null, 'Logged out successfully.');
+    }
+
+    #[Get('/me', name: 'api.auth.me', middleware: 'auth:sanctum')]
+    public function me(Request $request): JsonResponse
+    {
+        return $this->jsonResponse(
+            new UserResource($request->user()),
+            'Authenticated user retrieved successfully.'
+        );
+    }
+
+    /**
+     * @param  array{user: User, token: ?string}  $result
+     */
+    protected function authPayload(array $result): array
+    {
+        $payload = ['user' => new UserResource($result['user'])];
+
+        if ($result['token'] !== null) {
+            $payload['token'] = $result['token'];
+            $payload['token_type'] = 'Bearer';
+            $payload['expires_in'] = (int) config('project.auth.token_expiration', 1440) * 60;
+        }
+
+        return $payload;
+    }
+}

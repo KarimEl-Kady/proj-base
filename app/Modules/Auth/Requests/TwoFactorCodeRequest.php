@@ -1,15 +1,15 @@
 <?php
 
-namespace {{ namespace }}\Requests;
+namespace App\Modules\Auth\Requests;
 
 use App\Modules\Core\Requests\BaseRequest;
 
-class {{ className }} extends BaseRequest
+class TwoFactorCodeRequest extends BaseRequest
 {
     public function rules(): array
     {
         return [
-{{ rules }}
+            'code' => ['required', 'string'],
         ];
     }
 }

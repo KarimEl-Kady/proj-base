@@ -64,11 +64,9 @@ fi
 
 log "Refreshing caches"
 "$PHP_BIN" artisan config:cache
+"$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
 "$PHP_BIN" artisan event:cache
-# route:cache is skipped on purpose: closure-based routes (routes/web.php)
-# are not cacheable. Enable it once all routes are controller-based:
-# "$PHP_BIN" artisan route:cache
 
 if [ "$RESTART_QUEUE" = "true" ]; then
     log "Restarting queue workers"

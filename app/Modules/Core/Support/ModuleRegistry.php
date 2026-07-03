@@ -11,9 +11,12 @@ use Illuminate\Support\Facades\File;
  */
 class ModuleRegistry
 {
+    /** Override in tests to avoid touching the real registry file. */
+    public static ?string $pathOverride = null;
+
     public static function path(): string
     {
-        return base_path('config/project_modules.php');
+        return static::$pathOverride ?? base_path('config/project_modules.php');
     }
 
     /**

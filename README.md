@@ -4,7 +4,7 @@ A modular HMVC application foundation built on Laravel, designed to serve as a s
 
 ## Stack
 
-- **PHP** 8.3+ · **Laravel** 13.7
+- **PHP** 8.3+ · **Laravel** 13.7 · **Sanctum** 4
 - **Vite** 8 · **Tailwind CSS** 4
 - **SQLite** (dev) / MySQL 8.4 / PostgreSQL (production)
 - **Docker** (PHP-FPM, Nginx, MySQL, Redis, queue, scheduler, Mailpit, Vite HMR)
@@ -66,8 +66,10 @@ app/Modules/{Module}/
 | **Local packages** | `app/Vendor/{Name}` composer path packages (e.g. `local/media`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
 | **Uniform API envelope** | Success and error responses share `{success, message, data/errors}` — including validation, 404, 401, 403, 500 |
+| **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
+| **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
 | **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution |
-| **Feature flags** | Registration, email verification, 2FA, API tokens — togglable via env |
+| **Feature flags** | Registration, email verification, 2FA, API tokens — togglable via env and actually implemented by the Auth module |
 
 ## Generators
 
@@ -80,7 +82,7 @@ php artisan make:module Blog --api-only --with=migration --with=test
 
 # Single component into an existing module
 php artisan module:make                       # interactive
-php artisan module:make Blog model Post
+php artisan module:make Blog model Post --fillable=title,slug,body
 php artisan module:make Blog request FetchPosts --fetch
 php artisan module:make Blog test Post        # full API CRUD test
 # types: model, migration, controller, request, resource, service,
@@ -92,6 +94,7 @@ php artisan module:list
 php artisan module:enable Blog                # or omit the name to pick from a list
 php artisan module:disable Blog
 php artisan module:delete Blog
+php artisan module:boundaries                 # verify cross-module dependencies
 
 # Local packages (app/Vendor)
 php artisan make:package Payment
@@ -111,6 +114,18 @@ GET /api/v1/users?pagination=false
 
 `word` searches the model's `$searchable` columns; `sort_by` is validated against the model's `$sortable` whitelist; `per_page` is capped by `project.pagination.max_per_page`. Extend `FetchRequest` per module to add custom filters.
 
+### Authentication (Auth module)
+
+Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `session`. All endpoints under `/api/v1/auth`:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /register`, `POST /login`, `POST /logout`, `GET /me` | Core flow — login returns a Bearer token with `PROJECT_AUTH_TOKEN_EXPIRATION` lifetime |
+| `POST /password/forgot`, `POST /password/reset` | Password reset via email (non-enumerating) |
+| `POST /email/resend`, `GET /email/verify/{id}/{hash}` | Email verification (signed URLs) — `PROJECT_FEATURE_EMAIL_VERIFICATION` |
+| `POST /2fa/enable`, `/2fa/confirm`, `/2fa/disable` | TOTP 2FA (Google Authenticator-compatible, dependency-free) — `PROJECT_FEATURE_2FA`; login then requires `code` |
+| `GET/POST/DELETE /tokens` | Named personal access tokens for integrations — `PROJECT_FEATURE_API_TOKENS` |
+
 ### Local packages
 
 Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. First-party example — **`local/media`** (polymorphic attachments):
@@ -124,44 +139,6 @@ $post->addMedia($request->file('cover'), 'covers');
 $post->getFirstMediaUrl('covers');
 $post->clearMedia('covers');
 ```
-
-### Generate module components
-
-Individual components can be scaffolded after a module exists:
-
-```bash
-# Model
-php artisan make:module:model Blog Post --fillable=name,slug,content
-
-# Repository
-php artisan make:module:repository Blog PostRepository --model=Post
-
-# Service
-php artisan make:module:service Blog PostService --repository=PostRepository
-
-# Controller (API or Web)
-php artisan make:module:controller Blog Post --type=api --resource=PostResource
-php artisan make:module:controller Blog Post --type=web --service=PostService
-
-# Form Requests
-php artisan make:module:request Blog Post --type=both --rules="title:required|string|max:255|body:required|string"
-
-# API Resource
-php artisan make:module:resource Blog Post --fields=id,title,slug,created_at
-
-# Event + Listener
-php artisan make:module:event Blog PostCreated --model=Post --channels=posts
-```
-
-| Command | Description |
-|---------|-------------|
-| `make:module:model` | Create model with optional fillable fields |
-| `make:module:repository` | Create repository extending BaseRepository |
-| `make:module:service` | Create service extending BaseService |
-| `make:module:controller` | Create API or Web controller with route attributes |
-| `make:module:request` | Create Create/Update form requests with validation rules |
-| `make:module:resource` | Create API resource transformer |
-| `make:module:event` | Create event + queued listener pair |
 
 ## Configuration
 
@@ -197,7 +174,7 @@ Four suites run together: `Unit`, `Feature`, `Modules` (`app/Modules/*/Tests`), 
 GitHub Actions (`.github/workflows/ci.yml`) and a GitLab mirror (`.gitlab-ci.yml`):
 
 1. **Syntax** — `php -l` over the whole codebase + `composer validate` (fast fail)
-2. **Lint + Test** — Pint, boot smoke check, PHPUnit on PHP 8.3/8.4
+2. **Lint + Test** — Pint, boot smoke check (`route:list`, `route:cache` guard, `module:boundaries`), PHPUnit on PHP 8.3/8.4
 3. **Frontend** — `npm ci` + Vite build · **Security** — `composer audit`
 4. **Deploy → dev server** — on `develop` pushes (after all checks pass), SSHes in and runs `deploy/deploy-dev.sh`
 

@@ -2,15 +2,9 @@
 
 namespace App\Modules\Core\Providers;
 
-use App\Modules\Core\Commands\MakeControllerCommand;
-use App\Modules\Core\Commands\MakeEventCommand;
-use App\Modules\Core\Commands\MakeModelCommand;
 use App\Modules\Core\Commands\MakeModuleCommand;
 use App\Modules\Core\Commands\MakePackageCommand;
-use App\Modules\Core\Commands\MakeRepositoryCommand;
-use App\Modules\Core\Commands\MakeRequestCommand;
-use App\Modules\Core\Commands\MakeResourceCommand;
-use App\Modules\Core\Commands\MakeServiceCommand;
+use App\Modules\Core\Commands\ModuleBoundariesCommand;
 use App\Modules\Core\Commands\ModuleDeleteCommand;
 use App\Modules\Core\Commands\ModuleDisableCommand;
 use App\Modules\Core\Commands\ModuleEnableCommand;
@@ -42,15 +36,9 @@ class CoreServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
-                MakeControllerCommand::class,
-                MakeEventCommand::class,
-                MakeModelCommand::class,
                 MakeModuleCommand::class,
                 MakePackageCommand::class,
-                MakeRepositoryCommand::class,
-                MakeRequestCommand::class,
-                MakeResourceCommand::class,
-                MakeServiceCommand::class,
+                ModuleBoundariesCommand::class,
                 ModuleDeleteCommand::class,
                 ModuleDisableCommand::class,
                 ModuleEnableCommand::class,

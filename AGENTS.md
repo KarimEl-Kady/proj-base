@@ -34,6 +34,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Generate a new module: `php artisan make:module` with no arguments runs an **interactive wizard** (name, API/Web/both, extras: migration/seeder/factory, enable now). Non-interactive: `php artisan make:module Blog --api-only --with=migration --with=factory` (`--no-enable` to skip registration). New modules are registered as enabled in the registry automatically.
 - The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, and Resource — all wired with route attributes.
 - Module lifecycle commands (all prompt for the module when the argument is omitted): `module:list` (status table), `module:enable` / `module:disable` (toggle in the registry), `module:delete` (removes directory + registry entry).
+- **Module boundaries**: modules may depend only on Core plus dependencies declared in `config/project.php` → `boundaries.allow` (e.g. `'Auth' => ['User']`). `php artisan module:boundaries` verifies this and runs in CI — declare new cross-module deps there or the build fails.
 - Generate a single component into an existing module: `php artisan module:make` (interactive) or `php artisan module:make {Module} {type} {Name}` — types: `model`, `migration`, `controller` (`--web` for web), `request` (`--fetch` to extend FetchRequest), `resource`, `service`, `repository`, `seeder`, `factory`, `command`, `job`, `event`, `listener`, `middleware`, `policy`, `observer`.
 - `CoreServiceProvider` auto-loads each active module's `Database/Migrations`, `Views` (namespaced `view('blog::index')`), `Lang` (namespaced `__('blog::messages.key')`), and registers any artisan commands in the module's `Commands/` directory.
 - Factories resolve per module: `App\Modules\Blog\Models\Post` → `App\Modules\Blog\Database\Factories\PostFactory` (via `newFactory()` on the Core base Model).
@@ -83,6 +84,13 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Global query keys validated by `FetchRequest`: `pagination` (bool, default true; `false` returns the full set), `per_page` (capped at `project.pagination.max_per_page`), `page`, `word` (free-text search), `sort_by`, `sort_dir` (`asc|desc`).
 - `BaseRepository::fetch()` matches `word` with `LIKE` against the model's `protected array $searchable` columns and only sorts by columns in the model's `protected array $sortable` whitelist (default `id`, `created_at`, `updated_at`).
 - Add module filters by overriding `rules()` in the module's fetch request: `return parent::rules() + ['status' => [...]];`.
+
+### Auth module
+
+- Full auth implementation under `app/Modules/Auth`, routes at `/api/v1/auth/*`: register, login, logout, me, password forgot/reset, email verification (signed URLs, route name `verification.verify`), TOTP 2FA (`App\Modules\Auth\Support\Totp`, dependency-free RFC 6238), and named personal access tokens.
+- Driver via `PROJECT_AUTH_DRIVER`: `sanctum`/`token` issue Bearer tokens (lifetime `PROJECT_AUTH_TOKEN_EXPIRATION` minutes, wired to `sanctum.expiration`); `session` uses the web guard.
+- Every sub-feature is gated by its `PROJECT_FEATURE_*` flag and returns 403 when disabled. Login requires a `code` field when the user has confirmed 2FA.
+- Protected endpoints use `auth:sanctum`. `two_factor_secret` is stored encrypted and hidden from serialization.
 
 ### Multi-tenancy
 
@@ -187,7 +195,7 @@ GitHub Actions (`.github/workflows/ci.yml`) and a GitLab mirror (`.gitlab-ci.yml
 - Remote steps live in `deploy/deploy-dev.sh` — a CONFIGURATION block at the top (path, branch, php/composer binaries, toggles for migrations/assets/queue restart/maintenance mode) is meant to be customized per server. It can also be run manually: `ssh user@server 'bash -s' < deploy/deploy-dev.sh`.
 - Connection settings come from repo secrets (GitHub: Settings → Secrets → Actions; GitLab: Settings → CI/CD → Variables): `DEV_SSH_PRIVATE_KEY` (required), `DEV_SSH_HOST` (required), `DEV_SSH_USER` (required), `DEV_SSH_PORT` (default 22), `DEV_DEPLOY_PATH`, `DEV_SSH_KNOWN_HOSTS` (optional host-key pinning).
 - The public half of `DEV_SSH_PRIVATE_KEY` must be in the dev server's `~/.ssh/authorized_keys`. Until the secrets are configured, the deploy job exits with a notice and CI stays green.
-- `route:cache` is intentionally skipped in the deploy script (closure routes aren't cacheable); enable it there once all routes are controller-based.
+- The deploy script runs `config:cache`, `route:cache`, `view:cache`, and `event:cache`. Routes must stay cacheable (no closure routes — use `Route::view` or controllers); CI's boot smoke check enforces this.
 
 ## Important gotchas
 

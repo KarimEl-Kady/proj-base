@@ -193,6 +193,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Module Boundaries
+    |--------------------------------------------------------------------------
+    |
+    | Modules may always depend on Core. Any other cross-module dependency
+    | must be declared here or `php artisan module:boundaries` (run in CI)
+    | fails. Keeps modules honest about their coupling.
+    |
+    */
+
+    'boundaries' => [
+        'allow' => [
+            'Auth' => ['User'],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     |

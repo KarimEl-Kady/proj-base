@@ -120,6 +120,8 @@ jobs:
         run: |
           php artisan config:clear --ansi
           php artisan route:list > /dev/null
+          php artisan route:cache && php artisan route:clear   # guard: routes must stay cacheable
+          php artisan module:boundaries                        # guard: no undeclared cross-module deps
           php artisan about
         env:
           DB_CONNECTION: sqlite
