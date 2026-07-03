@@ -2,16 +2,24 @@
 
 ## Dev commands
 
-| Task | Command |
-|------|---------|
-| Setup | `composer setup` |
-| Run dev | `composer dev` (server + queue + pail + vite concurrently) |
-| Run tests | `composer test` |
-| Single test | `php artisan test --filter=ClassName` |
-| Lint (PHP) | `./vendor/bin/pint` |
-| Frontend dev | `npm run dev` |
-| Frontend build | `npm run build` |
-| Make module | `php artisan make:module Blog` (or `composer module -- Blog`) |
+| Task | Local | Docker |
+|------|-------|--------|
+| Setup | `composer setup` | `make setup` |
+| Run dev | `composer dev` | `make dev` |
+| Run tests | `composer test` | `make test` |
+| Single test | `php artisan test --filter=ClassName` | `make artisan c="test --filter=ClassName"` |
+| Lint (PHP) | `./vendor/bin/pint` | `make lint` |
+| Frontend dev | `npm run dev` | started automatically with `make dev` |
+| Frontend build | `npm run build` | `make npm c="run build"` |
+| Make module | `php artisan make:module Blog` | `make module name=Blog` |
+| Module component | `php artisan module:make Blog model Post` | `make artisan c="module:make Blog model Post"` |
+| List modules | `php artisan module:list` | `make artisan c="module:list"` |
+| Make local package | `php artisan make:package Payment` | `make artisan c="make:package Payment"` |
+| List local packages | `php artisan package:list` | `make artisan c="package:list"` |
+| Project overview | `php artisan project:info` | `make artisan c="project:info"` |
+| Shell | — | `make shell` |
+| Tinker | `php artisan tinker` | `make tinker` |
+| Logs | — | `make logs` or `make logs s=app` |
 
 ## Architecture
 
@@ -19,12 +27,24 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 
 ### Module system
 
-- Active modules controlled by `PROJECT_MODULES` env var (comma-separated, e.g. `User,Profile`).
+- Active modules are controlled by the **module registry** at `config/project_modules.php` (`'Name' => bool` map) — the single source of truth, managed via artisan or edited by hand. `config('project.modules')` derives the enabled list from it. The `App\Modules\Core\Support\ModuleRegistry` class reads/writes the file.
 - `CoreServiceProvider` (`app/Modules/Core/Providers/CoreServiceProvider.php:32`) auto-registers each active module's `{Module}ServiceProvider` at `app/Modules/{Module}/Providers/{Module}ServiceProvider.php`.
 - Use `module_path('Module')` helper to resolve module directories. Do NOT hardcode paths.
 - Module directory structure is defined in `config/project.php` under `module_structure` key.
-- Generate a new module: `php artisan make:module Blog` (alias: `composer module -- Blog`). Use `--api-only` or `--web-only` to skip unused controllers. Then add the module name to `PROJECT_MODULES` in `.env`.
-- The command creates: ServiceProvider, Model, Repository, Service, ApiController, WebController, Create/Update Requests, and Resource — all wired with route attributes.
+- Generate a new module: `php artisan make:module` with no arguments runs an **interactive wizard** (name, API/Web/both, extras: migration/seeder/factory, enable now). Non-interactive: `php artisan make:module Blog --api-only --with=migration --with=factory` (`--no-enable` to skip registration). New modules are registered as enabled in the registry automatically.
+- The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, and Resource — all wired with route attributes.
+- Module lifecycle commands (all prompt for the module when the argument is omitted): `module:list` (status table), `module:enable` / `module:disable` (toggle in the registry), `module:delete` (removes directory + registry entry).
+- Generate a single component into an existing module: `php artisan module:make` (interactive) or `php artisan module:make {Module} {type} {Name}` — types: `model`, `migration`, `controller` (`--web` for web), `request` (`--fetch` to extend FetchRequest), `resource`, `service`, `repository`, `seeder`, `factory`, `command`, `job`, `event`, `listener`, `middleware`, `policy`, `observer`.
+- `CoreServiceProvider` auto-loads each active module's `Database/Migrations`, `Views` (namespaced `view('blog::index')`), `Lang` (namespaced `__('blog::messages.key')`), and registers any artisan commands in the module's `Commands/` directory.
+- Factories resolve per module: `App\Modules\Blog\Models\Post` → `App\Modules\Blog\Database\Factories\PostFactory` (via `newFactory()` on the Core base Model).
+
+### Local packages (`app/Vendor`)
+
+- Local (non-Packagist) composer packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through the `path` repository (`app/Vendor/*`, symlinked) declared in the root `composer.json`.
+- Convention: composer name `local/{kebab-name}`, PSR-4 namespace `Local\{Name}\` → `src/` (configurable via `project.vendor.*` config).
+- Scaffold one: `php artisan make:package Payment`, then install: `composer require local/payment:"*"`. Providers are auto-discovered via `extra.laravel.providers`.
+- Inspect: `php artisan package:list`.
+- First-party example: `local/media` (`app/Vendor/Media`) — polymorphic attachments. Add `Local\Media\Traits\HasMedia` to a model, then `$model->addMedia($uploadedFile, 'collection')`, `getFirstMediaUrl()`, `clearMedia()`. Config in `config/media.php` (publish tag `media-config`).
 
 ### Route attributes (spatie/laravel-route-attributes)
 
@@ -54,7 +74,15 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Services: `App\Modules\Core\Services\BaseService` wraps a repository.
 - Controllers: `App\Modules\Core\Controllers\Controller` adds `jsonResponse()` and `jsonError()` helpers. App-level `App\Http\Controllers\Controller` extends it.
 - Resources: `App\Modules\Core\Resources\BaseResource` extends `JsonResource` for API response transformation.
+- Requests: `App\Modules\Core\Requests\BaseRequest` (authorize defaults to true) — **all module requests extend it**. `App\Modules\Core\Requests\FetchRequest` extends it for listing endpoints.
 - All modules follow: Controller → Service → Repository → Model, with Resources for API output.
+
+### Fetch (listing) pipeline
+
+- Index endpoints take a module request extending `FetchRequest` and call `$service->fetch($request)`.
+- Global query keys validated by `FetchRequest`: `pagination` (bool, default true; `false` returns the full set), `per_page` (capped at `project.pagination.max_per_page`), `page`, `word` (free-text search), `sort_by`, `sort_dir` (`asc|desc`).
+- `BaseRepository::fetch()` matches `word` with `LIKE` against the model's `protected array $searchable` columns and only sorts by columns in the model's `protected array $sortable` whitelist (default `id`, `created_at`, `updated_at`).
+- Add module filters by overriding `rules()` in the module's fetch request: `return parent::rules() + ['status' => [...]];`.
 
 ### Multi-tenancy
 
@@ -77,11 +105,94 @@ All project-specific config lives in `config/project.php`, read via `project_con
 
 - PHPUnit 12, run with `php artisan test` (or `composer test` which clears config first).
 - Tests use SQLite in-memory database (configured in `phpunit.xml`).
-- `tests/Unit/` and `tests/Feature/` standard layout.
+- Test suites (`phpunit.xml`): `Unit` (`tests/Unit`), `Feature` (`tests/Feature`), `Modules` (`app/Modules/*/Tests` — every module carries its own tests), `Packages` (`app/Vendor/*/tests`). All run together with `php artisan test`; run one with `--testsuite=Modules`.
+- Module tests live in `app/Modules/{Module}/Tests/{Feature,Unit}` and extend `Tests\TestCase`. Feature stubs skip themselves when the module is disabled in the registry.
+- Generate: `php artisan module:make {Module} test {Name}` (`--unit` for a unit test). When a matching API controller + model exist, the generator emits a full CRUD smoke test (index/store/show/update/destroy against the module's endpoints). `make:module --with=test` (wizard default) generates `{Module}ApiTest` automatically.
+- Reference example: `app/Modules/User/Tests/Feature/UserApiTest.php` covers CRUD, uuid exposure, and the fetch pipeline (word/pagination/per_page cap/sort whitelist).
+
+## Docker
+
+The project includes a full Docker setup for containerized development and deployment.
+
+### Quick start
+
+```bash
+cp .env.example .env          # configure DB/Redis credentials
+make setup                     # build images, install deps, migrate
+make dev                       # start all services + Vite HMR
+```
+
+### Services
+
+| Service | Container | Description | Port |
+|---------|-----------|-------------|------|
+| `app` | `proj-base-app` | PHP 8.3-FPM (Laravel) | 9000 (internal) |
+| `nginx` | `proj-base-nginx` | Web server, proxies to app | `APP_PORT` (default 80) |
+| `mysql` | `proj-base-mysql` | MySQL 8.4 database | `FORWARD_DB_PORT` (default 3306) |
+| `redis` | `proj-base-redis` | Redis 7 (cache/session/queue) | `REDIS_PORT` (default 6379) |
+| `queue` | `proj-base-queue` | Queue worker (`queue:work`) | — |
+| `scheduler` | `proj-base-scheduler` | Cron (`schedule:run` every minute) | — |
+| `vite` | `proj-base-vite` | Vite dev server with HMR (dev profile) | `VITE_PORT` (default 5173) |
+| `mailpit` | `proj-base-mailpit` | Email testing UI + SMTP (dev profile) | `MAILPIT_PORT` (default 8025) |
+
+### Database driver mapping
+
+`PROJECT_DB_DRIVER` in `.env` controls which DB service to use:
+
+| `PROJECT_DB_DRIVER` | Compose service | Notes |
+|---------------------|-----------------|-------|
+| `mysql` (default) | `mysql` | MySQL 8.4, active by default |
+| `pgsql` | `pgsql` | Uncomment in `docker-compose.yml`, update `DB_HOST=pgsql` |
+| `sqlite` | — | No DB container needed, uses file-based SQLite |
+
+### Volume strategy
+
+- **Bind mount** (`.:/var/www/html`) — live code sync for development.
+- **Named volumes** (`vendor`, `node_modules`) — avoid host ↔ container conflicts for dependencies.
+- **Persistent data** (`mysql_data`, `redis_data`) — survives `docker compose down`; destroyed with `make fresh` (`-v` flag).
+
+### Environment
+
+- All `PROJECT_*` env vars are forwarded from `.env` to the containers.
+- Docker-specific overrides (`DB_HOST=mysql`, `REDIS_HOST=redis`) are set in `docker-compose.yml`.
+- `.env.example` includes commented Docker overrides — uncomment when switching to Docker.
+- Use `docker-compose.override.yml` (gitignored) for local-only tweaks.
+
+### Xdebug
+
+Disabled by default. Enable at build time:
+```bash
+INSTALL_XDEBUG=true make rebuild
+```
+
+## Health Check
+
+- `GET /api/health` — returns structured JSON with DB, Cache, Redis, and Queue status.
+- Returns `200` when all checks pass (`healthy`), `503` when any check fails (`degraded`).
+- Response includes version from `config('project.version')`, per-check latency, and driver info.
+- Implemented as `App\Modules\Core\Controllers\Api\HealthController` using route attributes.
+
+## CI/CD
+
+GitHub Actions (`.github/workflows/ci.yml`) and a GitLab mirror (`.gitlab-ci.yml`) with the same stages. Runs on push/PR to `main` and `develop` (plus manual `workflow_dispatch`).
+
+- **Syntax job** (fast fail): `php -l` over app/config/database/routes/tests + `composer validate` — catches parse errors before installing anything.
+- **PHP job**: Pint lint, boot smoke check (`route:list` + `about` — catches urgent runtime errors), PHPUnit tests on PHP 8.3 & 8.4 (SQLite in-memory).
+- **Frontend job**: `npm ci --ignore-scripts` + `npm run build` (Node 22).
+- **Security job**: `composer audit` for known vulnerability scanning.
+- **Deploy job** (`deploy-dev`): after all checks pass on a `develop` push (or manual dispatch), SSHes into the dev server and runs `deploy/deploy-dev.sh` there.
+
+### Dev server deployment
+
+- Remote steps live in `deploy/deploy-dev.sh` — a CONFIGURATION block at the top (path, branch, php/composer binaries, toggles for migrations/assets/queue restart/maintenance mode) is meant to be customized per server. It can also be run manually: `ssh user@server 'bash -s' < deploy/deploy-dev.sh`.
+- Connection settings come from repo secrets (GitHub: Settings → Secrets → Actions; GitLab: Settings → CI/CD → Variables): `DEV_SSH_PRIVATE_KEY` (required), `DEV_SSH_HOST` (required), `DEV_SSH_USER` (required), `DEV_SSH_PORT` (default 22), `DEV_DEPLOY_PATH`, `DEV_SSH_KNOWN_HOSTS` (optional host-key pinning).
+- The public half of `DEV_SSH_PRIVATE_KEY` must be in the dev server's `~/.ssh/authorized_keys`. Until the secrets are configured, the deploy job exits with a notice and CI stays green.
+- `route:cache` is intentionally skipped in the deploy script (closure routes aren't cacheable); enable it there once all routes are controller-based.
 
 ## Important gotchas
 
 - `.npmrc` sets `ignore-scripts=true` — npm won't run post-install lifecycle scripts. When adding npm packages that need post-install scripts, this may cause issues.
+- Tests need the `pdo_sqlite` PHP extension (in-memory SQLite). The official Docker PHP images ship it; if the host PHP lacks it, run tests via Docker (`make test`) or install `php8.3-sqlite3`.
 - `config:clear` is run before tests; never rely on cached config in test environments.
 - The `Model` base class has `$guarded = ['id', 'uuid']` — all other attributes are mass-assignable, but `id` and `uuid` are guarded.
-- `HasUuid` trait sets `$incrementing = false` and `$keyType = 'string'` — primary keys are ordered UUIDs, not auto-increment integers.
+- Primary keys are auto-increment integers (internal only). `HasUuid` populates a separate `uuid` column on create — that uuid is the **public** identifier: API resources expose it as `id`, `getRouteKeyName()` binds routes to it, and `BaseRepository::find()/findOrFail()` transparently look up by uuid when given a uuid string.

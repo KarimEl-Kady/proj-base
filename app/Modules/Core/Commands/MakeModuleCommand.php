@@ -2,18 +2,26 @@
 
 namespace App\Modules\Core\Commands;
 
+use App\Modules\Core\Support\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\multiselect;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\text;
+
 class MakeModuleCommand extends Command
 {
     protected $signature = 'make:module
-                            {name : Module name in StudlyCase (e.g. Blog, ProductCatalog)}
-                            {--api-only : Skip web controller and requests}
-                            {--web-only : Skip API controller and resource}';
+                            {name? : Module name in StudlyCase (omit to run the interactive wizard)}
+                            {--api-only : Skip web controller}
+                            {--web-only : Skip API controller, fetch request, and resource}
+                            {--with=* : Extras to generate (migration, seeder, factory, test)}
+                            {--no-enable : Do not register the module in the registry}';
 
-    protected $description = 'Scaffold a new HMVC module with controllers, model, repository, service, requests, and resource';
+    protected $description = 'Scaffold a new HMVC module (interactive when no arguments are given)';
 
     protected string $moduleName;
 
@@ -33,17 +41,22 @@ class MakeModuleCommand extends Command
 
     protected string $namespace;
 
+    protected bool $withApi = true;
+
+    protected bool $withWeb = true;
+
+    /** @var array<int, string> */
+    protected array $extras = [];
+
+    protected bool $enable = true;
+
     public function handle(): int
     {
-        $this->moduleName = Str::studly($this->argument('name'));
-        $this->pluralKebab = Str::plural(Str::kebab($this->moduleName));
-        $this->pluralSnake = Str::plural(Str::snake($this->moduleName));
-        $this->singularKebab = Str::kebab($this->moduleName);
-        $this->paramName = lcfirst($this->moduleName);
-        $this->serviceVar = lcfirst($this->moduleName).'Service';
-        $this->tableName = $this->pluralSnake;
-        $this->modulePath = module_path($this->moduleName);
-        $this->namespace = "App\\Modules\\{$this->moduleName}";
+        $this->argument('name') !== null
+            ? $this->gatherFromArguments()
+            : $this->gatherInteractively();
+
+        $this->prepareNames();
 
         if (File::isDirectory($this->modulePath)) {
             $this->error("Module [{$this->moduleName}] already exists at {$this->modulePath}");
@@ -57,21 +70,114 @@ class MakeModuleCommand extends Command
         $this->makeRepository();
         $this->makeService();
 
-        if (! $this->option('web-only')) {
+        if ($this->withApi) {
             $this->makeApiController();
             $this->makeResource();
+            $this->makeFetchRequest();
         }
 
-        if (! $this->option('api-only')) {
+        if ($this->withWeb) {
             $this->makeWebController();
         }
 
         $this->makeRequests();
+        $this->makeExtras();
 
+        $this->newLine();
         $this->info("Module [{$this->moduleName}] scaffolded successfully.");
-        $this->info("Add '{$this->moduleName}' to PROJECT_MODULES in your .env to activate it.");
+
+        if ($this->enable) {
+            ModuleRegistry::set($this->moduleName, true);
+            $this->info('Registered as enabled in config/project_modules.php.');
+        } else {
+            $this->line("Enable it later with: php artisan module:enable {$this->moduleName}");
+        }
 
         return self::SUCCESS;
+    }
+
+    // ── Input gathering ──────────────────────────────────────────────
+
+    protected function gatherFromArguments(): void
+    {
+        $this->moduleName = Str::studly($this->argument('name'));
+        $this->withApi = ! $this->option('web-only');
+        $this->withWeb = ! $this->option('api-only');
+        $this->extras = array_values(array_intersect($this->option('with'), ['migration', 'seeder', 'factory', 'test']));
+        $this->enable = ! $this->option('no-enable');
+    }
+
+    protected function gatherInteractively(): void
+    {
+        $this->moduleName = Str::studly(text(
+            label: 'Module name',
+            placeholder: 'e.g. Blog, ProductCatalog',
+            required: true,
+            validate: fn (string $value) => File::isDirectory(module_path(Str::studly($value)))
+                ? 'A module with this name already exists.'
+                : null,
+        ));
+
+        $platform = select(
+            label: 'Which controllers does the module need?',
+            options: [
+                'full' => 'API + Web',
+                'api' => 'API only',
+                'web' => 'Web only',
+            ],
+            default: match (config('project.platform')) {
+                'api' => 'api',
+                'web' => 'full',
+                default => 'full',
+            },
+        );
+
+        $this->withApi = $platform !== 'web';
+        $this->withWeb = $platform !== 'api';
+
+        $this->extras = multiselect(
+            label: 'Extras to generate',
+            options: [
+                'migration' => 'Migration (create_'.Str::plural(Str::snake($this->moduleName)).'_table)',
+                'seeder' => 'Seeder',
+                'factory' => 'Factory',
+                'test' => 'Feature test (API CRUD smoke test)',
+            ],
+            default: ['migration', 'test'],
+        );
+
+        $this->enable = confirm('Enable the module now?', default: true);
+    }
+
+    protected function prepareNames(): void
+    {
+        $this->pluralKebab = Str::plural(Str::kebab($this->moduleName));
+        $this->pluralSnake = Str::plural(Str::snake($this->moduleName));
+        $this->singularKebab = Str::kebab($this->moduleName);
+        $this->paramName = lcfirst($this->moduleName);
+        $this->serviceVar = lcfirst($this->moduleName).'Service';
+        $this->tableName = $this->pluralSnake;
+        $this->modulePath = module_path($this->moduleName);
+        $this->namespace = "App\\Modules\\{$this->moduleName}";
+    }
+
+    // ── Extras (delegated to module:make) ────────────────────────────
+
+    protected function makeExtras(): void
+    {
+        foreach ($this->extras as $extra) {
+            $this->callSilently('module:make', [
+                'module' => $this->moduleName,
+                'type' => $extra,
+                'name' => match ($extra) {
+                    'migration' => "create_{$this->tableName}_table",
+                    'test' => "{$this->moduleName}Api",
+                    default => $this->moduleName,
+                },
+            ]);
+
+            $this->line("  Created: {$extra}");
+        }
     }
 
     protected function createDirectories(): void
@@ -127,6 +233,9 @@ class MakeModuleCommand extends Command
 
             protected \$table = '{$this->tableName}';
 
+            /** Columns matched by the FetchRequest `word` filter. */
+            protected array \$searchable = [];
+
             protected function casts(): array
             {
                 return [
@@ -174,7 +283,6 @@ class MakeModuleCommand extends Command
     {
         $name = "{$this->moduleName}Service";
         $repoName = "{$this->moduleName}Repository";
-        $modelName = $this->moduleName;
 
         $content = <<<PHP
         <?php
@@ -182,7 +290,6 @@ class MakeModuleCommand extends Command
         namespace {$this->namespace}\\Services;
 
         use App\\Modules\\Core\\Services\\BaseService;
-        use {$this->namespace}\\Models\\{$modelName};
         use {$this->namespace}\\Repositories\\{$repoName};
 
         class {$name} extends BaseService
@@ -205,9 +312,12 @@ class MakeModuleCommand extends Command
         $name = "{$this->moduleName}Controller";
         $serviceName = "{$this->moduleName}Service";
         $resourceName = "{$this->moduleName}Resource";
+        $fetchRequest = "Fetch{$this->moduleName}Request";
         $createRequest = "Create{$this->moduleName}Request";
         $updateRequest = "Update{$this->moduleName}Request";
         $humanName = Str::headline($this->pluralKebab);
+        $apiPrefix = config('project.api.prefix', 'api');
+        $apiVersion = config('project.api.version', 'v1');
 
         $content = <<<PHP
         <?php
@@ -216,6 +326,7 @@ class MakeModuleCommand extends Command
 
         use App\\Modules\\Core\\Controllers\\Controller;
         use {$this->namespace}\\Requests\\{$createRequest};
+        use {$this->namespace}\\Requests\\{$fetchRequest};
         use {$this->namespace}\\Requests\\{$updateRequest};
         use {$this->namespace}\\Resources\\{$resourceName};
         use {$this->namespace}\\Services\\{$serviceName};
@@ -227,7 +338,7 @@ class MakeModuleCommand extends Command
         use Spatie\\RouteAttributes\\Attributes\\Prefix;
         use Spatie\\RouteAttributes\\Attributes\\Put;
 
-        #[Prefix('api/v1/{$this->pluralKebab}')]
+        #[Prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')]
         #[Middleware('api')]
         class {$name} extends Controller
         {
@@ -236,12 +347,12 @@ class MakeModuleCommand extends Command
             ) {}
 
             #[Get('/', name: 'api.{$this->pluralSnake}.index')]
-            public function index(): JsonResponse
+            public function index({$fetchRequest} \$request): JsonResponse
             {
-                \$users = \$this->{$this->serviceVar}->paginate(20);
+                \$records = \$this->{$this->serviceVar}->fetch(\$request);
 
                 return \$this->jsonResponse(
-                    {$resourceName}::collection(\$users)->response()->getData(true),
+                    {$resourceName}::collection(\$records)->response()->getData(true),
                     '{$humanName} retrieved successfully.'
                 );
             }
@@ -249,10 +360,10 @@ class MakeModuleCommand extends Command
             #[Post('/', name: 'api.{$this->pluralSnake}.store')]
             public function store({$createRequest} \$request): JsonResponse
             {
-                \$user = \$this->{$this->serviceVar}->create(\$request->validated());
+                \$record = \$this->{$this->serviceVar}->create(\$request->validated());
 
                 return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
+                    new {$resourceName}(\$record),
                     '{$this->moduleName} created successfully.',
                     201
                 );
@@ -261,10 +372,10 @@ class MakeModuleCommand extends Command
             #[Get('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.show')]
             public function show(string \$id): JsonResponse
             {
-                \$user = \$this->{$this->serviceVar}->findOrFail(\$id);
+                \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
 
                 return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
+                    new {$resourceName}(\$record),
                     '{$this->moduleName} retrieved successfully.'
                 );
             }
@@ -272,10 +383,10 @@ class MakeModuleCommand extends Command
             #[Put('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.update')]
             public function update({$updateRequest} \$request, string \$id): JsonResponse
             {
-                \$user = \$this->{$this->serviceVar}->update(\$id, \$request->validated());
+                \$record = \$this->{$this->serviceVar}->update(\$id, \$request->validated());
 
                 return \$this->jsonResponse(
-                    new {$resourceName}(\$user),
+                    new {$resourceName}(\$record),
                     '{$this->moduleName} updated successfully.'
                 );
             }
@@ -332,7 +443,7 @@ class MakeModuleCommand extends Command
             #[Get('/', name: '{$this->pluralSnake}.index')]
             public function index(): View
             {
-                \$records = \$this->{$this->serviceVar}->paginate(20);
+                \$records = \$this->{$this->serviceVar}->paginate();
 
                 return view('{$this->singularKebab}::index', compact('records'));
             }
@@ -394,62 +505,58 @@ class MakeModuleCommand extends Command
 
     // ── Requests ─────────────────────────────────────────────────────
 
+    protected function makeFetchRequest(): void
+    {
+        $name = "Fetch{$this->moduleName}Request";
+
+        $content = <<<PHP
+        <?php
+
+        namespace {$this->namespace}\\Requests;
+
+        use App\\Modules\\Core\\Requests\\FetchRequest;
+
+        class {$name} extends FetchRequest
+        {
+            public function rules(): array
+            {
+                return parent::rules() + [
+                    // module-specific filters, e.g. 'status' => ['sometimes', 'in:draft,published'],
+                ];
+            }
+        }
+
+        PHP;
+
+        $this->write("Requests/{$name}.php", $content);
+    }
+
     protected function makeRequests(): void
     {
-        $createName = "Create{$this->moduleName}Request";
-        $updateName = "Update{$this->moduleName}Request";
+        foreach (['Create', 'Update'] as $action) {
+            $name = "{$action}{$this->moduleName}Request";
 
-        $createContent = <<<PHP
-        <?php
+            $content = <<<PHP
+            <?php
 
-        namespace {$this->namespace}\\Requests;
+            namespace {$this->namespace}\\Requests;
 
-        use Illuminate\\Foundation\\Http\\FormRequest;
+            use App\\Modules\\Core\\Requests\\BaseRequest;
 
-        class {$createName} extends FormRequest
-        {
-            public function authorize(): bool
+            class {$name} extends BaseRequest
             {
-                return true;
+                public function rules(): array
+                {
+                    return [
+                        //
+                    ];
+                }
             }
 
-            public function rules(): array
-            {
-                return [
-                    //
-                ];
-            }
+            PHP;
+
+            $this->write("Requests/{$name}.php", $content);
         }
-
-        PHP;
-
-        $this->write("Requests/{$createName}.php", $createContent);
-
-        $updateContent = <<<PHP
-        <?php
-
-        namespace {$this->namespace}\\Requests;
-
-        use Illuminate\\Foundation\\Http\\FormRequest;
-
-        class {$updateName} extends FormRequest
-        {
-            public function authorize(): bool
-            {
-                return true;
-            }
-
-            public function rules(): array
-            {
-                return [
-                    //
-                ];
-            }
-        }
-
-        PHP;
-
-        $this->write("Requests/{$updateName}.php", $updateContent);
     }
 
     // ── Resource ─────────────────────────────────────────────────────

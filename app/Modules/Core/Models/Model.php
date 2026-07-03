@@ -4,6 +4,8 @@ namespace App\Modules\Core\Models;
 
 use App\Modules\Core\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 
 /**
@@ -11,9 +13,57 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
  */
 abstract class Model extends Eloquent
 {
+    use HasFactory;
     use HasUuid;
 
     protected $guarded = ['id', 'uuid'];
+
+    /**
+     * Columns matched by the free-text `word` filter in BaseRepository::fetch().
+     *
+     * @var array<int, string>
+     */
+    protected array $searchable = [];
+
+    /**
+     * Columns clients may sort by via `sort_by`. Whitelist — anything
+     * else is ignored to keep column names out of attacker control.
+     *
+     * @var array<int, string>
+     */
+    protected array $sortable = ['id', 'created_at', 'updated_at'];
+
+    /**
+     * @return array<int, string>
+     */
+    public function searchableColumns(): array
+    {
+        return $this->searchable;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function sortableColumns(): array
+    {
+        return $this->sortable;
+    }
+
+    /**
+     * Resolve factories from the module's own Database/Factories directory,
+     * e.g. App\Modules\Blog\Models\Post -> App\Modules\Blog\Database\Factories\PostFactory.
+     *
+     * Untyped to stay signature-compatible with models that re-import
+     * the HasFactory trait directly.
+     *
+     * @return Factory|null
+     */
+    protected static function newFactory()
+    {
+        $factory = str_replace('\\Models\\', '\\Database\\Factories\\', static::class).'Factory';
+
+        return class_exists($factory) ? $factory::new() : null;
+    }
 
     public function scopeForTenant(Builder $query, int|string|null $tenantId): Builder
     {

@@ -2,15 +2,10 @@
 
 namespace App\Modules\User\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Modules\Core\Requests\BaseRequest;
 
-class CreateUserRequest extends FormRequest
+class CreateUserRequest extends BaseRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [

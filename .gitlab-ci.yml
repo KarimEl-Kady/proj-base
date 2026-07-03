@@ -1,0 +1,130 @@
+# =============================================================================
+# GitLab CI/CD — mirrors .github/workflows/ci.yml
+#
+# Stages: syntax → lint+test → build → deploy
+#
+# Dev deploy runs on pushes to `develop` and needs these CI/CD variables
+# (Settings → CI/CD → Variables; mark the key as Protected + Masked):
+#
+#   DEV_SSH_PRIVATE_KEY   (required, type: Variable) private key whose public
+#                         half is in the dev server's ~/.ssh/authorized_keys
+#   DEV_SSH_HOST          (required) dev server hostname or IP
+#   DEV_SSH_USER          (required) SSH user, e.g. deploy
+#   DEV_SSH_PORT          (optional) SSH port, defaults to 22
+#   DEV_DEPLOY_PATH       (optional) project path on the server, defaults to
+#                         the value in deploy/deploy-dev.sh
+#   DEV_SSH_KNOWN_HOSTS   (optional) pinned host key (`ssh-keyscan` output)
+# =============================================================================
+
+stages:
+  - syntax
+  - test
+  - build
+  - deploy
+
+variables:
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
+
+.php-base:
+  image: php:8.3-cli
+  before_script:
+    - apt-get update -qq && apt-get install -qq -y git unzip > /dev/null
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+    - composer install --no-interaction --prefer-dist --no-progress
+  cache:
+    key:
+      files:
+        - composer.lock
+    paths:
+      - .composer-cache/
+      - vendor/
+
+# -----------------------------------------------------------------------------
+# Syntax — fast fail on parse errors
+# -----------------------------------------------------------------------------
+php-syntax:
+  stage: syntax
+  image: php:8.3-cli
+  script:
+    - find app config database routes tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+    - echo "No syntax errors detected."
+
+# -----------------------------------------------------------------------------
+# Lint + Test
+# -----------------------------------------------------------------------------
+php-test:
+  stage: test
+  extends: .php-base
+  script:
+    - cp .env.example .env
+    - php artisan key:generate
+    - ./vendor/bin/pint --test
+    - php artisan config:clear --ansi
+    - php artisan route:list > /dev/null   # boot smoke check
+    - php artisan test
+  variables:
+    DB_CONNECTION: sqlite
+    DB_DATABASE: ":memory:"
+    CACHE_STORE: array
+    SESSION_DRIVER: array
+    QUEUE_CONNECTION: sync
+    MAIL_MAILER: array
+
+composer-audit:
+  stage: test
+  extends: .php-base
+  script:
+    - composer audit --format=plain
+  allow_failure: true
+
+# -----------------------------------------------------------------------------
+# Frontend build
+# -----------------------------------------------------------------------------
+frontend-build:
+  stage: build
+  image: node:22-alpine
+  script:
+    - npm ci --ignore-scripts
+    - npm run build
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+
+# -----------------------------------------------------------------------------
+# Deploy → Dev Server (SSH)
+# Remote steps live in deploy/deploy-dev.sh — customize there.
+# -----------------------------------------------------------------------------
+deploy-dev:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  environment:
+    name: dev
+  before_script:
+    - apk add --no-cache openssh-client bash
+    - |
+      if [ -z "$DEV_SSH_HOST" ] || [ -z "$DEV_SSH_USER" ] || [ -z "$DEV_SSH_PRIVATE_KEY" ]; then
+        echo "Dev deploy skipped — configure DEV_SSH_HOST, DEV_SSH_USER and DEV_SSH_PRIVATE_KEY CI/CD variables."
+        exit 0
+      fi
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - printf '%s\n' "$DEV_SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+    - chmod 600 ~/.ssh/deploy_key
+    - |
+      if [ -n "$DEV_SSH_KNOWN_HOSTS" ]; then
+        printf '%s\n' "$DEV_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+      else
+        ssh-keyscan -p "${DEV_SSH_PORT:-22}" "$DEV_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+      fi
+  script:
+    - |
+      if [ -z "$DEV_SSH_HOST" ]; then exit 0; fi
+      ssh -i ~/.ssh/deploy_key -p "${DEV_SSH_PORT:-22}" "$DEV_SSH_USER@$DEV_SSH_HOST" \
+        "DEPLOY_PATH='$DEV_DEPLOY_PATH' GIT_BRANCH='$CI_COMMIT_BRANCH' bash -s" \
+        < deploy/deploy-dev.sh
+  after_script:
+    - rm -f ~/.ssh/deploy_key

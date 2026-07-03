@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "72e9c12bd431ab731331b5033551a3ec",
+    "content-hash": "b6b9d8d93f3790caf7eca886af0a720f",
     "packages": [
         {
             "name": "brick/math",
@@ -2024,6 +2024,41 @@
                 }
             ],
             "time": "2026-03-08T20:05:35+00:00"
+        },
+        {
+            "name": "local/media",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "app/Vendor/Media",
+                "reference": "fa94f834e783c72575d684955b2f2001cb8dc430"
+            },
+            "require": {
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Local\\Media\\MediaServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Local\\Media\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Polymorphic media/attachments package (local path package)",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "monolog/monolog",

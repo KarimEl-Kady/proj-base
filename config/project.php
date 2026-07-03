@@ -13,6 +13,42 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Paths
+    |--------------------------------------------------------------------------
+    |
+    | Filesystem layout of the project's own building blocks, relative to the
+    | application root. "modules" holds HMVC modules, "vendor" holds local
+    | (non-Packagist) composer packages installed via path repositories.
+    |
+    */
+
+    'paths' => [
+        'modules' => 'app/Modules',
+        'vendor' => 'app/Vendor',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Local Vendor Packages
+    |--------------------------------------------------------------------------
+    |
+    | Local packages live in app/Vendor/<Name> with their own composer.json
+    | and are installed through the "path" repository declared in the root
+    | composer.json. They are regular composer packages: autoloaded via PSR-4
+    | and discovered through extra.laravel.providers.
+    |
+    | composer_vendor: the composer vendor prefix (e.g. local/media)
+    | namespace: the PHP root namespace (e.g. Local\Media)
+    |
+    */
+
+    'vendor' => [
+        'composer_vendor' => env('PROJECT_VENDOR_COMPOSER', 'local'),
+        'namespace' => env('PROJECT_VENDOR_NAMESPACE', 'Local'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Database Driver
     |--------------------------------------------------------------------------
     |
@@ -115,12 +151,17 @@ return [
     | Enabled Modules
     |--------------------------------------------------------------------------
     |
-    | Comma-separated list of modules to load. Their service providers
-    | are registered automatically by the Core module provider.
+    | Derived from the module registry (config/project_modules.php) — the
+    | single source of truth for module status. Manage it via artisan
+    | (module:enable / module:disable / module:delete) or by editing that
+    | file directly. Service providers of enabled modules are registered
+    | automatically by the Core module provider.
     |
     */
 
-    'modules' => array_filter(explode(',', (string) env('PROJECT_MODULES', 'User'))),
+    'modules' => array_keys(array_filter(
+        is_file(__DIR__.'/project_modules.php') ? (array) require __DIR__.'/project_modules.php' : []
+    )),
 
     /*
     |--------------------------------------------------------------------------
@@ -135,12 +176,35 @@ return [
     'module_structure' => [
         'Controllers/Api',
         'Controllers/Web',
+        'Database/Factories',
+        'Database/Migrations',
+        'Database/Seeders',
+        'Lang',
         'Models',
         'Providers',
         'Repositories',
         'Requests',
         'Resources',
         'Services',
+        'Tests/Feature',
+        'Tests/Unit',
+        'Views',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    |
+    | Project-wide pagination defaults. "per_page" is used by BaseService /
+    | BaseRepository when no explicit size is given; "max_per_page" caps any
+    | client-supplied ?per_page= value.
+    |
+    */
+
+    'pagination' => [
+        'per_page' => (int) env('PROJECT_PAGINATION_PER_PAGE', 15),
+        'max_per_page' => (int) env('PROJECT_PAGINATION_MAX_PER_PAGE', 100),
     ],
 
     /*

@@ -1,0 +1,56 @@
+# Version control
+.git
+.gitattributes
+.gitignore
+
+# Dependencies (installed inside container)
+/node_modules
+/vendor
+
+# Environment (injected via docker-compose)
+.env
+.env.backup
+.env.production
+
+# IDE / Editor
+/.idea
+/.vscode
+/.cursor
+/.zed
+/.nova
+/.phpactor.json
+_ide_helper.php
+
+# Testing artifacts
+/.phpunit.cache
+/.phpunit.result.cache
+/tests
+
+# Storage (mounted as volume)
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# Docker (don't send docker config into the build context)
+/docker
+docker-compose.yml
+docker-compose.override.yml
+Makefile
+
+# Build output (rebuilt inside container)
+/public/build
+/public/hot
+/public/fonts-manifest.dev.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.log
+/auth.json
+Homestead.json
+Homestead.yaml
+AGENTS.md
+README.md

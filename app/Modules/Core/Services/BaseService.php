@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Services;
 
 use App\Modules\Core\Repositories\BaseRepository;
+use App\Modules\Core\Requests\FetchRequest;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -28,9 +29,18 @@ abstract class BaseService
         return $this->repository->all();
     }
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(?int $perPage = null): LengthAwarePaginator
     {
         return $this->repository->paginate($perPage);
+    }
+
+    /**
+     * Listing driven by the standard fetch keys (pagination, per_page,
+     * word, sort_by, sort_dir) — see FetchRequest.
+     */
+    public function fetch(FetchRequest $request): LengthAwarePaginator|Collection
+    {
+        return $this->repository->fetch($request);
     }
 
     public function create(array $data): Model

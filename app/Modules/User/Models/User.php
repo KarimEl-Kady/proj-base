@@ -29,6 +29,9 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 
     protected $table = 'users';
 
+    /** Columns matched by the FetchRequest `word` filter. */
+    protected array $searchable = ['name', 'email'];
+
     protected function casts(): array
     {
         return [

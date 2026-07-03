@@ -2,16 +2,11 @@
 
 namespace App\Modules\User\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Modules\Core\Requests\BaseRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateUserRequest extends FormRequest
+class UpdateUserRequest extends BaseRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
