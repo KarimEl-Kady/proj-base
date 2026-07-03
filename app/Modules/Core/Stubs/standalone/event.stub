@@ -1,0 +1,16 @@
+<?php
+
+namespace {{ namespace }}\Events;
+
+{{ modelImport }}use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class {{ className }} implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;{{ constructor }}
+
+{{ broadcastMethod }}
+}

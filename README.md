@@ -125,6 +125,44 @@ $post->getFirstMediaUrl('covers');
 $post->clearMedia('covers');
 ```
 
+### Generate module components
+
+Individual components can be scaffolded after a module exists:
+
+```bash
+# Model
+php artisan make:module:model Blog Post --fillable=name,slug,content
+
+# Repository
+php artisan make:module:repository Blog PostRepository --model=Post
+
+# Service
+php artisan make:module:service Blog PostService --repository=PostRepository
+
+# Controller (API or Web)
+php artisan make:module:controller Blog Post --type=api --resource=PostResource
+php artisan make:module:controller Blog Post --type=web --service=PostService
+
+# Form Requests
+php artisan make:module:request Blog Post --type=both --rules="title:required|string|max:255|body:required|string"
+
+# API Resource
+php artisan make:module:resource Blog Post --fields=id,title,slug,created_at
+
+# Event + Listener
+php artisan make:module:event Blog PostCreated --model=Post --channels=posts
+```
+
+| Command | Description |
+|---------|-------------|
+| `make:module:model` | Create model with optional fillable fields |
+| `make:module:repository` | Create repository extending BaseRepository |
+| `make:module:service` | Create service extending BaseService |
+| `make:module:controller` | Create API or Web controller with route attributes |
+| `make:module:request` | Create Create/Update form requests with validation rules |
+| `make:module:resource` | Create API resource transformer |
+| `make:module:event` | Create event + queued listener pair |
+
 ## Configuration
 
 Project settings live in `config/project.php` (`PROJECT_*` env vars); active modules in `config/project_modules.php`:

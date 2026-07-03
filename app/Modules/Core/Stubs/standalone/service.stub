@@ -1,0 +1,15 @@
+<?php
+
+namespace {{ namespace }}\Services;
+
+use App\Modules\Core\Services\BaseService;
+use {{ namespace }}\Models\{{ modelName }};
+use {{ namespace }}\Repositories\{{ repositoryName }};
+
+class {{ className }} extends BaseService
+{
+    public function __construct({{ repositoryName }} $repository)
+    {
+        parent::__construct($repository);
+    }
+}

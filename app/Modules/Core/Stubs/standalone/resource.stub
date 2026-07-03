@@ -1,0 +1,16 @@
+<?php
+
+namespace {{ namespace }}\Resources;
+
+use App\Modules\Core\Resources\BaseResource;
+use Illuminate\Http\Request;
+
+class {{ className }} extends BaseResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+{{ fields }}
+        ];
+    }
+}
