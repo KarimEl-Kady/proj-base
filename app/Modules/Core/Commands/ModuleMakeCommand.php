@@ -220,7 +220,7 @@ class ModuleMakeCommand extends Command
             || ($this->interactive && select('Controller kind', ['api' => 'API', 'web' => 'Web']) === 'web');
 
         if ($web) {
-            return $this->write("Controllers/Web/{$name}.php", <<<PHP
+            $result = $this->write("Controllers/Web/{$name}.php", <<<PHP
             <?php
 
             namespace {$this->namespace}\\Controllers\\Web;
@@ -242,12 +242,19 @@ class ModuleMakeCommand extends Command
                 }
             }
             PHP);
+
+            $this->hintRouteFileIfNeeded(
+                'web',
+                "Route::get('/{$pluralKebab}', [{$this->namespace}\\Controllers\\Web\\{$name}::class, 'index'])->name('{$pluralSnake}.index');"
+            );
+
+            return $result;
         }
 
         $apiPrefix = config('project.api.prefix', 'api');
         $apiVersion = config('project.api.version', 'v1');
 
-        return $this->write("Controllers/Api/{$name}.php", <<<PHP
+        $result = $this->write("Controllers/Api/{$name}.php", <<<PHP
         <?php
 
         namespace {$this->namespace}\\Controllers\\Api;
@@ -269,6 +276,29 @@ class ModuleMakeCommand extends Command
             }
         }
         PHP);
+
+        $this->hintRouteFileIfNeeded(
+            'api',
+            "Route::get('/{$apiPrefix}/{$apiVersion}/{$pluralKebab}', [{$this->namespace}\\Controllers\\Api\\{$name}::class, 'index'])->name('api.{$pluralSnake}.index');"
+        );
+
+        return $result;
+    }
+
+    /**
+     * When route attributes are disabled, controllers generated one-at-a-time
+     * aren't auto-wired into Routes/{api,web}.php (unlike make:module, which
+     * writes the whole file up front) — point the developer at what to add.
+     */
+    protected function hintRouteFileIfNeeded(string $type, string $snippet): void
+    {
+        if (config('project.route_attributes.enabled', false)) {
+            return;
+        }
+
+        $this->newLine();
+        $this->warn("route_attributes is disabled — add this to Routes/{$type}.php:");
+        $this->line("  {$snippet}");
     }
 
     protected function makeRequest(string $name): int

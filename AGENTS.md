@@ -47,26 +47,37 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Inspect: `php artisan package:list`.
 - First-party example: `local/media` (`app/Vendor/Media`) — polymorphic attachments. Add `Local\Media\Traits\HasMedia` to a model, then `$model->addMedia($uploadedFile, 'collection')`, `getFirstMediaUrl()`, `clearMedia()`. Config in `config/media.php` (publish tag `media-config`).
 
-### Route attributes (spatie/laravel-route-attributes)
+### Routing — classic files (default) vs. attributes
 
-- Routes are declared via PHP 8 attributes on controller methods — there are **no module-level route files** (`Routes/api.php`, `Routes/web.php` are removed).
-- `CoreServiceProvider::configureRouteAttributes()` dynamically registers each active module's `Controllers/Api` and `Controllers/Web` directories with the spatie route registrar.
-- Toggle with `PROJECT_ROUTE_ATTRIBUTES` env (default `true`).
-- Use `#[Prefix]` + `#[Middleware]` at the class level, method-level HTTP attributes (`#[Get]`, `#[Post]`, `#[Put]`, `#[Delete]`, `#[Patch]`) on methods.
-- API controllers prefix: `api/v1/{resource}`. Web controllers prefix: `{resource}`.
-- Example:
-  ```php
-  #[Prefix('api/v1/users')]
-  #[Middleware('api')]
-  class UserController extends Controller
-  {
-      #[Get('/', name: 'api.users.index')]
-      public function index(): JsonResponse { ... }
+Two mutually exclusive registration modes, toggled by `PROJECT_ROUTE_ATTRIBUTES` (default `false`). Controllers carry `#[Prefix]`/`#[Middleware]`/`#[Get]` etc. attributes **either way** — they're inert metadata when attributes mode is off, so switching the flag never requires touching a controller, just `php artisan route:clear` (and `route:cache` again if caching).
 
-      #[Get('/{user}', name: 'api.users.show')]
-      public function show(string $id): JsonResponse { ... }
-  }
-  ```
+**Classic route files (`false`, default)** — `CoreServiceProvider::loadModuleRouteFiles()` loads, for every active module (+ Core), whichever of these exist:
+- `Routes/api.php` under the `api` middleware group.
+- `Routes/web.php` under the `web` middleware group.
+- `Routes/dashboard.php` under `project.routes.dashboard` config (prefix/middleware/name applied centrally — default prefix `dashboard`, middleware `['web', 'auth']`, name prefix `dashboard.`).
+
+Prefixes/names for `api.php`/`web.php` are declared inside the file itself (mirroring what the attribute strings would be), e.g.:
+```php
+// app/Modules/User/Routes/api.php
+Route::prefix('api/v1/users')->group(function () {
+    Route::get('/', [UserController::class, 'index'])->name('api.users.index');
+    // ...
+});
+```
+`make:module` generates all three files automatically, matching whatever controllers it scaffolds — a new module works immediately without wiring anything by hand. `module:make ... controller` (single-component generator) can't safely append to an existing route file, so it prints the `Route::` line to add manually when this mode is active.
+
+**Route attributes (`true`)** — `CoreServiceProvider::configureRouteAttributes()` registers each active module's `Controllers/Api` and `Controllers/Web` directories with the spatie route registrar (`spatie/laravel-route-attributes`). Use `#[Prefix]` + `#[Middleware]` at the class level, method-level HTTP attributes (`#[Get]`, `#[Post]`, `#[Put]`, `#[Delete]`, `#[Patch]`) on methods:
+```php
+#[Prefix('api/v1/users')]
+#[Middleware('api')]
+class UserController extends Controller
+{
+    #[Get('/', name: 'api.users.index')]
+    public function index(): JsonResponse { ... }
+}
+```
+
+Both modes produce the identical route table (paths, names, middleware) for the shipped modules — verified by the test suite, which never changes when the flag is flipped.
 
 ### Base class hierarchy
 
@@ -106,8 +117,8 @@ All project-specific config lives in `config/project.php`, read via `project_con
 ### Routing conventions
 
 - Module API routes use prefix `api/v1/{resource}` (e.g. `api/v1/users`).
-- Module web routes use prefix `{resource}` (e.g. `users`).
-- Global `routes/api.php` and `routes/web.php` exist but are mostly empty — module routes are loaded by spatie/laravel-route-attributes scanning each module's Controllers directory.
+- Module web routes use prefix `{resource}` (e.g. `users`); dashboard routes use `{dashboard_prefix}/{resource}` (e.g. `dashboard/users`), authenticated by default.
+- Global `routes/api.php` and `routes/web.php` stay empty — all module routes come from each module's own `Routes/*.php` files (or attributes; see above), loaded by `CoreServiceProvider`.
 
 ## Testing
 

@@ -74,12 +74,15 @@ class MakeModuleCommand extends Command
             $this->makeApiController();
             $this->makeResource();
             $this->makeFetchRequest();
+            $this->makeApiRoutes();
         }
 
         if ($this->withWeb) {
             $this->makeWebController();
+            $this->makeWebRoutes();
         }
 
+        $this->makeDashboardRoutes();
         $this->makeRequests();
         $this->makeExtras();
 
@@ -501,6 +504,135 @@ class MakeModuleCommand extends Command
         PHP;
 
         $this->write("Controllers/Web/{$name}.php", $content);
+    }
+
+    // ── Route files (used when project.route_attributes.enabled is false) ──
+
+    protected function makeApiRoutes(): void
+    {
+        $controller = "{$this->moduleName}Controller";
+        $apiPrefix = config('project.api.prefix', 'api');
+        $apiVersion = config('project.api.version', 'v1');
+
+        $content = <<<PHP
+        <?php
+
+        use {$this->namespace}\\Controllers\\Api\\{$controller};
+        use Illuminate\\Support\\Facades\\Route;
+
+        /*
+        |--------------------------------------------------------------------------
+        | {$this->moduleName} API Routes
+        |--------------------------------------------------------------------------
+        |
+        | Loaded under the "api" middleware group by CoreServiceProvider when
+        | project.route_attributes.enabled is false. Mirrors {$controller}'s
+        | #[Prefix] / #[Middleware] attributes.
+        |
+        */
+
+        Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->group(function () {
+            Route::get('/', [{$controller}::class, 'index'])->name('api.{$this->pluralSnake}.index');
+            Route::post('/', [{$controller}::class, 'store'])->name('api.{$this->pluralSnake}.store');
+            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('api.{$this->pluralSnake}.show');
+            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->name('api.{$this->pluralSnake}.update');
+            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->name('api.{$this->pluralSnake}.destroy');
+        });
+
+        PHP;
+
+        $this->write('Routes/api.php', $content);
+    }
+
+    protected function makeWebRoutes(): void
+    {
+        $controller = "{$this->moduleName}Controller";
+
+        $content = <<<PHP
+        <?php
+
+        use {$this->namespace}\\Controllers\\Web\\{$controller};
+        use Illuminate\\Support\\Facades\\Route;
+
+        /*
+        |--------------------------------------------------------------------------
+        | {$this->moduleName} Web Routes
+        |--------------------------------------------------------------------------
+        |
+        | Loaded under the "web" middleware group by CoreServiceProvider when
+        | project.route_attributes.enabled is false. Mirrors {$controller}'s
+        | #[Prefix] / #[Middleware] attributes.
+        |
+        */
+
+        Route::prefix('{$this->pluralKebab}')->group(function () {
+            Route::get('/', [{$controller}::class, 'index'])->name('{$this->pluralSnake}.index');
+            Route::get('/create', [{$controller}::class, 'create'])->name('{$this->pluralSnake}.create');
+            Route::post('/', [{$controller}::class, 'store'])->name('{$this->pluralSnake}.store');
+            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('{$this->pluralSnake}.show');
+            Route::get('/{{$this->paramName}}/edit', [{$controller}::class, 'edit'])->name('{$this->pluralSnake}.edit');
+            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->name('{$this->pluralSnake}.update');
+            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->name('{$this->pluralSnake}.destroy');
+        });
+
+        PHP;
+
+        $this->write('Routes/web.php', $content);
+    }
+
+    protected function makeDashboardRoutes(): void
+    {
+        if (! $this->withWeb) {
+            $this->write('Routes/dashboard.php', <<<PHP
+            <?php
+
+            /*
+            |--------------------------------------------------------------------------
+            | {$this->moduleName} Dashboard Routes
+            |--------------------------------------------------------------------------
+            |
+            | Loaded under project.routes.dashboard by CoreServiceProvider when
+            | project.route_attributes.enabled is false. This module has no web
+            | controller to expose here — add one and wire it up if needed.
+            |
+            */
+
+            PHP);
+
+            return;
+        }
+
+        $controller = "{$this->moduleName}Controller";
+
+        $content = <<<PHP
+        <?php
+
+        use {$this->namespace}\\Controllers\\Web\\{$controller};
+        use Illuminate\\Support\\Facades\\Route;
+
+        /*
+        |--------------------------------------------------------------------------
+        | {$this->moduleName} Dashboard Routes
+        |--------------------------------------------------------------------------
+        |
+        | Loaded under project.routes.dashboard (prefix, middleware, name prefix
+        | from config/project.php) by CoreServiceProvider when
+        | project.route_attributes.enabled is false. Reuses the Web controller —
+        | swap in a dedicated Controllers/Dashboard controller for a real backoffice.
+        |
+        */
+
+        Route::prefix('{$this->pluralKebab}')->group(function () {
+            Route::get('/', [{$controller}::class, 'index'])->name('{$this->pluralSnake}.index');
+            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('{$this->pluralSnake}.show');
+            Route::get('/{{$this->paramName}}/edit', [{$controller}::class, 'edit'])->name('{$this->pluralSnake}.edit');
+            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->name('{$this->pluralSnake}.update');
+            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->name('{$this->pluralSnake}.destroy');
+        });
+
+        PHP;
+
+        $this->write('Routes/dashboard.php', $content);
     }
 
     // ── Requests ─────────────────────────────────────────────────────

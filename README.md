@@ -33,8 +33,8 @@ make dev           # all services + Vite HMR
 ```
 app/Modules/{Module}/
 ├── Controllers/
-│   ├── Api/            # JSON endpoints (route attributes)
-│   └── Web/            # Blade views (route attributes)
+│   ├── Api/            # JSON endpoints
+│   └── Web/            # Blade views
 ├── Commands/           # Artisan commands (auto-registered)
 ├── Database/
 │   ├── Factories/      # Auto-resolved per module
@@ -46,6 +46,10 @@ app/Modules/{Module}/
 ├── Repositories/
 ├── Requests/           # Extend Core BaseRequest / FetchRequest
 ├── Resources/
+├── Routes/
+│   ├── api.php         # Loaded under "api" middleware (route_attributes=false)
+│   ├── web.php         # Loaded under "web" middleware
+│   └── dashboard.php   # Loaded under project.routes.dashboard (prefix/middleware)
 ├── Services/
 ├── Tests/
 │   ├── Feature/        # Runs with the project suite (Modules testsuite)
@@ -61,7 +65,7 @@ app/Modules/{Module}/
 |---------|---------|
 | **Module registry** | `config/project_modules.php` is the single source of truth (`'Blog' => true`) — managed via artisan or edited by hand |
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
-| **Route attributes** | Routes declared via PHP 8 attributes (`#[Get]`, `#[Post]`, `#[Prefix]`, `#[Middleware]`) using `spatie/laravel-route-attributes` |
+| **Routing** | Classic `Routes/{api,web,dashboard}.php` per module by default. Flip `PROJECT_ROUTE_ATTRIBUTES=true` to use PHP 8 attributes (`#[Get]`, `#[Prefix]`, ...) instead — controllers support both without changes |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
 | **Local packages** | `app/Vendor/{Name}` composer path packages (e.g. `local/media`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
@@ -114,6 +118,26 @@ GET /api/v1/users?pagination=false
 
 `word` searches the model's `$searchable` columns; `sort_by` is validated against the model's `$sortable` whitelist; `per_page` is capped by `project.pagination.max_per_page`. Extend `FetchRequest` per module to add custom filters.
 
+### Routing: classic files vs. attributes
+
+By default (`PROJECT_ROUTE_ATTRIBUTES=false`) every module registers routes through plain files, loaded automatically by `CoreServiceProvider`:
+
+| File | Middleware | Prefix / name |
+|------|-----------|----------------|
+| `Routes/api.php` | `api` | whatever the file declares (e.g. `api/v1/users`) |
+| `Routes/web.php` | `web` | whatever the file declares |
+| `Routes/dashboard.php` | `web` + config | centrally applied from `project.routes.dashboard` (`prefix`, `middleware`, `name_prefix` — defaults to `dashboard`, `['web','auth']`, `dashboard.`) |
+
+```php
+// app/Modules/Blog/Routes/api.php
+Route::prefix('api/v1/posts')->group(function () {
+    Route::get('/', [PostController::class, 'index'])->name('api.posts.index');
+    // ...
+});
+```
+
+`make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. Set `PROJECT_ROUTE_ATTRIBUTES=true` to switch to PHP 8 attributes (`#[Get]`, `#[Prefix]`, `#[Middleware]`, via `spatie/laravel-route-attributes`) instead — every controller already carries them, so toggling the flag needs no code changes, just `php artisan route:clear`.
+
 ### Authentication (Auth module)
 
 Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `session`. All endpoints under `/api/v1/auth`:
@@ -149,7 +173,8 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `config/project_modules.php` | `['User' => true]` | Module registry (file, not env) |
 | `PROJECT_TENANCY_MODE` | `single` | `single` or `multi` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
-| `PROJECT_ROUTE_ATTRIBUTES` | `true` | Use PHP 8 route attributes |
+| `PROJECT_ROUTE_ATTRIBUTES` | `false` | `true` = PHP 8 route attributes; `false` = classic `Routes/*.php` files (default) |
+| `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_DB_DRIVER` | `mysql` | Database driver |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |

@@ -15,6 +15,7 @@ use App\Modules\Core\Commands\ProjectInfoCommand;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Console\Command;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -52,6 +53,7 @@ class CoreServiceProvider extends ServiceProvider
         }
 
         $this->loadModuleResources();
+        $this->loadModuleRouteFiles();
 
         if (config('project.platform') === 'api' || config('project.platform') === 'hybrid') {
             $this->registerApiMiddleware();
@@ -163,6 +165,50 @@ class CoreServiceProvider extends ServiceProvider
         }
 
         config()->set('route-attributes.directories', $directories);
+    }
+
+    /**
+     * Classic route files — the alternative to route attributes. Loaded for
+     * every active module (plus Core) when project.route_attributes.enabled
+     * is false. Each file is optional; only existing ones are registered.
+     *
+     * - Routes/api.php        under the "api" middleware group
+     * - Routes/web.php        under the "web" middleware group
+     * - Routes/dashboard.php  under "web" + project.routes.dashboard config
+     *
+     * Prefixes/names are declared inside each file itself (mirroring the
+     * #[Prefix]/#[Middleware] attributes they replace) except for
+     * dashboard.php, which gets its prefix/name/middleware centrally from
+     * project.routes.dashboard so every module's backoffice section is
+     * consistent.
+     */
+    protected function loadModuleRouteFiles(): void
+    {
+        if (config('project.route_attributes.enabled', false)) {
+            return;
+        }
+
+        $modules = array_unique(array_merge(['Core'], config('project.modules', [])));
+
+        foreach ($modules as $module) {
+            $apiRoutes = module_path($module, 'Routes/api.php');
+            if (is_file($apiRoutes)) {
+                Route::middleware('api')->group($apiRoutes);
+            }
+
+            $webRoutes = module_path($module, 'Routes/web.php');
+            if (is_file($webRoutes)) {
+                Route::middleware('web')->group($webRoutes);
+            }
+
+            $dashboardRoutes = module_path($module, 'Routes/dashboard.php');
+            if (is_file($dashboardRoutes)) {
+                Route::middleware(config('project.routes.dashboard.middleware', ['web']))
+                    ->prefix(config('project.routes.dashboard.prefix', 'dashboard'))
+                    ->name(config('project.routes.dashboard.name_prefix', 'dashboard.'))
+                    ->group($dashboardRoutes);
+            }
+        }
     }
 
     protected function configureApiResources(): void
