@@ -47,7 +47,7 @@ app/Modules/{Module}/
 ├── Requests/           # Extend Core BaseRequest / FetchRequest
 ├── Resources/
 ├── Routes/
-│   ├── api.php         # Loaded under "api" middleware (route_attributes=false)
+│   ├── api.php         # Loaded under "api" middleware
 │   ├── web.php         # Loaded under "web" middleware
 │   └── dashboard.php   # Loaded under project.routes.dashboard (prefix/middleware)
 ├── Services/
@@ -65,11 +65,11 @@ app/Modules/{Module}/
 |---------|---------|
 | **Module registry** | `config/project_modules.php` is the single source of truth (`'Blog' => true`) — managed via artisan or edited by hand |
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
-| **Routing** | Classic `Routes/{api,web,dashboard}.php` per module by default. Flip `PROJECT_ROUTE_ATTRIBUTES=true` to use PHP 8 attributes (`#[Get]`, `#[Prefix]`, ...) instead — controllers support both without changes |
+| **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
-| **Local packages** | `app/Vendor/{Name}` composer path packages (e.g. `local/media`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
+| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
-| **Uniform API envelope** | Success and error responses share `{success, message, data/errors}` — including validation, 404, 401, 403, 500 |
+| **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
 | **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
 | **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution |
@@ -118,9 +118,9 @@ GET /api/v1/users?pagination=false
 
 `word` searches the model's `$searchable` columns; `sort_by` is validated against the model's `$sortable` whitelist; `per_page` is capped by `project.pagination.max_per_page`. Extend `FetchRequest` per module to add custom filters.
 
-### Routing: classic files vs. attributes
+### Routing
 
-By default (`PROJECT_ROUTE_ATTRIBUTES=false`) every module registers routes through plain files, loaded automatically by `CoreServiceProvider`:
+Every module registers routes through plain files, loaded automatically by `CoreServiceProvider` — no attributes, no directory scanning:
 
 | File | Middleware | Prefix / name |
 |------|-----------|----------------|
@@ -136,7 +136,7 @@ Route::prefix('api/v1/posts')->group(function () {
 });
 ```
 
-`make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. Set `PROJECT_ROUTE_ATTRIBUTES=true` to switch to PHP 8 attributes (`#[Get]`, `#[Prefix]`, `#[Middleware]`, via `spatie/laravel-route-attributes`) instead — every controller already carries them, so toggling the flag needs no code changes, just `php artisan route:clear`.
+`make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. `module:make controller` (single-component) prints the `Route::` line to add by hand, since it can't safely append to an existing file.
 
 ### Authentication (Auth module)
 
@@ -152,7 +152,20 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 
 ### Local packages
 
-Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. First-party example — **`local/media`** (polymorphic attachments):
+Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Two first-party examples ship with the base:
+
+**`local/data-response`** — the JSON envelope every controller uses. `App\Modules\Core\Controllers\Controller` already includes its trait, so `jsonResponse()`/`jsonError()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
+
+```php
+use Local\DataResponse\DataResponse;
+
+DataResponse::success($user, 'User created.', 201);
+DataResponse::error('Not found.', 404);
+```
+
+Rename the envelope keys or default messages project-wide via `config/data_response.php` (publish with `--tag=data-response-config`) — no controller changes needed.
+
+**`local/media`** — polymorphic attachments:
 
 ```php
 use Local\Media\Traits\HasMedia;
@@ -173,7 +186,6 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `config/project_modules.php` | `['User' => true]` | Module registry (file, not env) |
 | `PROJECT_TENANCY_MODE` | `single` | `single` or `multi` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
-| `PROJECT_ROUTE_ATTRIBUTES` | `false` | `true` = PHP 8 route attributes; `false` = classic `Routes/*.php` files (default) |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_DB_DRIVER` | `mysql` | Database driver |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |

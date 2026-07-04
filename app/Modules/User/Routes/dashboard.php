@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Loaded under project.routes.dashboard (prefix "dashboard", middleware
-| ["web", "auth"], name prefix "dashboard.") by CoreServiceProvider when
-| project.route_attributes.enabled is false. Reuses the same Web
-| controller/views as Routes/web.php — a real admin backoffice would
-| swap in a dedicated Controllers/Dashboard controller instead.
+| ["web", "auth"], name prefix "dashboard.") by CoreServiceProvider.
+| Reuses the same Web controller/views as Routes/web.php — a real admin
+| backoffice would swap in a dedicated Controllers/Dashboard controller
+| instead.
 |
 | Final paths:  dashboard/users, dashboard/users/{user}, ...
 | Final names:  dashboard.users.index, dashboard.users.show, ...

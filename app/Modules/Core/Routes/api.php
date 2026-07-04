@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Route;
 | Core API Routes
 |--------------------------------------------------------------------------
 |
-| Loaded under the "api" middleware group by CoreServiceProvider when
-| project.route_attributes.enabled is false. Mirrors HealthController's
-| #[Prefix('api/health')] / #[Get('/', name: 'api.health')] attributes.
+| Loaded under the "api" middleware group by CoreServiceProvider.
 |
 */
 

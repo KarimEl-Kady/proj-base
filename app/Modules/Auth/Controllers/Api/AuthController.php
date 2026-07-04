@@ -10,20 +10,13 @@ use App\Modules\User\Models\User;
 use App\Modules\User\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\RouteAttributes\Attributes\Get;
-use Spatie\RouteAttributes\Attributes\Middleware;
-use Spatie\RouteAttributes\Attributes\Post;
-use Spatie\RouteAttributes\Attributes\Prefix;
 
-#[Prefix('api/v1/auth')]
-#[Middleware('api')]
 class AuthController extends Controller
 {
     public function __construct(
         protected AuthService $authService
     ) {}
 
-    #[Post('/register', name: 'api.auth.register', middleware: 'throttle:10,1')]
     public function register(RegisterRequest $request): JsonResponse
     {
         abort_unless(config('project.features.registration', true), 403, 'Registration is disabled.');
@@ -37,7 +30,6 @@ class AuthController extends Controller
         );
     }
 
-    #[Post('/login', name: 'api.auth.login', middleware: 'throttle:10,1')]
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $this->authService->login(
@@ -50,7 +42,6 @@ class AuthController extends Controller
         return $this->jsonResponse($this->authPayload($result), 'Logged in successfully.');
     }
 
-    #[Post('/logout', name: 'api.auth.logout', middleware: 'auth:sanctum')]
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout($request->user());
@@ -58,7 +49,6 @@ class AuthController extends Controller
         return $this->jsonResponse(null, 'Logged out successfully.');
     }
 
-    #[Get('/me', name: 'api.auth.me', middleware: 'auth:sanctum')]
     public function me(Request $request): JsonResponse
     {
         return $this->jsonResponse(

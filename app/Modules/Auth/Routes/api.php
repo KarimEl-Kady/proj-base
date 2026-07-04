@@ -12,10 +12,7 @@ use Illuminate\Support\Facades\Route;
 | Auth API Routes
 |--------------------------------------------------------------------------
 |
-| Loaded under the "api" middleware group by CoreServiceProvider when
-| project.route_attributes.enabled is false. Mirrors the #[Prefix] /
-| #[Middleware] attributes on each Auth controller exactly — same paths,
-| names, and per-route middleware.
+| Loaded under the "api" middleware group by CoreServiceProvider.
 |
 */
 

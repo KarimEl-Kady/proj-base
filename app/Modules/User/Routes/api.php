@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Route;
 | User API Routes
 |--------------------------------------------------------------------------
 |
-| Loaded under the "api" middleware group by CoreServiceProvider when
-| project.route_attributes.enabled is false. Mirrors UserController's
-| #[Prefix('api/v1/users')] / #[Middleware('api')] attributes.
+| Loaded under the "api" middleware group by CoreServiceProvider.
 |
 */
 

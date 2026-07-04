@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Local\DataResponse\DataResponse;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 /**
  * Renders API exceptions in the same envelope as Controller::jsonResponse()
- * ({success, message, errors}). Registered in bootstrap/app.php.
+ * ({success, message, errors}), via the local/data-response package.
+ * Registered in bootstrap/app.php.
  */
 class Handler
 {
@@ -24,17 +26,9 @@ class Handler
         }
 
         [$status, $message] = static::resolve($e);
+        $errors = $e instanceof ValidationException ? $e->errors() : null;
 
-        $payload = [
-            'success' => false,
-            'message' => $message,
-        ];
-
-        if ($e instanceof ValidationException) {
-            $payload['errors'] = $e->errors();
-        }
-
-        return response()->json($payload, $status);
+        return DataResponse::error($message, $status, $errors);
     }
 
     /**

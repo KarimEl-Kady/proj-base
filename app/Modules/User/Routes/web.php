@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Route;
 | User Web Routes
 |--------------------------------------------------------------------------
 |
-| Loaded under the "web" middleware group by CoreServiceProvider when
-| project.route_attributes.enabled is false. Mirrors UserController's
-| #[Prefix('users')] / #[Middleware('web')] attributes.
+| Loaded under the "web" middleware group by CoreServiceProvider.
 |
 */
 

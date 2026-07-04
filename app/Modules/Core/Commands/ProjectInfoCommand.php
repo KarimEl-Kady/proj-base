@@ -18,7 +18,6 @@ class ProjectInfoCommand extends Command
         $this->twoColumnDetail('Mode', config('project.platform'));
         $this->twoColumnDetail('DB driver', config('project.db_driver'));
         $this->twoColumnDetail('Auth driver', config('project.auth.driver'));
-        $this->twoColumnDetail('Route attributes', config('project.route_attributes.enabled') ? 'enabled' : 'disabled');
 
         $this->twoColumnDetail('<fg=cyan>Tenancy</>', '');
         $this->twoColumnDetail('Mode', config('project.tenancy.mode'));

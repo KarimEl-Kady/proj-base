@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "57b55271350041cc18b0ab5e6b5aa378",
+    "content-hash": "d01bd3c6ca47f6c8a5a2bebd423a0606",
     "packages": [
         {
             "name": "brick/math",
@@ -2093,6 +2093,41 @@
             "time": "2026-03-08T20:05:35+00:00"
         },
         {
+            "name": "local/data-response",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "app/Vendor/DataResponse",
+                "reference": "507d145bf36a5194b70f69cba527444ee4cfde16"
+            },
+            "require": {
+                "illuminate/http": "^13.0",
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Local\\DataResponse\\DataResponseServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Local\\DataResponse\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Standardized JSON response envelope (success/message/data/errors) — local path package",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
             "name": "local/media",
             "version": "1.0.0",
             "dist": {
@@ -3401,138 +3436,6 @@
                 "source": "https://github.com/ramsey/uuid/tree/4.9.3"
             },
             "time": "2026-06-18T03:57:49+00:00"
-        },
-        {
-            "name": "spatie/laravel-route-attributes",
-            "version": "1.28.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/spatie/laravel-route-attributes.git",
-                "reference": "17cb15b40d31c0d7c3c9378948d3760135563020"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-route-attributes/zipball/17cb15b40d31c0d7c3c9378948d3760135563020",
-                "reference": "17cb15b40d31c0d7c3c9378948d3760135563020",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/contracts": "^11.0|^12.0|^13.0",
-                "nesbot/carbon": "^2.63|^3.0",
-                "php": "^8.3",
-                "spatie/php-attribute-reader": "^1.0"
-            },
-            "require-dev": {
-                "laravel/pint": "^1.25",
-                "orchestra/testbench": "^9.0|^10.0|^11.0",
-                "pestphp/pest": "^3.0|^4.0",
-                "pestphp/pest-plugin-laravel": "^3.0|^4.0"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Spatie\\RouteAttributes\\RouteAttributesServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Spatie\\RouteAttributes\\": "src",
-                    "Spatie\\RouteAttributes\\Database\\Factories\\": "database/factories"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Freek Van der Herten",
-                    "email": "freek@spatie.be",
-                    "homepage": "https://spatie.be",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Auto register routes using PHP attributes",
-            "homepage": "https://github.com/spatie/laravel-route-attributes",
-            "keywords": [
-                "laravel-route-attributes",
-                "spatie"
-            ],
-            "support": {
-                "issues": "https://github.com/spatie/laravel-route-attributes/issues",
-                "source": "https://github.com/spatie/laravel-route-attributes/tree/1.28.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/sponsors/spatie",
-                    "type": "github"
-                },
-                {
-                    "url": "https://spatie.be/open-source/support-us",
-                    "type": "other"
-                }
-            ],
-            "time": "2026-03-06T08:25:46+00:00"
-        },
-        {
-            "name": "spatie/php-attribute-reader",
-            "version": "1.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/spatie/php-attribute-reader.git",
-                "reference": "46e7484d7b51f5b22d672745c541e48c5a385404"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/spatie/php-attribute-reader/zipball/46e7484d7b51f5b22d672745c541e48c5a385404",
-                "reference": "46e7484d7b51f5b22d672745c541e48c5a385404",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.0"
-            },
-            "require-dev": {
-                "pestphp/pest": "^1.0|^2.0|^3.0|^4.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Spatie\\Attributes\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Freek Van der Herten",
-                    "email": "freek@spatie.be",
-                    "homepage": "https://spatie.be",
-                    "role": "Developer"
-                }
-            ],
-            "description": "A clean API for working with PHP attributes",
-            "homepage": "https://github.com/spatie/php-attribute-reader",
-            "keywords": [
-                "attributes",
-                "php-attribute-reader",
-                "reflection",
-                "spatie"
-            ],
-            "support": {
-                "issues": "https://github.com/spatie/php-attribute-reader/issues",
-                "source": "https://github.com/spatie/php-attribute-reader/tree/1.1.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/spatie",
-                    "type": "github"
-                }
-            ],
-            "time": "2026-02-23T09:01:55+00:00"
         },
         {
             "name": "symfony/clock",

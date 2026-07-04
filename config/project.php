@@ -104,36 +104,12 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Route Attributes
-    |--------------------------------------------------------------------------
-    |
-    | Two mutually exclusive ways to register module routes:
-    |
-    | - true:  PHP 8 attributes (spatie/laravel-route-attributes) on the
-    |          controllers themselves. CoreServiceProvider registers each
-    |          active module's Controllers/{Api,Web} directories for scanning.
-    | - false (default): classic route files. CoreServiceProvider loads each
-    |          active module's Routes/api.php, Routes/web.php, and
-    |          Routes/dashboard.php (whichever exist).
-    |
-    | Controllers keep their route attributes either way — they're inert
-    | metadata when this is false, so toggling the flag never requires
-    | touching a controller.
-    |
-    */
-
-    'route_attributes' => [
-        'enabled' => env('PROJECT_ROUTE_ATTRIBUTES', false),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Dashboard Routes
     |--------------------------------------------------------------------------
     |
-    | Applied centrally to every module's Routes/dashboard.php (when route
-    | attributes are disabled) — a separate, typically authenticated,
-    | backoffice section distinct from the public web/api routes.
+    | Applied centrally to every module's Routes/dashboard.php — a separate,
+    | typically authenticated, backoffice section distinct from the public
+    | web/api routes.
     |
     */
 

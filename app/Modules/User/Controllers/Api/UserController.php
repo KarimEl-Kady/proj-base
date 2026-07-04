@@ -9,22 +9,13 @@ use App\Modules\User\Requests\UpdateUserRequest;
 use App\Modules\User\Resources\UserResource;
 use App\Modules\User\Services\UserService;
 use Illuminate\Http\JsonResponse;
-use Spatie\RouteAttributes\Attributes\Delete;
-use Spatie\RouteAttributes\Attributes\Get;
-use Spatie\RouteAttributes\Attributes\Middleware;
-use Spatie\RouteAttributes\Attributes\Post;
-use Spatie\RouteAttributes\Attributes\Prefix;
-use Spatie\RouteAttributes\Attributes\Put;
 
-#[Prefix('api/v1/users')]
-#[Middleware('api')]
 class UserController extends Controller
 {
     public function __construct(
         protected UserService $userService
     ) {}
 
-    #[Get('/', name: 'api.users.index')]
     public function index(FetchUserRequest $request): JsonResponse
     {
         $users = $this->userService->fetch($request);
@@ -35,7 +26,6 @@ class UserController extends Controller
         );
     }
 
-    #[Post('/', name: 'api.users.store')]
     public function store(CreateUserRequest $request): JsonResponse
     {
         $user = $this->userService->create($request->validated());
@@ -47,7 +37,6 @@ class UserController extends Controller
         );
     }
 
-    #[Get('/{user}', name: 'api.users.show')]
     public function show(string $id): JsonResponse
     {
         $user = $this->userService->findOrFail($id);
@@ -58,7 +47,6 @@ class UserController extends Controller
         );
     }
 
-    #[Put('/{user}', name: 'api.users.update')]
     public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
         $user = $this->userService->update($id, $request->validated());
@@ -69,7 +57,6 @@ class UserController extends Controller
         );
     }
 
-    #[Delete('/{user}', name: 'api.users.destroy')]
     public function destroy(string $id): JsonResponse
     {
         $this->userService->delete($id);

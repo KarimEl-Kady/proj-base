@@ -1,0 +1,30 @@
+<?php
+
+namespace Local\DataResponse\Concerns;
+
+use Illuminate\Http\JsonResponse;
+use Local\DataResponse\DataResponse;
+
+/**
+ * Drop into any controller for jsonResponse()/jsonError() helpers built on
+ * the shared DataResponse envelope.
+ */
+trait BuildsDataResponses
+{
+    protected function jsonResponse(
+        mixed $data = null,
+        ?string $message = null,
+        int $status = 200,
+        array $headers = []
+    ): JsonResponse {
+        return DataResponse::success($data, $message, $status, $headers);
+    }
+
+    protected function jsonError(
+        ?string $message = null,
+        int $status = 400,
+        mixed $errors = null
+    ): JsonResponse {
+        return DataResponse::error($message, $status, $errors);
+    }
+}

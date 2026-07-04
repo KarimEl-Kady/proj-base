@@ -29,7 +29,6 @@ class CoreServiceProvider extends ServiceProvider
 
         $this->loadHelpers();
         $this->registerModuleProviders();
-        $this->configureRouteAttributes();
         $this->configureApiResources();
     }
 
@@ -136,58 +135,21 @@ class CoreServiceProvider extends ServiceProvider
         }
     }
 
-    protected function configureRouteAttributes(): void
-    {
-        if (! config('project.route_attributes.enabled', true)) {
-            return;
-        }
-
-        $directories = [];
-
-        // Register Core module's API controllers (e.g. HealthController)
-        $coreApiDir = module_path('Core', 'Controllers/Api');
-        if (is_dir($coreApiDir)) {
-            $directories['App\\Modules\\Core\\Controllers\\Api\\'] = $coreApiDir;
-        }
-
-        foreach (config('project.modules', []) as $module) {
-            $namespace = "App\\Modules\\{$module}\\Controllers";
-
-            $apiDir = module_path($module, 'Controllers/Api');
-            if (is_dir($apiDir)) {
-                $directories[$namespace.'\\Api\\'] = $apiDir;
-            }
-
-            $webDir = module_path($module, 'Controllers/Web');
-            if (is_dir($webDir)) {
-                $directories[$namespace.'\\Web\\'] = $webDir;
-            }
-        }
-
-        config()->set('route-attributes.directories', $directories);
-    }
-
     /**
-     * Classic route files — the alternative to route attributes. Loaded for
-     * every active module (plus Core) when project.route_attributes.enabled
-     * is false. Each file is optional; only existing ones are registered.
+     * Module route files. Loaded for every active module (plus Core); each
+     * file is optional, only existing ones are registered.
      *
      * - Routes/api.php        under the "api" middleware group
      * - Routes/web.php        under the "web" middleware group
      * - Routes/dashboard.php  under "web" + project.routes.dashboard config
      *
-     * Prefixes/names are declared inside each file itself (mirroring the
-     * #[Prefix]/#[Middleware] attributes they replace) except for
-     * dashboard.php, which gets its prefix/name/middleware centrally from
+     * Prefixes/names for api.php/web.php are declared inside each file
+     * itself. dashboard.php gets its prefix/name/middleware centrally from
      * project.routes.dashboard so every module's backoffice section is
      * consistent.
      */
     protected function loadModuleRouteFiles(): void
     {
-        if (config('project.route_attributes.enabled', false)) {
-            return;
-        }
-
         $modules = array_unique(array_merge(['Core'], config('project.modules', [])));
 
         foreach ($modules as $module) {

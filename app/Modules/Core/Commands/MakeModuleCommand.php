@@ -319,8 +319,6 @@ class MakeModuleCommand extends Command
         $createRequest = "Create{$this->moduleName}Request";
         $updateRequest = "Update{$this->moduleName}Request";
         $humanName = Str::headline($this->pluralKebab);
-        $apiPrefix = config('project.api.prefix', 'api');
-        $apiVersion = config('project.api.version', 'v1');
 
         $content = <<<PHP
         <?php
@@ -334,22 +332,13 @@ class MakeModuleCommand extends Command
         use {$this->namespace}\\Resources\\{$resourceName};
         use {$this->namespace}\\Services\\{$serviceName};
         use Illuminate\\Http\\JsonResponse;
-        use Spatie\\RouteAttributes\\Attributes\\Delete;
-        use Spatie\\RouteAttributes\\Attributes\\Get;
-        use Spatie\\RouteAttributes\\Attributes\\Middleware;
-        use Spatie\\RouteAttributes\\Attributes\\Post;
-        use Spatie\\RouteAttributes\\Attributes\\Prefix;
-        use Spatie\\RouteAttributes\\Attributes\\Put;
 
-        #[Prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')]
-        #[Middleware('api')]
         class {$name} extends Controller
         {
             public function __construct(
                 protected {$serviceName} \${$this->serviceVar}
             ) {}
 
-            #[Get('/', name: 'api.{$this->pluralSnake}.index')]
             public function index({$fetchRequest} \$request): JsonResponse
             {
                 \$records = \$this->{$this->serviceVar}->fetch(\$request);
@@ -360,7 +349,6 @@ class MakeModuleCommand extends Command
                 );
             }
 
-            #[Post('/', name: 'api.{$this->pluralSnake}.store')]
             public function store({$createRequest} \$request): JsonResponse
             {
                 \$record = \$this->{$this->serviceVar}->create(\$request->validated());
@@ -372,7 +360,6 @@ class MakeModuleCommand extends Command
                 );
             }
 
-            #[Get('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.show')]
             public function show(string \$id): JsonResponse
             {
                 \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
@@ -383,7 +370,6 @@ class MakeModuleCommand extends Command
                 );
             }
 
-            #[Put('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.update')]
             public function update({$updateRequest} \$request, string \$id): JsonResponse
             {
                 \$record = \$this->{$this->serviceVar}->update(\$id, \$request->validated());
@@ -394,7 +380,6 @@ class MakeModuleCommand extends Command
                 );
             }
 
-            #[Delete('/{{$this->paramName}}', name: 'api.{$this->pluralSnake}.destroy')]
             public function destroy(string \$id): JsonResponse
             {
                 \$this->{$this->serviceVar}->delete(\$id);
@@ -428,22 +413,13 @@ class MakeModuleCommand extends Command
         use {$this->namespace}\\Services\\{$serviceName};
         use Illuminate\\Http\\RedirectResponse;
         use Illuminate\\View\\View;
-        use Spatie\\RouteAttributes\\Attributes\\Delete;
-        use Spatie\\RouteAttributes\\Attributes\\Get;
-        use Spatie\\RouteAttributes\\Attributes\\Middleware;
-        use Spatie\\RouteAttributes\\Attributes\\Post;
-        use Spatie\\RouteAttributes\\Attributes\\Prefix;
-        use Spatie\\RouteAttributes\\Attributes\\Put;
 
-        #[Prefix('{$this->pluralKebab}')]
-        #[Middleware('web')]
         class {$name} extends Controller
         {
             public function __construct(
                 protected {$serviceName} \${$this->serviceVar}
             ) {}
 
-            #[Get('/', name: '{$this->pluralSnake}.index')]
             public function index(): View
             {
                 \$records = \$this->{$this->serviceVar}->paginate();
@@ -451,13 +427,11 @@ class MakeModuleCommand extends Command
                 return view('{$this->singularKebab}::index', compact('records'));
             }
 
-            #[Get('/create', name: '{$this->pluralSnake}.create')]
             public function create(): View
             {
                 return view('{$this->singularKebab}::create');
             }
 
-            #[Post('/', name: '{$this->pluralSnake}.store')]
             public function store({$createRequest} \$request): RedirectResponse
             {
                 \$this->{$this->serviceVar}->create(\$request->validated());
@@ -466,7 +440,6 @@ class MakeModuleCommand extends Command
                     ->with('success', '{$this->moduleName} created successfully.');
             }
 
-            #[Get('/{{$this->paramName}}', name: '{$this->pluralSnake}.show')]
             public function show(string \$id): View
             {
                 \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
@@ -474,7 +447,6 @@ class MakeModuleCommand extends Command
                 return view('{$this->singularKebab}::show', compact('record'));
             }
 
-            #[Get('/{{$this->paramName}}/edit', name: '{$this->pluralSnake}.edit')]
             public function edit(string \$id): View
             {
                 \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
@@ -482,7 +454,6 @@ class MakeModuleCommand extends Command
                 return view('{$this->singularKebab}::edit', compact('record'));
             }
 
-            #[Put('/{{$this->paramName}}', name: '{$this->pluralSnake}.update')]
             public function update({$updateRequest} \$request, string \$id): RedirectResponse
             {
                 \$this->{$this->serviceVar}->update(\$id, \$request->validated());
@@ -491,7 +462,6 @@ class MakeModuleCommand extends Command
                     ->with('success', '{$this->moduleName} updated successfully.');
             }
 
-            #[Delete('/{{$this->paramName}}', name: '{$this->pluralSnake}.destroy')]
             public function destroy(string \$id): RedirectResponse
             {
                 \$this->{$this->serviceVar}->delete(\$id);
@@ -506,7 +476,7 @@ class MakeModuleCommand extends Command
         $this->write("Controllers/Web/{$name}.php", $content);
     }
 
-    // ── Route files (used when project.route_attributes.enabled is false) ──
+    // ── Route files ──────────────────────────────────────────────────
 
     protected function makeApiRoutes(): void
     {
@@ -525,9 +495,7 @@ class MakeModuleCommand extends Command
         | {$this->moduleName} API Routes
         |--------------------------------------------------------------------------
         |
-        | Loaded under the "api" middleware group by CoreServiceProvider when
-        | project.route_attributes.enabled is false. Mirrors {$controller}'s
-        | #[Prefix] / #[Middleware] attributes.
+        | Loaded under the "api" middleware group by CoreServiceProvider.
         |
         */
 
@@ -559,9 +527,7 @@ class MakeModuleCommand extends Command
         | {$this->moduleName} Web Routes
         |--------------------------------------------------------------------------
         |
-        | Loaded under the "web" middleware group by CoreServiceProvider when
-        | project.route_attributes.enabled is false. Mirrors {$controller}'s
-        | #[Prefix] / #[Middleware] attributes.
+        | Loaded under the "web" middleware group by CoreServiceProvider.
         |
         */
 
@@ -591,9 +557,9 @@ class MakeModuleCommand extends Command
             | {$this->moduleName} Dashboard Routes
             |--------------------------------------------------------------------------
             |
-            | Loaded under project.routes.dashboard by CoreServiceProvider when
-            | project.route_attributes.enabled is false. This module has no web
-            | controller to expose here — add one and wire it up if needed.
+            | Loaded under project.routes.dashboard by CoreServiceProvider. This
+            | module has no web controller to expose here — add one and wire it
+            | up if needed.
             |
             */
 
@@ -616,9 +582,9 @@ class MakeModuleCommand extends Command
         |--------------------------------------------------------------------------
         |
         | Loaded under project.routes.dashboard (prefix, middleware, name prefix
-        | from config/project.php) by CoreServiceProvider when
-        | project.route_attributes.enabled is false. Reuses the Web controller —
-        | swap in a dedicated Controllers/Dashboard controller for a real backoffice.
+        | from config/project.php) by CoreServiceProvider. Reuses the Web
+        | controller — swap in a dedicated Controllers/Dashboard controller for
+        | a real backoffice.
         |
         */
 

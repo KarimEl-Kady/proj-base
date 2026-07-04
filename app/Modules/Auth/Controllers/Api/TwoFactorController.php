@@ -7,15 +7,9 @@ use App\Modules\Auth\Support\Totp;
 use App\Modules\Core\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\RouteAttributes\Attributes\Middleware;
-use Spatie\RouteAttributes\Attributes\Post;
-use Spatie\RouteAttributes\Attributes\Prefix;
 
-#[Prefix('api/v1/auth/2fa')]
-#[Middleware(['api', 'auth:sanctum'])]
 class TwoFactorController extends Controller
 {
-    #[Post('/enable', name: 'api.auth.2fa.enable')]
     public function enable(Request $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
@@ -39,7 +33,6 @@ class TwoFactorController extends Controller
         ], 'Scan the QR code, then confirm with a code.');
     }
 
-    #[Post('/confirm', name: 'api.auth.2fa.confirm')]
     public function confirm(TwoFactorCodeRequest $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
@@ -59,7 +52,6 @@ class TwoFactorController extends Controller
         return $this->jsonResponse(null, 'Two-factor authentication enabled.');
     }
 
-    #[Post('/disable', name: 'api.auth.2fa.disable')]
     public function disable(TwoFactorCodeRequest $request): JsonResponse
     {
         $this->ensureFeatureEnabled();

@@ -6,21 +6,13 @@ use App\Modules\Auth\Requests\CreateTokenRequest;
 use App\Modules\Core\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\RouteAttributes\Attributes\Delete;
-use Spatie\RouteAttributes\Attributes\Get;
-use Spatie\RouteAttributes\Attributes\Middleware;
-use Spatie\RouteAttributes\Attributes\Post;
-use Spatie\RouteAttributes\Attributes\Prefix;
 
 /**
  * Named personal access tokens (PROJECT_FEATURE_API_TOKENS) — for
  * integrations/CLI use, separate from the login token flow.
  */
-#[Prefix('api/v1/auth/tokens')]
-#[Middleware(['api', 'auth:sanctum'])]
 class TokenController extends Controller
 {
-    #[Get('/', name: 'api.auth.tokens.index')]
     public function index(Request $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
@@ -31,7 +23,6 @@ class TokenController extends Controller
         return $this->jsonResponse($tokens, 'Tokens retrieved successfully.');
     }
 
-    #[Post('/', name: 'api.auth.tokens.store')]
     public function store(CreateTokenRequest $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
@@ -44,7 +35,6 @@ class TokenController extends Controller
         ], 'Token created successfully. Store it now — it will not be shown again.', 201);
     }
 
-    #[Delete('/{id}', name: 'api.auth.tokens.destroy')]
     public function destroy(Request $request, int $id): JsonResponse
     {
         $this->ensureFeatureEnabled();

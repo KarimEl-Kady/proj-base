@@ -74,7 +74,7 @@ services:
       PROJECT_API_PREFIX: ${PROJECT_API_PREFIX:-api}
       PROJECT_API_VERSION: ${PROJECT_API_VERSION:-v1}
       PROJECT_API_RATE_LIMIT: ${PROJECT_API_RATE_LIMIT:-60}
-      PROJECT_ROUTE_ATTRIBUTES: ${PROJECT_ROUTE_ATTRIBUTES:-true}
+      PROJECT_DASHBOARD_PREFIX: ${PROJECT_DASHBOARD_PREFIX:-dashboard}
       PROJECT_AUTH_DRIVER: ${PROJECT_AUTH_DRIVER:-session}
       PROJECT_FEATURE_REGISTRATION: ${PROJECT_FEATURE_REGISTRATION:-true}
       PROJECT_FEATURE_EMAIL_VERIFICATION: ${PROJECT_FEATURE_EMAIL_VERIFICATION:-false}
@@ -232,7 +232,6 @@ services:
       CACHE_STORE: ${CACHE_STORE:-redis}
       QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
       PROJECT_DB_DRIVER: ${PROJECT_DB_DRIVER:-mysql}
-      PROJECT_ROUTE_ATTRIBUTES: ${PROJECT_ROUTE_ATTRIBUTES:-true}
     entrypoint: ["entrypoint.sh"]
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
     depends_on:
@@ -278,7 +277,6 @@ services:
       CACHE_STORE: ${CACHE_STORE:-redis}
       QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
       PROJECT_DB_DRIVER: ${PROJECT_DB_DRIVER:-mysql}
-      PROJECT_ROUTE_ATTRIBUTES: ${PROJECT_ROUTE_ATTRIBUTES:-true}
     entrypoint: ["entrypoint.sh"]
     command: ["/bin/sh", "-c", "echo '* * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1' | crontab - && crond -f -l 2"]
     depends_on:

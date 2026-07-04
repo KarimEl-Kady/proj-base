@@ -7,16 +7,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Spatie\RouteAttributes\Attributes\Get;
-use Spatie\RouteAttributes\Attributes\Prefix;
 
-#[Prefix('api/health')]
 class HealthController extends Controller
 {
     /**
      * Quick liveness probe — always returns 200 if the app is up.
      */
-    #[Get('/', name: 'api.health')]
     public function __invoke(): JsonResponse
     {
         $checks = [

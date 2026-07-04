@@ -227,15 +227,9 @@ class ModuleMakeCommand extends Command
 
             use App\\Modules\\Core\\Controllers\\Controller;
             use Illuminate\\View\\View;
-            use Spatie\\RouteAttributes\\Attributes\\Get;
-            use Spatie\\RouteAttributes\\Attributes\\Middleware;
-            use Spatie\\RouteAttributes\\Attributes\\Prefix;
 
-            #[Prefix('{$pluralKebab}')]
-            #[Middleware('web')]
             class {$name} extends Controller
             {
-                #[Get('/', name: '{$pluralSnake}.index')]
                 public function index(): View
                 {
                     return view('{$pluralKebab}::index');
@@ -243,7 +237,7 @@ class ModuleMakeCommand extends Command
             }
             PHP);
 
-            $this->hintRouteFileIfNeeded(
+            $this->hintRouteFile(
                 'web',
                 "Route::get('/{$pluralKebab}', [{$this->namespace}\\Controllers\\Web\\{$name}::class, 'index'])->name('{$pluralSnake}.index');"
             );
@@ -261,15 +255,9 @@ class ModuleMakeCommand extends Command
 
         use App\\Modules\\Core\\Controllers\\Controller;
         use Illuminate\\Http\\JsonResponse;
-        use Spatie\\RouteAttributes\\Attributes\\Get;
-        use Spatie\\RouteAttributes\\Attributes\\Middleware;
-        use Spatie\\RouteAttributes\\Attributes\\Prefix;
 
-        #[Prefix('{$apiPrefix}/{$apiVersion}/{$pluralKebab}')]
-        #[Middleware('api')]
         class {$name} extends Controller
         {
-            #[Get('/', name: 'api.{$pluralSnake}.index')]
             public function index(): JsonResponse
             {
                 return \$this->jsonResponse([]);
@@ -277,7 +265,7 @@ class ModuleMakeCommand extends Command
         }
         PHP);
 
-        $this->hintRouteFileIfNeeded(
+        $this->hintRouteFile(
             'api',
             "Route::get('/{$apiPrefix}/{$apiVersion}/{$pluralKebab}', [{$this->namespace}\\Controllers\\Api\\{$name}::class, 'index'])->name('api.{$pluralSnake}.index');"
         );
@@ -286,18 +274,15 @@ class ModuleMakeCommand extends Command
     }
 
     /**
-     * When route attributes are disabled, controllers generated one-at-a-time
-     * aren't auto-wired into Routes/{api,web}.php (unlike make:module, which
-     * writes the whole file up front) — point the developer at what to add.
+     * Controllers generated one-at-a-time aren't auto-wired into
+     * Routes/{api,web}.php (unlike make:module, which writes the whole file
+     * up front, since it knows every route in advance) — point the
+     * developer at what to add.
      */
-    protected function hintRouteFileIfNeeded(string $type, string $snippet): void
+    protected function hintRouteFile(string $type, string $snippet): void
     {
-        if (config('project.route_attributes.enabled', false)) {
-            return;
-        }
-
         $this->newLine();
-        $this->warn("route_attributes is disabled — add this to Routes/{$type}.php:");
+        $this->warn("Add this to Routes/{$type}.php:");
         $this->line("  {$snippet}");
     }
 
