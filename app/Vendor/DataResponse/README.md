@@ -23,9 +23,10 @@ use Local\DataResponse\DataResponse;
 
 return DataResponse::success($user, 'User created.', 201);
 return DataResponse::error('Not found.', 404);
+return DataResponse::raw(['status' => 'healthy']); // escape hatch for non-envelope shapes
 ```
 
-Or drop the trait into a controller for `jsonResponse()`/`jsonError()` helpers:
+Or drop the trait into a controller for `successResponse()`/`failedResponse()` helpers:
 
 ```php
 use Local\DataResponse\Concerns\BuildsDataResponses;
@@ -36,12 +37,12 @@ class UserController extends Controller
 
     public function show($id)
     {
-        return $this->jsonResponse(new UserResource($user), 'User retrieved.');
+        return $this->successResponse(new UserResource($user), 'User retrieved.');
     }
 }
 ```
 
-`App\Modules\Core\Controllers\Controller` already uses this trait, so every module controller gets `jsonResponse()`/`jsonError()` for free.
+`App\Modules\Core\Controllers\Controller` already uses this trait, so every module controller gets `successResponse()`/`failedResponse()` for free.
 
 ## Envelope
 

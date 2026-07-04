@@ -23,7 +23,7 @@ class AuthController extends Controller
 
         $result = $this->authService->register($request->validated());
 
-        return $this->jsonResponse(
+        return $this->successResponse(
             $this->authPayload($result),
             'Registered successfully.',
             201
@@ -39,19 +39,19 @@ class AuthController extends Controller
             $request->validated('device', 'api'),
         );
 
-        return $this->jsonResponse($this->authPayload($result), 'Logged in successfully.');
+        return $this->successResponse($this->authPayload($result), 'Logged in successfully.');
     }
 
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout($request->user());
 
-        return $this->jsonResponse(null, 'Logged out successfully.');
+        return $this->successResponse(null, 'Logged out successfully.');
     }
 
     public function me(Request $request): JsonResponse
     {
-        return $this->jsonResponse(
+        return $this->successResponse(
             new UserResource($request->user()),
             'Authenticated user retrieved successfully.'
         );

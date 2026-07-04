@@ -13,7 +13,7 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 /**
- * Renders API exceptions in the same envelope as Controller::jsonResponse()
+ * Renders API exceptions in the same envelope as Controller::successResponse()
  * ({success, message, errors}), via the local/data-response package.
  * Registered in bootstrap/app.php.
  */

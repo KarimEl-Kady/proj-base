@@ -20,7 +20,7 @@ class TokenController extends Controller
         $tokens = $request->user()->tokens()
             ->get(['id', 'name', 'last_used_at', 'expires_at', 'created_at']);
 
-        return $this->jsonResponse($tokens, 'Tokens retrieved successfully.');
+        return $this->successResponse($tokens, 'Tokens retrieved successfully.');
     }
 
     public function store(CreateTokenRequest $request): JsonResponse
@@ -29,7 +29,7 @@ class TokenController extends Controller
 
         $token = $request->user()->createToken($request->validated('name'));
 
-        return $this->jsonResponse([
+        return $this->successResponse([
             'token' => $token->plainTextToken,
             'token_type' => 'Bearer',
         ], 'Token created successfully. Store it now — it will not be shown again.', 201);
@@ -41,7 +41,7 @@ class TokenController extends Controller
 
         $request->user()->tokens()->where('id', $id)->delete();
 
-        return $this->jsonResponse(null, 'Token revoked successfully.');
+        return $this->successResponse(null, 'Token revoked successfully.');
     }
 
     protected function ensureFeatureEnabled(): void

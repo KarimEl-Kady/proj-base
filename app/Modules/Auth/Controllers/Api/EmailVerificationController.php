@@ -15,12 +15,12 @@ class EmailVerificationController extends Controller
         abort_unless(config('project.features.email_verification', false), 403, 'Email verification is disabled.');
 
         if ($request->user()->hasVerifiedEmail()) {
-            return $this->jsonResponse(null, 'Email is already verified.');
+            return $this->successResponse(null, 'Email is already verified.');
         }
 
         $request->user()->sendEmailVerificationNotification();
 
-        return $this->jsonResponse(null, 'Verification email sent.');
+        return $this->successResponse(null, 'Verification email sent.');
     }
 
     /**
@@ -41,6 +41,6 @@ class EmailVerificationController extends Controller
             event(new Verified($user));
         }
 
-        return $this->jsonResponse(null, 'Email verified successfully.');
+        return $this->successResponse(null, 'Email verified successfully.');
     }
 }

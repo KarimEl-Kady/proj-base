@@ -20,7 +20,7 @@ class UserController extends Controller
     {
         $users = $this->userService->fetch($request);
 
-        return $this->jsonResponse(
+        return $this->successResponse(
             UserResource::collection($users)->response()->getData(true),
             'Users retrieved successfully.'
         );
@@ -30,7 +30,7 @@ class UserController extends Controller
     {
         $user = $this->userService->create($request->validated());
 
-        return $this->jsonResponse(
+        return $this->successResponse(
             new UserResource($user),
             'User created successfully.',
             201
@@ -41,7 +41,7 @@ class UserController extends Controller
     {
         $user = $this->userService->findOrFail($id);
 
-        return $this->jsonResponse(
+        return $this->successResponse(
             new UserResource($user),
             'User retrieved successfully.'
         );
@@ -51,7 +51,7 @@ class UserController extends Controller
     {
         $user = $this->userService->update($id, $request->validated());
 
-        return $this->jsonResponse(
+        return $this->successResponse(
             new UserResource($user),
             'User updated successfully.'
         );
@@ -61,6 +61,6 @@ class UserController extends Controller
     {
         $this->userService->delete($id);
 
-        return $this->jsonResponse(null, 'User deleted successfully.');
+        return $this->successResponse(null, 'User deleted successfully.');
     }
 }

@@ -46,7 +46,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Scaffold one: `php artisan make:package Payment`, then install: `composer require local/payment:"*"`. Providers are auto-discovered via `extra.laravel.providers`.
 - Inspect: `php artisan package:list`.
 - First-party packages:
-  - `local/data-response` (`app/Vendor/DataResponse`) — every JSON response in the app is built here, no exceptions. `Local\DataResponse\DataResponse::success()/error()` build the standard envelope (`{success, message, data|errors}`) directly; `Local\DataResponse\Concerns\BuildsDataResponses` is the trait that gives `jsonResponse()`/`jsonError()` to any controller — Core's base `Controller` already uses it, and `Core\Exceptions\Handler` uses `error()` for validation/404/401/403/500. `DataResponse::raw($payload, $status)` is the escape hatch for responses that intentionally don't use the envelope (e.g. `HealthController`'s flat status shape) — it still funnels through the same class. Key names and default messages are configurable in `config/data_response.php` (publish tag `data-response-config`), so renaming the envelope is a config change, not a find-and-replace across controllers.
+  - `local/data-response` (`app/Vendor/DataResponse`) — every JSON response in the app is built here, no exceptions. `Local\DataResponse\DataResponse::success()/error()` build the standard envelope (`{success, message, data|errors}`) directly; `Local\DataResponse\Concerns\BuildsDataResponses` is the trait that gives `successResponse()`/`failedResponse()` to any controller — Core's base `Controller` already uses it, and `Core\Exceptions\Handler` uses `error()` for validation/404/401/403/500. `DataResponse::raw($payload, $status)` is the escape hatch for responses that intentionally don't use the envelope (e.g. `HealthController`'s flat status shape) — it still funnels through the same class. Key names and default messages are configurable in `config/data_response.php` (publish tag `data-response-config`), so renaming the envelope is a config change, not a find-and-replace across controllers.
   - `local/media` (`app/Vendor/Media`) — polymorphic attachments. Add `Local\Media\Traits\HasMedia` to a model, then `$model->addMedia($uploadedFile, 'collection')`, `getFirstMediaUrl()`, `clearMedia()`. Config in `config/media.php` (publish tag `media-config`).
 
 ### Routing (plain route files)
@@ -73,7 +73,7 @@ Controllers are plain classes with public action methods — no `#[Prefix]`/`#[G
 - Models: `App\Modules\Core\Models\Model` extends Eloquent, includes `HasUuid` trait, has `scopeForTenant()`.
 - Repositories: `App\Modules\Core\Repositories\BaseRepository` provides standard CRUD.
 - Services: `App\Modules\Core\Services\BaseService` wraps a repository.
-- Controllers: `App\Modules\Core\Controllers\Controller` adds `jsonResponse()` and `jsonError()` helpers (via the `local/data-response` package's `BuildsDataResponses` trait — see below). App-level `App\Http\Controllers\Controller` extends it.
+- Controllers: `App\Modules\Core\Controllers\Controller` adds `successResponse()` and `failedResponse()` helpers (via the `local/data-response` package's `BuildsDataResponses` trait — see below). App-level `App\Http\Controllers\Controller` extends it.
 - Resources: `App\Modules\Core\Resources\BaseResource` extends `JsonResource` for API response transformation.
 - Requests: `App\Modules\Core\Requests\BaseRequest` (authorize defaults to true) — **all module requests extend it**. `App\Modules\Core\Requests\FetchRequest` extends it for listing endpoints.
 - All modules follow: Controller → Service → Repository → Model, with Resources for API output.
@@ -179,7 +179,7 @@ INSTALL_XDEBUG=true make rebuild
 - Returns `200` when all checks pass (`healthy`), `503` when any check fails (`degraded`).
 - Response includes version from `config('project.version')`, per-check latency, and driver info.
 - Implemented as `App\Modules\Core\Controllers\Api\HealthController` (route: `app/Modules/Core/Routes/api.php`).
-- Deliberately not the success/message/data envelope — built via `DataResponse::raw()` instead of `jsonResponse()` so tooling that expects a flat shape (uptime monitors, k8s probes) keeps working.
+- Deliberately not the success/message/data envelope — built via `DataResponse::raw()` instead of `successResponse()` so tooling that expects a flat shape (uptime monitors, k8s probes) keeps working.
 
 ## CI/CD
 

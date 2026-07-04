@@ -343,7 +343,7 @@ class MakeModuleCommand extends Command
             {
                 \$records = \$this->{$this->serviceVar}->fetch(\$request);
 
-                return \$this->jsonResponse(
+                return \$this->successResponse(
                     {$resourceName}::collection(\$records)->response()->getData(true),
                     '{$humanName} retrieved successfully.'
                 );
@@ -353,7 +353,7 @@ class MakeModuleCommand extends Command
             {
                 \$record = \$this->{$this->serviceVar}->create(\$request->validated());
 
-                return \$this->jsonResponse(
+                return \$this->successResponse(
                     new {$resourceName}(\$record),
                     '{$this->moduleName} created successfully.',
                     201
@@ -364,7 +364,7 @@ class MakeModuleCommand extends Command
             {
                 \$record = \$this->{$this->serviceVar}->findOrFail(\$id);
 
-                return \$this->jsonResponse(
+                return \$this->successResponse(
                     new {$resourceName}(\$record),
                     '{$this->moduleName} retrieved successfully.'
                 );
@@ -374,7 +374,7 @@ class MakeModuleCommand extends Command
             {
                 \$record = \$this->{$this->serviceVar}->update(\$id, \$request->validated());
 
-                return \$this->jsonResponse(
+                return \$this->successResponse(
                     new {$resourceName}(\$record),
                     '{$this->moduleName} updated successfully.'
                 );
@@ -384,7 +384,7 @@ class MakeModuleCommand extends Command
             {
                 \$this->{$this->serviceVar}->delete(\$id);
 
-                return \$this->jsonResponse(null, '{$this->moduleName} deleted successfully.');
+                return \$this->successResponse(null, '{$this->moduleName} deleted successfully.');
             }
         }
 

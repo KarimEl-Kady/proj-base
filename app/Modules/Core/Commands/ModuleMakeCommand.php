@@ -260,7 +260,7 @@ class ModuleMakeCommand extends Command
         {
             public function index(): JsonResponse
             {
-                return \$this->jsonResponse([]);
+                return \$this->successResponse([]);
             }
         }
         PHP);
