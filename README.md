@@ -154,13 +154,14 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 
 Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Two first-party examples ship with the base:
 
-**`local/data-response`** — the JSON envelope every controller uses. `App\Modules\Core\Controllers\Controller` already includes its trait, so `jsonResponse()`/`jsonError()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
+**`local/data-response`** — every JSON response in the app is built here. `App\Modules\Core\Controllers\Controller` already includes its trait, so `jsonResponse()`/`jsonError()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
 
 ```php
 use Local\DataResponse\DataResponse;
 
 DataResponse::success($user, 'User created.', 201);
 DataResponse::error('Not found.', 404);
+DataResponse::raw(['status' => 'healthy', 'checks' => [...]]); // escape hatch for non-envelope shapes
 ```
 
 Rename the envelope keys or default messages project-wide via `config/data_response.php` (publish with `--tag=data-response-config`) — no controller changes needed.

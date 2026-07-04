@@ -46,7 +46,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Scaffold one: `php artisan make:package Payment`, then install: `composer require local/payment:"*"`. Providers are auto-discovered via `extra.laravel.providers`.
 - Inspect: `php artisan package:list`.
 - First-party packages:
-  - `local/data-response` (`app/Vendor/DataResponse`) — the JSON envelope (`{success, message, data|errors}`). `Local\DataResponse\DataResponse::success()/error()` build responses directly; `Local\DataResponse\Concerns\BuildsDataResponses` is the trait that gives `jsonResponse()`/`jsonError()` to any controller — Core's base `Controller` already uses it. Key names and default messages are configurable in `config/data_response.php` (publish tag `data-response-config`), so renaming the envelope is a config change, not a find-and-replace across controllers.
+  - `local/data-response` (`app/Vendor/DataResponse`) — every JSON response in the app is built here, no exceptions. `Local\DataResponse\DataResponse::success()/error()` build the standard envelope (`{success, message, data|errors}`) directly; `Local\DataResponse\Concerns\BuildsDataResponses` is the trait that gives `jsonResponse()`/`jsonError()` to any controller — Core's base `Controller` already uses it, and `Core\Exceptions\Handler` uses `error()` for validation/404/401/403/500. `DataResponse::raw($payload, $status)` is the escape hatch for responses that intentionally don't use the envelope (e.g. `HealthController`'s flat status shape) — it still funnels through the same class. Key names and default messages are configurable in `config/data_response.php` (publish tag `data-response-config`), so renaming the envelope is a config change, not a find-and-replace across controllers.
   - `local/media` (`app/Vendor/Media`) — polymorphic attachments. Add `Local\Media\Traits\HasMedia` to a model, then `$model->addMedia($uploadedFile, 'collection')`, `getFirstMediaUrl()`, `clearMedia()`. Config in `config/media.php` (publish tag `media-config`).
 
 ### Routing (plain route files)
@@ -178,7 +178,8 @@ INSTALL_XDEBUG=true make rebuild
 - `GET /api/health` — returns structured JSON with DB, Cache, Redis, and Queue status.
 - Returns `200` when all checks pass (`healthy`), `503` when any check fails (`degraded`).
 - Response includes version from `config('project.version')`, per-check latency, and driver info.
-- Implemented as `App\Modules\Core\Controllers\Api\HealthController` using route attributes.
+- Implemented as `App\Modules\Core\Controllers\Api\HealthController` (route: `app/Modules/Core/Routes/api.php`).
+- Deliberately not the success/message/data envelope — built via `DataResponse::raw()` instead of `jsonResponse()` so tooling that expects a flat shape (uptime monitors, k8s probes) keeps working.
 
 ## CI/CD
 

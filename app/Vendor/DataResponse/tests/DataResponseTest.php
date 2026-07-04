@@ -76,4 +76,20 @@ class DataResponseTest extends TestCase
             'payload' => ['x' => 1],
         ]);
     }
+
+    public function test_raw_builds_a_response_with_exactly_the_given_payload(): void
+    {
+        $response = $this->wrap(DataResponse::raw(['status' => 'healthy', 'checks' => []], 200));
+
+        $response->assertStatus(200);
+        $response->assertExactJson(['status' => 'healthy', 'checks' => []]);
+    }
+
+    public function test_raw_respects_the_given_status_and_headers(): void
+    {
+        $response = $this->wrap(DataResponse::raw(['status' => 'degraded'], 503, ['X-Probe' => 'health']));
+
+        $response->assertStatus(503);
+        $response->assertHeader('X-Probe', 'health');
+    }
 }

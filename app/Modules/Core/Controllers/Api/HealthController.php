@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Local\DataResponse\DataResponse;
 
 class HealthController extends Controller
 {
@@ -28,7 +29,10 @@ class HealthController extends Controller
 
         $healthy = collect($checks)->every(fn (array $check) => $check['status'] === 'ok');
 
-        return response()->json([
+        // Deliberately not the success/message/data envelope — health
+        // check tooling (uptime monitors, k8s probes) expects this flat
+        // shape, so it goes through DataResponse::raw() instead.
+        return DataResponse::raw([
             'status' => $healthy ? 'healthy' : 'degraded',
             'timestamp' => now()->toIso8601String(),
             'version' => config('project.version', '1.0.0'),

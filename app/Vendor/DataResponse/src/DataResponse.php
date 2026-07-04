@@ -41,6 +41,20 @@ class DataResponse
     }
 
     /**
+     * Build a JSON response with a caller-supplied payload shape — for
+     * endpoints that intentionally don't use the success/message/data
+     * envelope (e.g. a health check's flat status/checks structure).
+     * Keeps every JSON response in the app funneled through one place
+     * even when the standard envelope doesn't apply.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public static function raw(array $payload, int $status = 200, array $headers = []): JsonResponse
+    {
+        return response()->json($payload, $status, $headers);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function successPayload(mixed $data, ?string $message, int $status): array
