@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d01bd3c6ca47f6c8a5a2bebd423a0606",
+    "content-hash": "64b9f96c038bb866c2aa358fdfdc6e2f",
     "packages": [
         {
             "name": "brick/math",
@@ -2122,6 +2122,40 @@
                 "proprietary"
             ],
             "description": "Standardized JSON response envelope (success/message/data/errors) — local path package",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "local/geo-seeder",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "app/Vendor/GeoSeeder",
+                "reference": "dea31fd7252c92de92454e5b27e813a08719b574"
+            },
+            "require": {
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Local\\GeoSeeder\\GeoSeederServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Local\\GeoSeeder\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Country + city reference data for seeding (Egypt, Kuwait, UAE, KSA) — local path package",
             "transport-options": {
                 "symlink": true,
                 "relative": true

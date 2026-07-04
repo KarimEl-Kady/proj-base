@@ -1,0 +1,24 @@
+{
+    "name": "local/geo-seeder",
+    "description": "Country + city reference data for seeding (Egypt, Kuwait, UAE, KSA) — local path package",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Local\\GeoSeeder\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Local\\GeoSeeder\\GeoSeederServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}

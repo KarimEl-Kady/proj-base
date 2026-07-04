@@ -48,6 +48,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - First-party packages:
   - `local/data-response` (`app/Vendor/DataResponse`) — every JSON response in the app is built here, no exceptions. `Local\DataResponse\DataResponse::success()/error()` build the standard envelope (`{success, message, data|errors}`) directly; `Local\DataResponse\Concerns\BuildsDataResponses` is the trait that gives `successResponse()`/`failedResponse()` to any controller — Core's base `Controller` already uses it, and `Core\Exceptions\Handler` uses `error()` for validation/404/401/403/500. `DataResponse::raw($payload, $status)` is the escape hatch for responses that intentionally don't use the envelope (e.g. `HealthController`'s flat status shape) — it still funnels through the same class. Key names and default messages are configurable in `config/data_response.php` (publish tag `data-response-config`), so renaming the envelope is a config change, not a find-and-replace across controllers.
   - `local/media` (`app/Vendor/Media`) — polymorphic attachments. Add `Local\Media\Traits\HasMedia` to a model, then `$model->addMedia($uploadedFile, 'collection')`, `getFirstMediaUrl()`, `clearMedia()`. Config in `config/media.php` (publish tag `media-config`).
+  - `local/geo-seeder` (`app/Vendor/GeoSeeder`) — country/city reference data for Egypt, Kuwait, UAE, KSA. Pure data (`src/Data/{ISO2}.php`) + `Local\GeoSeeder\GeoDataRepository` (`supported()`, `has()`, `country()`, `cities()`) — no models, no migrations, no artisan commands of its own; see the Country/City modules below for what consumes it. Which countries seed by default is `config/geo_seeder.php` → `countries`, driven by `GEO_SEED_COUNTRIES`.
 
 ### Routing (plain route files)
 
@@ -84,6 +85,7 @@ Controllers are plain classes with public action methods — no `#[Prefix]`/`#[G
 - Global query keys validated by `FetchRequest`: `pagination` (bool, default true; `false` returns the full set), `per_page` (capped at `project.pagination.max_per_page`), `page`, `word` (free-text search), `sort_by`, `sort_dir` (`asc|desc`).
 - `BaseRepository::fetch()` matches `word` with `LIKE` against the model's `protected array $searchable` columns and only sorts by columns in the model's `protected array $sortable` whitelist (default `id`, `created_at`, `updated_at`).
 - Add module filters by overriding `rules()` in the module's fetch request: `return parent::rules() + ['status' => [...]];`.
+- For filters that need to scope the query itself (not just word/sort), override `BaseRepository::baseQuery(FetchRequest $request): Builder` (default: `$this->query()`) — e.g. `CityRepository::baseQuery()` narrows to a `?country=EG` filter via `FetchCityRequest::countryCode()` before word search/sorting/pagination run on top.
 
 ### Auth module
 
@@ -91,6 +93,15 @@ Controllers are plain classes with public action methods — no `#[Prefix]`/`#[G
 - Driver via `PROJECT_AUTH_DRIVER`: `sanctum`/`token` issue Bearer tokens (lifetime `PROJECT_AUTH_TOKEN_EXPIRATION` minutes, wired to `sanctum.expiration`); `session` uses the web guard.
 - Every sub-feature is gated by its `PROJECT_FEATURE_*` flag and returns 403 when disabled. Login requires a `code` field when the user has confirmed 2FA.
 - Protected endpoints use `auth:sanctum`. `two_factor_secret` is stored encrypted and hidden from serialization.
+
+### Country / City modules
+
+- Full CRUD API modules at `/api/v1/countries` and `/api/v1/cities`, seeded from the `local/geo-seeder` package (Egypt, Kuwait, UAE, KSA by default).
+- `City belongsTo Country` / `Country hasMany City` — a genuinely bidirectional coupling, declared both ways in `config/project.php` → `boundaries.allow` (`'Country' => ['City'], 'City' => ['Country']`). Don't "fix" this into one direction; it's the real shape of the domain.
+- Both models are global reference data, **not** tenant-scoped — they skip `HasTenantScope` on purpose (every tenant shares the same list).
+- `country_id` in the API is always the country's public **uuid**, like every other identifier — `CityService::create()/update()` resolves it to the real internal id right before writing (`Country::where('uuid', ...)->value('id')`); `CityRepository::query()` eager-loads `country` so it's never an extra query.
+- `php artisan geo:seed` (in `App\Modules\Country\Commands\SeedGeoDataCommand`) is the entry point: prints a table of exactly which countries will be seeded (and which requested codes have no shipped data, so they're skipped rather than fatal) before running `CountrySeeder` then `CitySeeder`. `--countries=EG,KW` overrides `config('geo_seeder.countries')` for one run; `--fresh` deletes existing rows for just those countries first. Both seeders `updateOrCreate` (by `iso2`, and by `[country_id, name]`), so re-running — with or without the command — is always safe.
+- `FetchCityRequest` adds a `?country=EG` filter, implemented via `CityRepository::baseQuery()` (see Fetch pipeline above).
 
 ### Multi-tenancy
 

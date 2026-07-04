@@ -72,6 +72,7 @@ app/Modules/{Module}/
 | **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
 | **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
+| **Country/City reference data** | `Country` and `City` modules (full CRUD API) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
 | **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution |
 | **Feature flags** | Registration, email verification, 2FA, API tokens — togglable via env and actually implemented by the Auth module |
 
@@ -152,7 +153,7 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 
 ### Local packages
 
-Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Two first-party examples ship with the base:
+Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Three first-party examples ship with the base:
 
 **`local/data-response`** — every JSON response in the app is built here. `App\Modules\Core\Controllers\Controller` already includes its trait, so `successResponse()`/`failedResponse()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
 
@@ -178,6 +179,35 @@ $post->getFirstMediaUrl('covers');
 $post->clearMedia('covers');
 ```
 
+**`local/geo-seeder`** — country/city reference data (name, ISO2/ISO3, phone code, currency, flag, timezone; cities with coordinates) for **Egypt, Kuwait, UAE, and KSA**. Pure data + a read-only repository — no models, no migrations of its own; the `Country`/`City` modules own the tables and seed *from* this package:
+
+```php
+use Local\GeoSeeder\GeoDataRepository;
+
+app(GeoDataRepository::class)->supported();   // ['AE', 'EG', 'KW', 'SA']
+app(GeoDataRepository::class)->country('EG'); // ['name' => 'Egypt', 'iso2' => 'EG', ...]
+```
+
+Which countries get seeded is one setting — `GEO_SEED_COUNTRIES=EG,KW,AE,SA` — read by both seeders and by a dedicated command that reports its plan before touching the database:
+
+```bash
+php artisan geo:seed                    # seeds config('geo_seeder.countries')
+php artisan geo:seed --countries=EG,KW  # override for this run
+php artisan geo:seed --fresh            # wipe + reseed just these countries
+```
+
+```
+Planning to seed:
++------+---------+----------------------------+--------+
+| Code | Country | Data                       | Cities |
++------+---------+----------------------------+--------+
+| EG   | Egypt   | ok                         | 12     |
+| FR   | —       | no data — will be skipped | —      |
++------+---------+----------------------------+--------+
+```
+
+Add a country by dropping `app/Vendor/GeoSeeder/src/Data/{ISO2}.php` (same shape as the existing files) and adding its code to `GEO_SEED_COUNTRIES` — no other changes.
+
 ## Configuration
 
 Project settings live in `config/project.php` (`PROJECT_*` env vars); active modules in `config/project_modules.php`:
@@ -192,6 +222,7 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |
 | `MEDIA_DISK` / `MEDIA_MAX_FILE_SIZE` | `public` / `10240` KB | Media package |
+| `GEO_SEED_COUNTRIES` | `EG,KW,AE,SA` | ISO2 codes the `geo:seed` command / seeders act on |
 
 See `.env.example` for all options.
 

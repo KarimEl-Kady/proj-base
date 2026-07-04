@@ -62,7 +62,7 @@ abstract class BaseRepository
      */
     public function fetch(FetchRequest $request): LengthAwarePaginator|Collection
     {
-        $query = $this->query();
+        $query = $this->baseQuery($request);
 
         $word = $request->searchWord();
         $columns = $this->searchableColumns();
@@ -88,6 +88,16 @@ abstract class BaseRepository
         }
 
         return $query->paginate($request->perPage())->appends($request->query());
+    }
+
+    /**
+     * Starting point for fetch()'s query — override to scope listings to
+     * extra request-driven filters (e.g. "cities in this country") before
+     * word search / sorting / pagination are applied on top.
+     */
+    protected function baseQuery(FetchRequest $request): Builder
+    {
+        return $this->query();
     }
 
     /**

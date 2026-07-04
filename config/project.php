@@ -210,6 +210,11 @@ return [
     'boundaries' => [
         'allow' => [
             'Auth' => ['User'],
+            // Country <-> City is a genuinely bidirectional domain coupling:
+            // City::belongsTo(Country) + Country::hasMany(City), and the
+            // geo:seed command (in Country) orchestrates City's seeder too.
+            'Country' => ['City'],
+            'City' => ['Country'],
         ],
     ],
 

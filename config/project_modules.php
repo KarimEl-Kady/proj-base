@@ -16,4 +16,6 @@
 return [
     'Auth' => true,
     'User' => true,
+    'Country' => true,
+    'City' => true,
 ];
