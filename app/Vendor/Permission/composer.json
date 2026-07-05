@@ -1,0 +1,26 @@
+{
+    "name": "local/permission",
+    "description": "Roles and permissions (database-backed, cached, middleware-ready) — local path package",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/auth": "^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Local\\Permission\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Local\\Permission\\PermissionServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}

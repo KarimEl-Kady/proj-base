@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "64b9f96c038bb866c2aa358fdfdc6e2f",
+    "content-hash": "2fc26286c516c15a060f8c98c3ded3ae",
     "packages": [
         {
             "name": "brick/math",
@@ -2191,6 +2191,42 @@
                 "proprietary"
             ],
             "description": "Polymorphic media/attachments package (local path package)",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "local/permission",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "app/Vendor/Permission",
+                "reference": "66e73631ddad839350e1b1b153cfd43d2d10d879"
+            },
+            "require": {
+                "illuminate/auth": "^13.0",
+                "illuminate/database": "^13.0",
+                "illuminate/support": "^13.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Local\\Permission\\PermissionServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Local\\Permission\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Roles and permissions (database-backed, cached, middleware-ready) — local path package",
             "transport-options": {
                 "symlink": true,
                 "relative": true

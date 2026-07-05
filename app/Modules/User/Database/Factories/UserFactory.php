@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Factories;
+namespace App\Modules\User\Database\Factories;
 
 use App\Modules\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -12,16 +12,13 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     /**
      * The current password being used by the factory.
      */
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
@@ -33,9 +30,6 @@ class UserFactory extends Factory
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [

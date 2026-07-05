@@ -21,7 +21,8 @@
         "laravel/tinker": "^3.0",
         "local/data-response": "*",
         "local/geo-seeder": "*",
-        "local/media": "*"
+        "local/media": "*",
+        "local/permission": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

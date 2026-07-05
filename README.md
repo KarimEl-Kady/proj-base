@@ -67,7 +67,8 @@ app/Modules/{Module}/
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
 | **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
-| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
+| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
+| **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
 | **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
 | **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
@@ -153,7 +154,7 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 
 ### Local packages
 
-Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Three first-party examples ship with the base:
+Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Four first-party examples ship with the base:
 
 **`local/data-response`** — every JSON response in the app is built here. `App\Modules\Core\Controllers\Controller` already includes its trait, so `successResponse()`/`failedResponse()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
 
@@ -208,6 +209,41 @@ Planning to seed:
 
 Add a country by dropping `app/Vendor/GeoSeeder/src/Data/{ISO2}.php` (same shape as the existing files) and adding its code to `GEO_SEED_COUNTRIES` — no other changes.
 
+**`local/permission`** — roles and permissions, database-backed and cached. Unlike the other three packages it does own its own tables (`Role`, `Permission`, and three pivot tables) — roles/permissions are inherently data, not just reference config. Already wired into `App\Modules\User\Models\User`:
+
+```php
+use Local\Permission\Traits\HasRolesAndPermissions;
+
+class User extends Model { use HasRolesAndPermissions; }
+
+$user->assignRole('admin');                          // creates the role if missing
+$user->hasPermissionTo('posts.create');               // direct grant OR via any role
+$user->hasAnyRole('admin', 'manager');
+```
+
+Route middleware is auto-registered — `role:admin`, `permission:posts.create` (pipe-separate for "any of"), and `role_or_permission:admin|posts.create`. A failed check throws `UnauthorizedException` (extends Laravel's `AuthorizationException`), so it renders as a normal 403 through the existing exception handler — no extra wiring.
+
+Which roles/permissions should exist is one config file, mirroring `local/geo-seeder`'s pattern:
+
+```php
+// config/permission.php
+'definitions' => [
+    'permissions' => ['users.view', 'users.create', 'countries.manage', ...],
+    'roles' => [
+        'admin' => ['*'],              // every permission above
+        'manager' => ['users.view'],
+    ],
+],
+```
+
+```bash
+php artisan permission:seed              # reports the plan, then creates/syncs
+php artisan permission:seed --fresh      # also wipes existing roles/permissions (confirms first)
+php artisan permission:list              # what's actually in the database
+```
+
+The role → permission map is cached as a single unit (it's small, read on every check) and auto-flushed whenever a role's permissions change — no manual cache-busting anywhere.
+
 ## Configuration
 
 Project settings live in `config/project.php` (`PROJECT_*` env vars); active modules in `config/project_modules.php`:
@@ -223,6 +259,7 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |
 | `MEDIA_DISK` / `MEDIA_MAX_FILE_SIZE` | `public` / `10240` KB | Media package |
 | `GEO_SEED_COUNTRIES` | `EG,KW,AE,SA` | ISO2 codes the `geo:seed` command / seeders act on |
+| `PERMISSION_CACHE_ENABLED` / `PERMISSION_CACHE_TTL` | `true` / `3600` | Permission package's role→permission map cache |
 
 See `.env.example` for all options.
 

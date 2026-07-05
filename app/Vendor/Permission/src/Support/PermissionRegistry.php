@@ -1,0 +1,63 @@
+<?php
+
+namespace Local\Permission\Support;
+
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Caches the whole role -> permission-name map as one small payload,
+ * since it's read on every permission check and rarely changes. Anything
+ * that writes to roles/permissions/role_has_permissions (Role's model
+ * events, see Models/Role.php) flushes it automatically.
+ */
+class PermissionRegistry
+{
+    protected ?Collection $rolePermissionNames = null;
+
+    /**
+     * @return Collection<int, string> permission names for one role id
+     */
+    public function permissionNamesForRole(int $roleId): Collection
+    {
+        return $this->map()->get($roleId, collect());
+    }
+
+    /**
+     * @return Collection<int, Collection<int, string>> role id => permission names
+     */
+    protected function map(): Collection
+    {
+        if ($this->rolePermissionNames !== null) {
+            return $this->rolePermissionNames;
+        }
+
+        if (! config('permission.cache.enabled', true)) {
+            return $this->rolePermissionNames = $this->loadFromDatabase();
+        }
+
+        return $this->rolePermissionNames = Cache::remember(
+            config('permission.cache.key', 'local.permission.role_permission_map'),
+            config('permission.cache.ttl_seconds', 3600),
+            fn () => $this->loadFromDatabase()
+        );
+    }
+
+    protected function loadFromDatabase(): Collection
+    {
+        $tables = config('permission.table_names');
+
+        return DB::table($tables['role_has_permissions'])
+            ->join($tables['permissions'], "{$tables['permissions']}.id", '=', "{$tables['role_has_permissions']}.permission_id")
+            ->get(["{$tables['role_has_permissions']}.role_id", "{$tables['permissions']}.name"])
+            ->groupBy('role_id')
+            ->map(fn (Collection $rows) => $rows->pluck('name'));
+    }
+
+    public function forgetCache(): void
+    {
+        Cache::forget(config('permission.cache.key', 'local.permission.role_permission_map'));
+        $this->rolePermissionNames = null;
+    }
+}
