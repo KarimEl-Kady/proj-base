@@ -4,6 +4,7 @@ namespace App\Modules\User\Models;
 
 use App\Modules\Core\Models\Model;
 use App\Modules\Core\Traits\HasTenantScope;
+use App\Modules\User\Events\UserCreated;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Auth\Passwords\CanResetPassword;
@@ -37,6 +38,14 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 
     /** Columns matched by the FetchRequest `word` filter. */
     protected array $searchable = ['name', 'email'];
+
+    protected static function booted(): void
+    {
+        // Model hook (not service-layer dispatch) so the fact is emitted no
+        // matter which entry point created the user: UserService CRUD,
+        // Auth registration, factories, seeders.
+        static::created(fn (User $user) => UserCreated::dispatch($user));
+    }
 
     protected function casts(): array
     {

@@ -226,6 +226,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Async Events
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for queued listeners extending Core's QueuedListener.
+    | queue: null = the default queue (what the shipped workers consume);
+    | if you set a named queue here, add it to the workers' --queue= list.
+    |
+    */
+
+    'events' => [
+        'queue' => env('PROJECT_EVENTS_QUEUE'),
+        'tries' => (int) env('PROJECT_EVENTS_TRIES', 3),
+        'backoff' => [10, 60, 300],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     |

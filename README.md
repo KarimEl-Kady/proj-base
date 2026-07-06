@@ -69,7 +69,7 @@ app/Modules/{Module}/
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
 | **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
-| **Events & listeners** | Every active module's `Listeners/` dir is auto-discovered (type-hinted `handle()` = wired, zero registration) — `event:cache`-compatible, disabled modules excluded |
+| **Event-driven messaging** | `DomainEvent` base (after-commit dispatch, uuid + timestamp) fanned out to auto-discovered module listeners; `QueuedListener` base for async handlers over the queue — `event:cache`-compatible, disabled modules excluded |
 | **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
 | **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
@@ -145,24 +145,36 @@ Route::prefix('api/v1/posts')->group(function () {
 
 `make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. `module:make controller` (single-component) prints the `Route::` line to add by hand, since it can't safely append to an existing file.
 
-### Events & listeners
+### Events & listeners (event-driven messaging)
+
+The base's async architecture is **event-driven over the queue** — events are *facts* (`UserCreated`) fanned out to any number of listeners, jobs are *commands* (`GenerateInvoicePdf`) with one owner. Rule of thumb: if deleting the consumer should break the dispatcher, it's a job; if the dispatcher shouldn't even notice, it's an event.
 
 Every **active** module's `Listeners/` directory is auto-discovered (wired in `bootstrap/app.php` from the module registry) — no `Event::listen`, no provider wiring. Discovery keys off the type-hint of `handle()`'s first parameter, which is why the listener generator asks for the event:
 
 ```bash
 php artisan module:make Blog event PostPublished
-php artisan module:make Blog listener NotifySubscribers --event=PostPublished
+php artisan module:make Blog listener NotifySubscribers --event=PostPublished --queued
 php artisan module:make Blog listener AuditLogin --event='Illuminate\Auth\Events\Registered'
 ```
 
 ```php
-// Generated: app/Modules/Blog/Listeners/NotifySubscribers.php
-public function handle(PostPublished $event): void { ... }
+// Generated event — extends Core's DomainEvent:
+//   dispatched only after the surrounding DB transaction commits
+//   (no queued listener ever sees uncommitted data), and carries
+//   $eventId (uuid) + $occurredAt for audit trails/deduplication.
+class PostPublished extends DomainEvent { ... }
+
+// Generated with --queued — extends Core's QueuedListener:
+//   ShouldQueue with shared tries/backoff from config('project.events').
+class NotifySubscribers extends QueuedListener
+{
+    public function handle(PostPublished $event): void { ... }
+}
 ```
 
-Dispatch with `event(new PostPublished($post))`; queue a listener by implementing `ShouldQueue` as usual. `php artisan event:list` shows the discovered map, `event:cache` caches it (already in the deploy script), and disabling a module removes its listeners automatically.
+Dispatch with `PostPublished::dispatch($post)`. `php artisan event:list` shows the discovered map (queued listeners labeled `ShouldQueue`), `event:cache` caches it (already in the deploy script), and disabling a module removes its listeners automatically.
 
-Living example: `App\Modules\Auth\Listeners\AssignDefaultRole` assigns `PROJECT_AUTH_DEFAULT_ROLE` (via `local/permission`) to every new registration — unset by default, so it's a no-op until you opt in.
+Living examples: `Auth\Listeners\AssignDefaultRole` (sync — assigns `PROJECT_AUTH_DEFAULT_ROLE` to new registrations, atomic on purpose) and `User\Events\UserCreated` + `User\Listeners\RecordUserCreation` (async — fired from the model's `created` hook for every entry point, queued audit-log listener).
 
 ### Authentication (Auth module)
 
@@ -279,6 +291,7 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
+| `PROJECT_EVENTS_QUEUE` / `PROJECT_EVENTS_TRIES` | *(default queue)* / `3` | Queue + retries for listeners extending `QueuedListener` |
 | `PROJECT_DB_DRIVER` | `mysql` | Database driver |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |

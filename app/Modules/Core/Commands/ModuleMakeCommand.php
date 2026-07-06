@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
+use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
@@ -25,6 +26,7 @@ class ModuleMakeCommand extends Command
                             {--fetch : Generate a request extending FetchRequest (listing filters) instead of BaseRequest}
                             {--unit : Generate a unit test (Tests/Unit) instead of a feature test}
                             {--event= : For listeners: event to type-hint on handle() — an event name from this module, or a FQCN}
+                            {--queued : For listeners: run on the queue (extends Core QueuedListener)}
                             {--fillable= : For models: comma-separated fillable columns}';
 
     protected $description = 'Generate a single component inside an existing module (interactive when arguments are omitted)';
@@ -699,16 +701,14 @@ class ModuleMakeCommand extends Command
 
         namespace {$this->namespace}\\Events;
 
-        use Illuminate\\Foundation\\Events\\Dispatchable;
-        use Illuminate\\Queue\\SerializesModels;
+        use App\\Modules\\Core\\Events\\DomainEvent;
 
-        class {$name}
+        class {$name} extends DomainEvent
         {
-            use Dispatchable, SerializesModels;
-
-            public function __construct()
-            {
-                //
+            public function __construct(
+                // promote the event's payload here, e.g. public readonly Post \$post
+            ) {
+                parent::__construct(); // sets \$eventId + \$occurredAt, keeps after-commit dispatch
             }
         }
         PHP;
@@ -753,6 +753,28 @@ class ModuleMakeCommand extends Command
             : "{$this->namespace}\\Events\\".Str::studly($event);
 
         $eventShort = Str::afterLast($eventClass, '\\');
+
+        $queued = $this->option('queued')
+            || ($this->interactive && confirm('Run this listener on the queue?', default: false));
+
+        if ($queued) {
+            return $this->write("Listeners/{$name}.php", <<<PHP
+            <?php
+
+            namespace {$this->namespace}\\Listeners;
+
+            use App\\Modules\\Core\\Listeners\\QueuedListener;
+            use {$eventClass};
+
+            class {$name} extends QueuedListener
+            {
+                public function handle({$eventShort} \$event): void
+                {
+                    //
+                }
+            }
+            PHP);
+        }
 
         return $this->write("Listeners/{$name}.php", <<<PHP
         <?php
