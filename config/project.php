@@ -148,6 +148,10 @@ return [
     'auth' => [
         'driver' => env('PROJECT_AUTH_DRIVER', 'session'),
         'token_expiration' => env('PROJECT_AUTH_TOKEN_EXPIRATION', 1440),
+
+        // Role (from local/permission) assigned to every newly registered
+        // user by Auth's AssignDefaultRole listener. null = don't assign.
+        'default_role' => env('PROJECT_AUTH_DEFAULT_ROLE'),
     ],
 
     /*
@@ -183,7 +187,9 @@ return [
         'Database/Factories',
         'Database/Migrations',
         'Database/Seeders',
+        'Events',
         'Lang',
+        'Listeners',
         'Models',
         'Providers',
         'Repositories',

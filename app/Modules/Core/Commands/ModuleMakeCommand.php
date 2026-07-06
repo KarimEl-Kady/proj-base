@@ -24,6 +24,7 @@ class ModuleMakeCommand extends Command
                             {--web : Generate a web controller instead of an API controller}
                             {--fetch : Generate a request extending FetchRequest (listing filters) instead of BaseRequest}
                             {--unit : Generate a unit test (Tests/Unit) instead of a feature test}
+                            {--event= : For listeners: event to type-hint on handle() — an event name from this module, or a FQCN}
                             {--fillable= : For models: comma-separated fillable columns}';
 
     protected $description = 'Generate a single component inside an existing module (interactive when arguments are omitted)';
@@ -71,7 +72,7 @@ class ModuleMakeCommand extends Command
             'command' => $this->makeCommand(Str::studly($name)),
             'job' => $this->makeSimple(Str::studly($name), 'Jobs', $this->jobStub(Str::studly($name))),
             'event' => $this->makeSimple(Str::studly($name), 'Events', $this->eventStub(Str::studly($name))),
-            'listener' => $this->makeSimple(Str::studly($name), 'Listeners', $this->listenerStub(Str::studly($name))),
+            'listener' => $this->makeListener(Str::studly($name)),
             'middleware' => $this->makeSimple(Str::studly($name), 'Middleware', $this->middlewareStub(Str::studly($name))),
             'policy' => $this->makeSimple(Str::studly($name), 'Policies', $this->policyStub(Str::studly($name))),
             'observer' => $this->makeSimple(Str::studly($name), 'Observers', $this->observerStub(Str::studly($name))),
@@ -713,21 +714,61 @@ class ModuleMakeCommand extends Command
         PHP;
     }
 
-    protected function listenerStub(string $name): string
+    /**
+     * Listeners in module Listeners/ dirs are auto-discovered (see
+     * bootstrap/app.php), but discovery keys off the type-hint of handle()'s
+     * first parameter — an untyped listener is generated but never wired.
+     * So the generator asks for the event and emits a typed handle().
+     */
+    protected function makeListener(string $name): int
     {
-        return <<<PHP
+        $event = $this->option('event')
+            ?? ($this->interactive ? text(
+                label: 'Event to listen for (name from this module, or a FQCN)',
+                placeholder: 'e.g. PostPublished, or Illuminate\Auth\Events\Registered',
+            ) : '');
+
+        $event = trim((string) $event, ' \\');
+
+        if ($event === '') {
+            $this->warn('No event given — generating an untyped handle(); auto-discovery will NOT pick this listener up until you type-hint the event.');
+
+            return $this->write("Listeners/{$name}.php", <<<PHP
+            <?php
+
+            namespace {$this->namespace}\\Listeners;
+
+            class {$name}
+            {
+                public function handle(object \$event): void
+                {
+                    //
+                }
+            }
+            PHP);
+        }
+
+        $eventClass = str_contains($event, '\\')
+            ? $event
+            : "{$this->namespace}\\Events\\".Str::studly($event);
+
+        $eventShort = Str::afterLast($eventClass, '\\');
+
+        return $this->write("Listeners/{$name}.php", <<<PHP
         <?php
 
         namespace {$this->namespace}\\Listeners;
 
+        use {$eventClass};
+
         class {$name}
         {
-            public function handle(object \$event): void
+            public function handle({$eventShort} \$event): void
             {
                 //
             }
         }
-        PHP;
+        PHP);
     }
 
     protected function middlewareStub(string $name): string

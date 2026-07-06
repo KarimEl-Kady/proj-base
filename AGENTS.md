@@ -35,7 +35,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, and Resource — all wired with route attributes.
 - Module lifecycle commands (all prompt for the module when the argument is omitted): `module:list` (status table), `module:enable` / `module:disable` (toggle in the registry), `module:delete` (removes directory + registry entry).
 - **Module boundaries**: modules may depend only on Core plus dependencies declared in `config/project.php` → `boundaries.allow` (e.g. `'Auth' => ['User']`). `php artisan module:boundaries` verifies this and runs in CI — declare new cross-module deps there or the build fails.
-- Generate a single component into an existing module: `php artisan module:make` (interactive) or `php artisan module:make {Module} {type} {Name}` — types: `model`, `migration`, `controller` (`--web` for web), `request` (`--fetch` to extend FetchRequest), `resource`, `service`, `repository`, `seeder`, `factory`, `command`, `job`, `event`, `listener`, `middleware`, `policy`, `observer`.
+- Generate a single component into an existing module: `php artisan module:make` (interactive) or `php artisan module:make {Module} {type} {Name}` — types: `model`, `migration`, `controller` (`--web` for web), `request` (`--fetch` to extend FetchRequest), `resource`, `service`, `repository`, `seeder`, `factory`, `command`, `job`, `event`, `listener` (`--event=` for the type-hint auto-discovery needs — see Events & listeners), `middleware`, `policy`, `observer`.
 - `CoreServiceProvider` auto-loads each active module's `Database/Migrations`, `Views` (namespaced `view('blog::index')`), `Lang` (namespaced `__('blog::messages.key')`), and registers any artisan commands in the module's `Commands/` directory.
 - Factories resolve per module: `App\Modules\Blog\Models\Post` → `App\Modules\Blog\Database\Factories\PostFactory` (via `newFactory()` on the Core base Model).
 
@@ -88,12 +88,22 @@ Controllers are plain classes with public action methods — no `#[Prefix]`/`#[G
 - Add module filters by overriding `rules()` in the module's fetch request: `return parent::rules() + ['status' => [...]];`.
 - For filters that need to scope the query itself (not just word/sort), override `BaseRepository::baseQuery(FetchRequest $request): Builder` (default: `$this->query()`) — e.g. `CityRepository::baseQuery()` narrows to a `?country=EG` filter via `FetchCityRequest::countryCode()` before word search/sorting/pagination run on top.
 
+### Events & listeners (auto-discovered per module)
+
+- Listeners in each **active** module's `Listeners/` directory (plus Core's) are auto-discovered — no manual `Event::listen` or provider wiring anywhere. Wired in `bootstrap/app.php` via `->withEvents(discover: ...)`, which reads the module registry file directly (config isn't loaded yet at that point). Disabling a module removes its listeners.
+- **Discovery keys off the type-hint** of `handle()`'s (or `__invoke()`'s) first parameter. An untyped `handle(object $event)` is never wired — this is why `module:make {M} listener {Name}` asks for the event (interactive) or takes `--event=`: an event name resolves to this module's `Events\{Name}`, a FQCN (e.g. `Illuminate\Auth\Events\Registered`) is used as-is. Generating without an event prints a warning and emits the untyped stub.
+- Events are plain classes in the module's `Events/` directory (`module:make {M} event {Name}`); dispatch with `event(new OrderShipped($order))` or `OrderShipped::dispatch($order)`. Listeners can be queued by implementing `ShouldQueue` as usual.
+- Cross-module decoupling: a module may listen to another module's (or the framework's) events without any `boundaries.allow` entry **only if** it doesn't import the other module's classes — type-hinting a framework event is always safe; type-hinting `App\Modules\X\Events\Y` from module Z is a dependency and must be declared in `project.boundaries`.
+- `php artisan event:list` shows the discovered map; `event:cache` caches it (already part of `deploy/deploy-dev.sh`) and `event:clear` resets. Verified: cached discovery includes module listeners.
+- Living example: `App\Modules\Auth\Listeners\AssignDefaultRole` — typed on `Illuminate\Auth\Events\Registered`, assigns `project.auth.default_role` (`PROJECT_AUTH_DEFAULT_ROLE`, default null = no-op) to every new registration via `local/permission`. Tests in `app/Modules/Auth/Tests/Feature/AssignDefaultRoleTest.php` cover discovery + behavior.
+
 ### Auth module
 
 - Full auth implementation under `app/Modules/Auth`, routes at `/api/v1/auth/*`: register, login, logout, me, password forgot/reset, email verification (signed URLs, route name `verification.verify`), TOTP 2FA (`App\Modules\Auth\Support\Totp`, dependency-free RFC 6238), and named personal access tokens.
 - Driver via `PROJECT_AUTH_DRIVER`: `sanctum`/`token` issue Bearer tokens (lifetime `PROJECT_AUTH_TOKEN_EXPIRATION` minutes, wired to `sanctum.expiration`); `session` uses the web guard.
 - Every sub-feature is gated by its `PROJECT_FEATURE_*` flag and returns 403 when disabled. Login requires a `code` field when the user has confirmed 2FA.
 - Protected endpoints use `auth:sanctum`. `two_factor_secret` is stored encrypted and hidden from serialization.
+- New registrations optionally get a default role — set `PROJECT_AUTH_DEFAULT_ROLE` (see Events & listeners above).
 
 ### Country / City modules
 

@@ -40,7 +40,9 @@ app/Modules/{Module}/
 │   ├── Factories/      # Auto-resolved per module
 │   ├── Migrations/     # Auto-loaded
 │   └── Seeders/
+├── Events/             # Plain event classes
 ├── Lang/               # Auto-loaded, namespaced: __('blog::key')
+├── Listeners/          # Auto-discovered (typed handle() = wired, no registration)
 ├── Models/
 ├── Providers/
 ├── Repositories/
@@ -67,6 +69,7 @@ app/Modules/{Module}/
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
 | **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
+| **Events & listeners** | Every active module's `Listeners/` dir is auto-discovered (type-hinted `handle()` = wired, zero registration) — `event:cache`-compatible, disabled modules excluded |
 | **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
 | **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
@@ -91,6 +94,8 @@ php artisan module:make                       # interactive
 php artisan module:make Blog model Post --fillable=title,slug,body
 php artisan module:make Blog request FetchPosts --fetch
 php artisan module:make Blog test Post        # full API CRUD test
+php artisan module:make Blog event PostPublished
+php artisan module:make Blog listener NotifySubscribers --event=PostPublished
 # types: model, migration, controller, request, resource, service,
 #        repository, seeder, factory, command, job, event, listener,
 #        middleware, policy, observer, test
@@ -139,6 +144,25 @@ Route::prefix('api/v1/posts')->group(function () {
 ```
 
 `make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. `module:make controller` (single-component) prints the `Route::` line to add by hand, since it can't safely append to an existing file.
+
+### Events & listeners
+
+Every **active** module's `Listeners/` directory is auto-discovered (wired in `bootstrap/app.php` from the module registry) — no `Event::listen`, no provider wiring. Discovery keys off the type-hint of `handle()`'s first parameter, which is why the listener generator asks for the event:
+
+```bash
+php artisan module:make Blog event PostPublished
+php artisan module:make Blog listener NotifySubscribers --event=PostPublished
+php artisan module:make Blog listener AuditLogin --event='Illuminate\Auth\Events\Registered'
+```
+
+```php
+// Generated: app/Modules/Blog/Listeners/NotifySubscribers.php
+public function handle(PostPublished $event): void { ... }
+```
+
+Dispatch with `event(new PostPublished($post))`; queue a listener by implementing `ShouldQueue` as usual. `php artisan event:list` shows the discovered map, `event:cache` caches it (already in the deploy script), and disabling a module removes its listeners automatically.
+
+Living example: `App\Modules\Auth\Listeners\AssignDefaultRole` assigns `PROJECT_AUTH_DEFAULT_ROLE` (via `local/permission`) to every new registration — unset by default, so it's a no-op until you opt in.
 
 ### Authentication (Auth module)
 
@@ -254,6 +278,7 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_TENANCY_MODE` | `single` | `single` or `multi` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
+| `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
 | `PROJECT_DB_DRIVER` | `mysql` | Database driver |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |
