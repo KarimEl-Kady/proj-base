@@ -173,7 +173,7 @@ class ModuleMakeCommand extends Command
                     Schema::create('{$table}', function (Blueprint \$table) {
                         \$table->id();
                         \$table->uuid('uuid')->unique();
-                        // \$table->foreignId('tenant_id')->nullable()->index();
+                        \$table->tenantColumn(); // adds the tenant column only in multi-tenant mode
                         \$table->timestamps();
                     });
             PHP;

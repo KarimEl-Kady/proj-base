@@ -9,7 +9,7 @@ use Illuminate\Auth\Events\Registered;
  * project.auth.default_role (PROJECT_AUTH_DEFAULT_ROLE) — a no-op when the
  * config is null (the default) or when the user model doesn't use
  * local/permission's HasRoles trait.
- *
+ *changes
  * Auto-discovered from this module's Listeners directory (see
  * bootstrap/app.php) via the Registered type-hint below — no manual
  * registration anywhere.

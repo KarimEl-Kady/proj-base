@@ -130,6 +130,13 @@ The base's messaging architecture is **event-driven over Laravel's queue** (the 
 - Use `tenant_id()` helper to get current tenant, `is_multi_tenant()` to check mode.
 - Models should use `HasTenantScope` trait and call `scopeForTenant()` on queries.
 
+**Tenant-aware migrations** — one migration file, correct schema in both modes:
+
+- Create-table migrations call `$table->tenantColumn();` (a Blueprint macro registered by CoreServiceProvider; `module:make {M} migration create_x_table` generates it). In `multi` mode it adds the configured tenant column (nullable + indexed); in `single` mode it's a **no-op** — nothing to comment in/out per project.
+- Switching an existing project from `single` to `multi`: run `php artisan tenant:migrations`. It discovers every non-abstract model using `HasTenantScope` across active modules, prints a status table (ok / table missing / migration created), and generates `add_{column}_to_{table}_table` migrations into each owning module's `Database/Migrations` for tables missing the column — idempotent (re-running reports "migration already generated"), and a no-op with a hint in `single` mode.
+- The generated catch-up migration adds column + index only, **no foreign key** on purpose — adding an FK to an existing table isn't portable across drivers (SQLite in particular); add one in a separate migration if the project needs it.
+- Verified lifecycle: create table in single mode (no column) → flip to multi → `tenant:migrations` + `migrate` (column added) → tables created afterwards get the column at create time via the macro.
+
 ### Project config
 
 All project-specific config lives in `config/project.php`, read via `project_config('key')` helper or `config('project.key')`. Features like registration, email verification, 2FA, API tokens are toggled via env vars prefixed `PROJECT_FEATURE_*`.

@@ -77,7 +77,7 @@ app/Modules/{Module}/
 | **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
 | **Country/City reference data** | `Country` and `City` modules (full CRUD API) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
-| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution |
+| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution. Migrations adapt automatically: `$table->tenantColumn()` adds the tenant column only in multi mode, and `php artisan tenant:migrations` generates catch-up migrations when a single-tenant project goes multi |
 | **Feature flags** | Registration, email verification, 2FA, API tokens — togglable via env and actually implemented by the Auth module |
 
 ## Generators
@@ -106,6 +106,7 @@ php artisan module:enable Blog                # or omit the name to pick from a 
 php artisan module:disable Blog
 php artisan module:delete Blog
 php artisan module:boundaries                 # verify cross-module dependencies
+php artisan tenant:migrations                 # single→multi: generate missing tenant-column migrations
 
 # Local packages (app/Vendor)
 php artisan make:package Payment

@@ -12,8 +12,10 @@ use App\Modules\Core\Commands\ModuleListCommand;
 use App\Modules\Core\Commands\ModuleMakeCommand;
 use App\Modules\Core\Commands\PackageListCommand;
 use App\Modules\Core\Commands\ProjectInfoCommand;
+use App\Modules\Core\Commands\TenantMigrationsCommand;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Console\Command;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -46,11 +48,13 @@ class CoreServiceProvider extends ServiceProvider
                 ModuleMakeCommand::class,
                 PackageListCommand::class,
                 ProjectInfoCommand::class,
+                TenantMigrationsCommand::class,
             ]);
 
             $this->registerModuleCommands();
         }
 
+        $this->registerTenancyMacros();
         $this->loadModuleResources();
         $this->loadModuleRouteFiles();
 
@@ -62,6 +66,31 @@ class CoreServiceProvider extends ServiceProvider
     protected function loadHelpers(): void
     {
         require_once __DIR__.'/../Helpers/helpers.php';
+    }
+
+    /**
+     * Schema macros that make migrations tenancy-mode aware. Use as a bare
+     * statement in create-table migrations:
+     *
+     *     $table->tenantColumn();
+     *
+     * In multi-tenant mode it adds the configured tenant column (nullable,
+     * indexed); in single mode it's a no-op — one migration file, correct
+     * schema in both modes. For tables created while the project was still
+     * single-tenant, `php artisan tenant:migrations` generates the
+     * catch-up add-column migrations.
+     */
+    protected function registerTenancyMacros(): void
+    {
+        Blueprint::macro('tenantColumn', function (): Blueprint {
+            /** @var Blueprint $this */
+            if (is_multi_tenant()) {
+                $column = config('project.tenancy.tenant_column', 'tenant_id');
+                $this->foreignId($column)->nullable()->index();
+            }
+
+            return $this;
+        });
     }
 
     protected function registerModuleProviders(): void
