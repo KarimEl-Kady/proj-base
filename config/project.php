@@ -64,16 +64,39 @@ return [
     | Tenancy Configuration
     |--------------------------------------------------------------------------
     |
-    | mode: "single" or "multi"
+    | mode: "none", "single" or "multi" (unknown values behave as "none")
+    |   - none:   no tenancy at all — no tenant column, no scoping, no
+    |             tenant resolution.
+    |   - single: one implicit tenant. The tenant column is added to
+    |             tenant-scoped tables and every request runs under the
+    |             default_tenant below (created on first use), so data is
+    |             tenant-stamped from day one and switching to "multi"
+    |             later is just a config change.
+    |   - multi:  full multi-tenancy — the tenant is resolved per request
+    |             via tenant_identification.
+    |
     | tenant_column: column name used for tenant scoping on models
-    | tenant_identification: how tenants are identified — "subdomain", "header", "path"
+    | tenant_identification: how tenants are identified in multi mode —
+    |   "subdomain", "header" (X-Tenant-ID), "path"
+    | tenant_model: the Eloquent model tenants are looked up through
+    | default_tenant: name/slug of the implicit tenant used in single mode
+    | exempt_paths: request paths (wildcards allowed) that never require a
+    |   tenant in multi mode — probes and monitors hit these tenant-less
     |
     */
 
     'tenancy' => [
-        'mode' => env('PROJECT_TENANCY_MODE', 'single'),
+        'mode' => env('PROJECT_TENANCY_MODE', 'none'),
         'tenant_column' => env('PROJECT_TENANT_COLUMN', 'tenant_id'),
         'tenant_identification' => env('PROJECT_TENANT_IDENTIFICATION', 'subdomain'),
+        'tenant_model' => env('PROJECT_TENANT_MODEL', 'App\Models\Tenant'),
+        'default_tenant' => [
+            'name' => env('PROJECT_TENANT_DEFAULT_NAME', 'Default'),
+            'slug' => env('PROJECT_TENANT_DEFAULT_SLUG', 'default'),
+        ],
+        'exempt_paths' => [
+            'api/health',
+        ],
     ],
 
     /*

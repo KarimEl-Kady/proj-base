@@ -8,15 +8,27 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Puts the current tenant id into Context, according to the tenancy mode
+ * (config/project.php → tenancy.mode):
+ *
+ * - none:   pass-through, no tenant is ever set.
+ * - single: every request runs under the implicit default tenant
+ *           (tenancy.default_tenant), created on first use.
+ * - multi:  the tenant is resolved from the request via
+ *           tenancy.tenant_identification; unidentifiable requests get 400.
+ */
 class TenantMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('project.tenancy.mode') !== 'multi') {
+        if (! has_tenancy() || $this->isExempt($request)) {
             return $next($request);
         }
 
-        $tenantId = $this->resolveTenantId($request);
+        $tenantId = is_single_tenant()
+            ? $this->resolveDefaultTenantId()
+            : $this->resolveTenantId($request);
 
         if ($tenantId === null) {
             abort(400, 'Tenant could not be identified.');
@@ -25,6 +37,39 @@ class TenantMiddleware
         Context::add('tenant_id', $tenantId);
 
         return $next($request);
+    }
+
+    /**
+     * Paths that never require a tenant (health checks, probes) — see
+     * project.tenancy.exempt_paths.
+     */
+    protected function isExempt(Request $request): bool
+    {
+        $paths = config('project.tenancy.exempt_paths', []);
+
+        return $paths !== [] && $request->is(...$paths);
+    }
+
+    /**
+     * Single mode: the one tenant everything belongs to. Created on first
+     * use so single mode needs no seeding step.
+     */
+    protected function resolveDefaultTenantId(): ?int
+    {
+        $tenantModel = $this->tenantModel();
+
+        if (! class_exists($tenantModel)) {
+            return null;
+        }
+
+        $default = config('project.tenancy.default_tenant', []);
+
+        $tenant = $tenantModel::query()->firstOrCreate(
+            ['slug' => $default['slug'] ?? 'default'],
+            ['name' => $default['name'] ?? 'Default', 'is_active' => true],
+        );
+
+        return $tenant->id;
     }
 
     protected function resolveTenantId(Request $request): ?int
@@ -69,16 +114,25 @@ class TenantMiddleware
 
     protected function lookupTenant(string $identifier): ?int
     {
-        $tenantModel = config('project.tenancy.tenant_model', Tenant::class);
+        $tenantModel = $this->tenantModel();
 
         if (! class_exists($tenantModel)) {
-            return (int) $identifier ?: null;
+            return null;
         }
 
-        $tenant = $tenantModel::where('slug', $identifier)
-            ->orWhere('subdomain', $identifier)
+        $tenant = $tenantModel::where('is_active', true)
+            ->where(function ($query) use ($identifier) {
+                $query->where('slug', $identifier)
+                    ->orWhere('subdomain', $identifier);
+            })
             ->first();
 
         return $tenant?->id;
+    }
+
+    /** @return class-string */
+    protected function tenantModel(): string
+    {
+        return config('project.tenancy.tenant_model', Tenant::class);
     }
 }
