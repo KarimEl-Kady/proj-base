@@ -259,26 +259,40 @@ $user->hasAnyRole('admin', 'manager');
 
 Route middleware is auto-registered — `role:admin`, `permission:posts.create` (pipe-separate for "any of"), and `role_or_permission:admin|posts.create`. A failed check throws `UnauthorizedException` (extends Laravel's `AuthorizationException`), so it renders as a normal 403 through the existing exception handler — no extra wiring.
 
-Which roles/permissions should exist is one config file, mirroring `local/geo-seeder`'s pattern:
+Which roles/permissions should exist is declarative, and **module-owned**: each module declares the permissions of the resource it ships in its own `Config/permissions.php`, and the central `config/permission.php` keeps the roles plus anything cross-cutting. `permission:seed` merges every source:
 
 ```php
-// config/permission.php
+// app/Modules/Blog/Config/permissions.php — owned by the module
+return [
+    'permissions' => ['posts.view', 'posts.manage'],
+];
+
+// config/permission.php — roles + cross-cutting permissions
 'definitions' => [
-    'permissions' => ['users.view', 'users.create', 'countries.manage', ...],
+    'permissions' => [],               // module-owned ones live in the modules
     'roles' => [
-        'admin' => ['*'],              // every permission above
+        'admin' => ['*'],              // every permission from every source
         'manager' => ['users.view'],
     ],
+],
+'definition_paths' => [
+    'app/Modules/*/Config/permissions.php',   // how module files are discovered
 ],
 ```
 
 ```bash
-php artisan permission:seed              # reports the plan, then creates/syncs
+php artisan permission:seed              # reports sources + the plan, then creates/syncs
 php artisan permission:seed --fresh      # also wipes existing roles/permissions (confirms first)
 php artisan permission:list              # what's actually in the database
 ```
 
 The role → permission map is cached as a single unit (it's small, read on every check) and auto-flushed whenever a role's permissions change — no manual cache-busting anywhere.
+
+**Bootstrapping the first admin** is one command — it seeds the definitions if needed, creates the user if the email is unknown (interactive, or `--name=`/`--password=` for scripting), and grants the role:
+
+```bash
+php artisan user:make-admin you@example.com
+```
 
 ## Configuration
 

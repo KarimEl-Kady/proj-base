@@ -78,4 +78,31 @@ class PermissionRegistryTest extends TestCase
 
         $this->assertTrue($names->contains('posts.create'));
     }
+
+    /**
+     * Persistent cache stores refuse to unserialize objects by default
+     * (config/cache.php → serializable_classes = false, Laravel's
+     * gadget-chain hardening), so the cached payload must be plain
+     * arrays/scalars end to end. The in-memory array store used in tests
+     * never serializes, which hides violations — assert the strict
+     * round-trip directly. Regression test for a real crash: with
+     * CACHE_STORE=database, a cached Collection came back to the next PHP
+     * process as __PHP_Incomplete_Class and fataled every permission check.
+     */
+    public function test_cached_payload_survives_strict_object_free_unserialization(): void
+    {
+        $role = Role::findOrCreate('editor');
+        $role->givePermissionTo(Permission::findOrCreate('posts.create'));
+
+        // Warm the cache.
+        app(PermissionRegistry::class)->permissionNamesForRole($role->id);
+
+        $cached = cache()->get(config('permission.cache.key'));
+
+        $this->assertIsArray($cached);
+
+        $roundTripped = unserialize(serialize($cached), ['allowed_classes' => false]);
+        $this->assertSame($cached, $roundTripped);
+        $this->assertSame(['posts.create'], $roundTripped[$role->id]);
+    }
 }

@@ -8,6 +8,7 @@ use Local\Permission\Commands\PermissionSeedCommand;
 use Local\Permission\Middleware\PermissionMiddleware;
 use Local\Permission\Middleware\RoleMiddleware;
 use Local\Permission\Middleware\RoleOrPermissionMiddleware;
+use Local\Permission\Support\DefinitionLoader;
 use Local\Permission\Support\PermissionRegistry;
 
 class PermissionServiceProvider extends ServiceProvider
@@ -17,6 +18,7 @@ class PermissionServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/permission.php', 'permission');
 
         $this->app->singleton(PermissionRegistry::class);
+        $this->app->singleton(DefinitionLoader::class);
     }
 
     public function boot(): void

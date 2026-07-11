@@ -24,6 +24,9 @@ class PermissionSeedCommandTest extends TestCase
                     'manager' => ['users.view', 'countries.view'],
                 ],
             ],
+            // Isolate from the real module definition files — these tests
+            // assert exact counts against the config set above.
+            'permission.definition_paths' => [],
         ]);
     }
 

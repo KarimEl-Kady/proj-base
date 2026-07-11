@@ -18,7 +18,7 @@ class UserCreatedEventTest extends TestCase
 
     public function test_creating_a_user_via_the_api_dispatches_the_domain_event(): void
     {
-        $this->actingAsUser();
+        $this->actingAsUser('users.create');
         Event::fake([UserCreated::class]);
 
         $this->postJson('/api/v1/users', [

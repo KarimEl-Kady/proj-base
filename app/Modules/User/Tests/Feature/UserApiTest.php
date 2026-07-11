@@ -31,19 +31,29 @@ class UserApiTest extends TestCase
     }
 
     /**
-     * All /api/v1/users routes require auth:sanctum. Pass a user to act as
-     * one of the fixtures (keeps user counts in listing assertions exact).
+     * All /api/v1/users routes require auth:sanctum plus a users.* permission
+     * per action. Pass a user to act as one of the fixtures (keeps user
+     * counts in listing assertions exact), and/or a narrower permission set
+     * to test the authorization boundary itself.
+     *
+     * @param  string|array<int, string>  $permissions
      */
-    protected function authenticate(?User $user = null): User
-    {
+    protected function authenticate(
+        ?User $user = null,
+        string|array $permissions = ['users.view', 'users.create', 'users.update', 'users.delete'],
+    ): User {
         $user ??= $this->makeUser('Admin', 'admin@example.com');
+
+        if ($permissions !== []) {
+            $user->givePermissionTo($permissions);
+        }
 
         Sanctum::actingAs($user);
 
         return $user;
     }
 
-    // ── Authentication gate ──────────────────────────────────────────
+    // ── Authentication & authorization gates ──────────────────────────
 
     public function test_guests_are_rejected_on_every_endpoint(): void
     {
@@ -54,6 +64,31 @@ class UserApiTest extends TestCase
         $this->getJson("/api/v1/users/{$uuid}")->assertUnauthorized();
         $this->putJson("/api/v1/users/{$uuid}", [])->assertUnauthorized();
         $this->deleteJson("/api/v1/users/{$uuid}")->assertUnauthorized();
+    }
+
+    public function test_authenticated_users_without_the_matching_permission_are_forbidden(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->authenticate(permissions: []);
+
+        $this->getJson('/api/v1/users')->assertForbidden();
+        $this->postJson('/api/v1/users', [])->assertForbidden();
+        $this->getJson("/api/v1/users/{$uuid}")->assertForbidden();
+        $this->putJson("/api/v1/users/{$uuid}", [])->assertForbidden();
+        $this->deleteJson("/api/v1/users/{$uuid}")->assertForbidden();
+    }
+
+    public function test_permissions_are_checked_per_action_not_as_a_bundle(): void
+    {
+        $user = $this->makeUser();
+        $this->authenticate($user, permissions: 'users.view');
+
+        // Granted: users.view
+        $this->getJson("/api/v1/users/{$user->uuid}")->assertOk();
+
+        // Not granted: users.delete
+        $this->deleteJson("/api/v1/users/{$user->uuid}")->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 
     // ── CRUD ─────────────────────────────────────────────────────────

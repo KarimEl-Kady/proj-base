@@ -82,6 +82,9 @@ return [
     | default_tenant: name/slug of the implicit tenant used in single mode
     | exempt_paths: request paths (wildcards allowed) that never require a
     |   tenant in multi mode — probes and monitors hit these tenant-less
+    | cache: identifier → tenant id resolutions are cached (via Core's
+    |   TenantCache) so steady-state requests skip the tenants-table query;
+    |   tenant writes flush their own entries, so this is safe to leave on
     |
     */
 
@@ -96,6 +99,10 @@ return [
         ],
         'exempt_paths' => [
             'api/health',
+        ],
+        'cache' => [
+            'enabled' => env('PROJECT_TENANCY_CACHE_ENABLED', true),
+            'ttl_seconds' => env('PROJECT_TENANCY_CACHE_TTL', 3600),
         ],
     ],
 

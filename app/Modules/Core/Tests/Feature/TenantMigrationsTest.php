@@ -26,7 +26,6 @@ class TenantMigrationsTest extends TestCase
         Schema::dropIfExists('tenant_probes');
         Schema::dropIfExists('macro_probes');
         File::deleteDirectory($this->probePath);
-        File::delete(glob(module_path('User', 'Database/Migrations').'/*_add_tenant_id_to_users_table.php'));
 
         parent::tearDown();
     }
@@ -104,7 +103,9 @@ class TenantMigrationsTest extends TestCase
             $table->foreignId('tenant_id')->nullable()->index();
         });
 
-        $this->artisan('tenant:migrations')->assertSuccessful();
+        // --module=User: this test only cares about the "ok" status, so it
+        // never touches any other module's real filesystem path.
+        $this->artisan('tenant:migrations', ['--module' => ['User']])->assertSuccessful();
 
         $this->assertSame(
             [],
@@ -125,7 +126,11 @@ class TenantMigrationsTest extends TestCase
             $table->id();
         });
 
-        $this->artisan('tenant:migrations')
+        // --module=TenantProbe: without this, the command would also process
+        // every other active module's tenant-scoped models (e.g. User) and
+        // attempt to write a catch-up migration into their real, live
+        // Database/Migrations directory as a side effect of this test.
+        $this->artisan('tenant:migrations', ['--module' => ['TenantProbe']])
             ->expectsOutputToContain('migration created')
             ->assertSuccessful();
 
@@ -138,7 +143,7 @@ class TenantMigrationsTest extends TestCase
         $this->assertStringContainsString("dropColumn('tenant_id')", $content);
 
         // Second run must not create a second file.
-        $this->artisan('tenant:migrations')
+        $this->artisan('tenant:migrations', ['--module' => ['TenantProbe']])
             ->expectsOutputToContain('migration already generated')
             ->assertSuccessful();
 
@@ -146,6 +151,15 @@ class TenantMigrationsTest extends TestCase
             1,
             glob("{$this->probePath}/Database/Migrations/*_add_tenant_id_to_tenant_probes_table.php")
         );
+    }
+
+    public function test_module_option_narrows_which_modules_are_scanned(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+
+        $this->artisan('tenant:migrations', ['--module' => ['TenantProbe']])
+            ->expectsOutputToContain('No models using HasTenantScope found in active modules.')
+            ->assertSuccessful();
     }
 
     protected function makeProbeModule(): void

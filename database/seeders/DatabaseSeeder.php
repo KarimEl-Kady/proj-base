@@ -12,14 +12,20 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * The dev-convenience user is environment-guarded and idempotent — this
+     * seeder can never plant test credentials in a real deployment. For a
+     * production bootstrap, use: php artisan user:make-admin
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        if (! app()->environment('local', 'development', 'testing')) {
+            return;
+        }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::query()->firstOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User', 'password' => 'password'],
+        );
     }
 }

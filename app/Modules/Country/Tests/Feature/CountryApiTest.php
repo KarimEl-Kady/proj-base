@@ -35,6 +35,16 @@ class CountryApiTest extends TestCase
         $this->deleteJson("/api/v1/countries/{$record->uuid}")->assertUnauthorized();
     }
 
+    public function test_authenticated_users_without_countries_manage_cannot_write(): void
+    {
+        $record = $this->makeRecord();
+        $this->actingAsUser();
+
+        $this->postJson('/api/v1/countries', [])->assertForbidden();
+        $this->putJson("/api/v1/countries/{$record->uuid}", [])->assertForbidden();
+        $this->deleteJson("/api/v1/countries/{$record->uuid}")->assertForbidden();
+    }
+
     public function test_index_returns_records(): void
     {
         $this->makeRecord();
@@ -46,7 +56,7 @@ class CountryApiTest extends TestCase
 
     public function test_store_creates_a_record(): void
     {
-        $this->actingAsUser();
+        $this->actingAsUser('countries.manage');
 
         $this->postJson('/api/v1/countries', [
             'name' => 'Egypt',
@@ -61,7 +71,7 @@ class CountryApiTest extends TestCase
 
     public function test_store_validates_unique_iso_codes(): void
     {
-        $this->actingAsUser();
+        $this->actingAsUser('countries.manage');
         $this->makeRecord()->update(['iso2' => 'EG', 'iso3' => 'EGY']);
 
         $this->postJson('/api/v1/countries', [
@@ -82,7 +92,7 @@ class CountryApiTest extends TestCase
 
     public function test_update_modifies_a_record(): void
     {
-        $this->actingAsUser();
+        $this->actingAsUser('countries.manage');
         $record = $this->makeRecord();
 
         $this->putJson("/api/v1/countries/{$record->uuid}", [
@@ -92,7 +102,7 @@ class CountryApiTest extends TestCase
 
     public function test_destroy_deletes_a_record(): void
     {
-        $this->actingAsUser();
+        $this->actingAsUser('countries.manage');
         $record = $this->makeRecord();
 
         $this->deleteJson("/api/v1/countries/{$record->uuid}")->assertOk();

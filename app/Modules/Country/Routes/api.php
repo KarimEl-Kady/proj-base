@@ -17,7 +17,7 @@ Route::prefix('api/v1/countries')->group(function () {
     Route::get('/', [CountryController::class, 'index'])->name('api.countries.index');
     Route::get('/{country}', [CountryController::class, 'show'])->name('api.countries.show');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'permission:countries.manage'])->group(function () {
         Route::post('/', [CountryController::class, 'store'])->name('api.countries.store');
         Route::put('/{country}', [CountryController::class, 'update'])->name('api.countries.update');
         Route::delete('/{country}', [CountryController::class, 'destroy'])->name('api.countries.destroy');

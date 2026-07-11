@@ -19,7 +19,8 @@ use ReflectionClass;
  */
 class TenantMigrationsCommand extends Command
 {
-    protected $signature = 'tenant:migrations';
+    protected $signature = 'tenant:migrations
+                            {--module=* : Limit to specific module(s) (default: every active module)}';
 
     protected $description = 'Generate add-tenant-column migrations for tenant-scoped tables that are missing it';
 
@@ -127,7 +128,20 @@ class TenantMigrationsCommand extends Command
     }
 
     /**
-     * Non-abstract models using HasTenantScope across active modules.
+     * Active modules to scan, narrowed by --module= when given.
+     *
+     * @return array<int, string>
+     */
+    protected function targetModules(): array
+    {
+        $active = config('project.modules', []);
+        $requested = $this->option('module');
+
+        return $requested === [] ? $active : array_values(array_intersect($active, $requested));
+    }
+
+    /**
+     * Non-abstract models using HasTenantScope across the target modules.
      *
      * @return array<int, class-string>
      */
@@ -135,7 +149,7 @@ class TenantMigrationsCommand extends Command
     {
         $models = [];
 
-        foreach (config('project.modules', []) as $module) {
+        foreach ($this->targetModules() as $module) {
             $dir = module_path($module, 'Models');
 
             if (! is_dir($dir)) {

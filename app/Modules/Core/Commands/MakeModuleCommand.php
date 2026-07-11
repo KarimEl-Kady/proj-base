@@ -70,6 +70,8 @@ class MakeModuleCommand extends Command
             $this->makeApiRoutes();
         }
 
+        $this->makePermissionsConfig();
+
         if ($this->withWeb) {
             $this->makeWebController();
             $this->makeWebRoutes();
@@ -485,6 +487,9 @@ class MakeModuleCommand extends Command
 
         // Generated protected by default — remove the auth middleware (or move
         // routes out of the group) only for endpoints that are truly public.
+        // Add per-action authorization once this resource's permissions are
+        // declared in Config/permissions.php (see the User/Country/City
+        // modules for the pattern): ->middleware('permission:{$this->pluralSnake}.view')
         Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->middleware('auth:sanctum')->group(function () {
             Route::get('/', [{$controller}::class, 'index'])->name('api.{$this->pluralSnake}.index');
             Route::post('/', [{$controller}::class, 'store'])->name('api.{$this->pluralSnake}.store');
@@ -496,6 +501,39 @@ class MakeModuleCommand extends Command
         PHP;
 
         $this->write('Routes/api.php', $content);
+    }
+
+    protected function makePermissionsConfig(): void
+    {
+        $content = <<<PHP
+        <?php
+
+        /*
+        |--------------------------------------------------------------------------
+        | {$this->moduleName} Module — Permission Definitions
+        |--------------------------------------------------------------------------
+        |
+        | Owned by this module and merged into the central definitions by
+        | local/permission's DefinitionLoader (config/permission.php →
+        | definition_paths). Apply with: php artisan permission:seed
+        |
+        | Uncomment (or reshape) the permissions below, gate the routes in
+        | Routes/api.php with permission: middleware, then re-seed.
+        |
+        */
+
+        return [
+
+            'permissions' => [
+                // '{$this->pluralSnake}.view',
+                // '{$this->pluralSnake}.manage',
+            ],
+
+        ];
+
+        PHP;
+
+        $this->write('Config/permissions.php', $content);
     }
 
     protected function makeWebRoutes(): void

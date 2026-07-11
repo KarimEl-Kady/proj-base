@@ -33,18 +33,28 @@ class PermissionRegistry
             return $this->rolePermissionNames;
         }
 
-        if (! config('permission.cache.enabled', true)) {
-            return $this->rolePermissionNames = $this->loadFromDatabase();
-        }
+        $plain = config('permission.cache.enabled', true)
+            ? Cache::remember(
+                config('permission.cache.key', 'local.permission.role_permission_map'),
+                config('permission.cache.ttl_seconds', 3600),
+                fn () => $this->loadFromDatabase()
+            )
+            : $this->loadFromDatabase();
 
-        return $this->rolePermissionNames = Cache::remember(
-            config('permission.cache.key', 'local.permission.role_permission_map'),
-            config('permission.cache.ttl_seconds', 3600),
-            fn () => $this->loadFromDatabase()
-        );
+        return $this->rolePermissionNames = collect($plain)
+            ->map(fn (array $names) => collect($names));
     }
 
-    protected function loadFromDatabase(): Collection
+    /**
+     * The cached payload MUST stay plain arrays/scalars: persistent cache
+     * stores refuse to unserialize objects by default (config/cache.php →
+     * serializable_classes = false, Laravel's gadget-chain hardening), so
+     * a cached Collection would come back as __PHP_Incomplete_Class on the
+     * next process and fatal every permission check.
+     *
+     * @return array<int, array<int, string>> role id => permission names
+     */
+    protected function loadFromDatabase(): array
     {
         $tables = config('permission.table_names');
 
@@ -52,7 +62,8 @@ class PermissionRegistry
             ->join($tables['permissions'], "{$tables['permissions']}.id", '=', "{$tables['role_has_permissions']}.permission_id")
             ->get(["{$tables['role_has_permissions']}.role_id", "{$tables['permissions']}.name"])
             ->groupBy('role_id')
-            ->map(fn (Collection $rows) => $rows->pluck('name'));
+            ->map(fn (Collection $rows) => $rows->pluck('name')->all())
+            ->all();
     }
 
     public function forgetCache(): void

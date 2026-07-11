@@ -4,9 +4,11 @@ namespace App\Modules\Core\Tests\Feature;
 
 use App\Models\Tenant;
 use App\Modules\User\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -184,6 +186,113 @@ class TenancyModesTest extends TestCase
         $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'active-corp'])->assertOk();
 
         $this->assertSame($tenant->id, tenant_id());
+    }
+
+    // ── resolution caching ───────────────────────────────────────────
+
+    public function test_multi_mode_resolution_is_cached_after_the_first_request(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.tenant_identification' => 'header',
+        ]);
+
+        Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk();
+
+        // Second request must resolve from cache — zero tenants-table queries.
+        $this->assertSame(
+            0,
+            $this->tenantQueriesDuring(
+                fn () => $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk()
+            )
+        );
+    }
+
+    public function test_deactivating_a_tenant_takes_effect_despite_the_cache(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.tenant_identification' => 'header',
+        ]);
+
+        $tenant = Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk();
+
+        // The model write flushes the cached resolution — no TTL wait.
+        $tenant->update(['is_active' => false]);
+
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertStatus(400);
+    }
+
+    public function test_renaming_a_tenant_slug_flushes_the_stale_cache_key(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.tenant_identification' => 'header',
+        ]);
+
+        $tenant = Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk();
+
+        $tenant->update(['slug' => 'acme-corp']);
+
+        // Old identifier no longer resolves; the new one does.
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertStatus(400);
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme-corp'])->assertOk();
+    }
+
+    public function test_single_mode_kill_switch_works_despite_the_cache(): void
+    {
+        config(['project.tenancy.mode' => 'single']);
+
+        $this->getJson('/api/v1/countries')->assertOk();
+
+        Tenant::where('slug', 'default')->first()->update(['is_active' => false]);
+
+        $this->getJson('/api/v1/countries')->assertStatus(400);
+    }
+
+    public function test_resolution_cache_can_be_disabled(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.tenant_identification' => 'header',
+            'project.tenancy.cache.enabled' => false,
+        ]);
+
+        Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk();
+
+        // Cache off — every request goes to the tenants table.
+        $this->assertGreaterThan(
+            0,
+            $this->tenantQueriesDuring(
+                fn () => $this->getJson('/api/v1/countries', ['X-Tenant-ID' => 'acme'])->assertOk()
+            )
+        );
+    }
+
+    /**
+     * Number of queries against the tenants table executed by $callback.
+     */
+    protected function tenantQueriesDuring(callable $callback): int
+    {
+        $count = 0;
+
+        DB::listen(function (QueryExecuted $query) use (&$count) {
+            if (str_contains($query->sql, 'tenants')) {
+                $count++;
+            }
+        });
+
+        $callback();
+
+        return $count;
     }
 
     // ── HasTenantScope ───────────────────────────────────────────────

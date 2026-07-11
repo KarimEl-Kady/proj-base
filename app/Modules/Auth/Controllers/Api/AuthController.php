@@ -67,7 +67,12 @@ class AuthController extends Controller
         if ($result['token'] !== null) {
             $payload['token'] = $result['token'];
             $payload['token_type'] = 'Bearer';
-            $payload['expires_in'] = (int) config('project.auth.token_expiration', 1440) * 60;
+
+            // 0 means "never expires" (see AuthService::issueToken) — report
+            // that as null, not 0 seconds, which clients would read as
+            // "already expired".
+            $expiration = (int) config('project.auth.token_expiration', 1440);
+            $payload['expires_in'] = $expiration > 0 ? $expiration * 60 : null;
         }
 
         return $payload;

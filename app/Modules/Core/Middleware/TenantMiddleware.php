@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Middleware;
 
 use App\Models\Tenant;
+use App\Modules\Core\Support\TenantCache;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
@@ -17,6 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
  *           (tenancy.default_tenant), created on first use.
  * - multi:  the tenant is resolved from the request via
  *           tenancy.tenant_identification; unidentifiable requests get 400.
+ *
+ * Successful resolutions are cached through TenantCache (tenancy.cache
+ * config) so steady-state requests skip the tenants-table query; tenant
+ * writes flush their entries via the model hooks in App\Models\Tenant.
  */
 class TenantMiddleware
 {
@@ -65,13 +70,16 @@ class TenantMiddleware
         }
 
         $default = config('project.tenancy.default_tenant', []);
+        $slug = $default['slug'] ?? 'default';
 
-        $tenant = $tenantModel::query()->firstOrCreate(
-            ['slug' => $default['slug'] ?? 'default'],
-            ['name' => $default['name'] ?? 'Default', 'is_active' => true],
-        );
+        return TenantCache::remember($slug, function () use ($tenantModel, $default, $slug): ?int {
+            $tenant = $tenantModel::query()->firstOrCreate(
+                ['slug' => $slug],
+                ['name' => $default['name'] ?? 'Default', 'is_active' => true],
+            );
 
-        return $tenant->is_active ? $tenant->id : null;
+            return $tenant->is_active ? $tenant->id : null;
+        });
     }
 
     protected function resolveTenantId(Request $request): ?int
@@ -122,14 +130,16 @@ class TenantMiddleware
             return null;
         }
 
-        $tenant = $tenantModel::where('is_active', true)
-            ->where(function ($query) use ($identifier) {
-                $query->where('slug', $identifier)
-                    ->orWhere('subdomain', $identifier);
-            })
-            ->first();
+        return TenantCache::remember($identifier, function () use ($tenantModel, $identifier): ?int {
+            $tenant = $tenantModel::where('is_active', true)
+                ->where(function ($query) use ($identifier) {
+                    $query->where('slug', $identifier)
+                        ->orWhere('subdomain', $identifier);
+                })
+                ->first();
 
-        return $tenant?->id;
+            return $tenant?->id;
+        });
     }
 
     /** @return class-string */

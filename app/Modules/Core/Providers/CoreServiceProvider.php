@@ -90,11 +90,11 @@ class CoreServiceProvider extends ServiceProvider
      *
      *     $table->tenantColumn();
      *
-     * In multi-tenant mode it adds the configured tenant column (nullable,
-     * indexed); in single mode it's a no-op — one migration file, correct
-     * schema in both modes. For tables created while the project was still
-     * single-tenant, `php artisan tenant:migrations` generates the
-     * catch-up add-column migrations.
+     * Whenever tenancy is active (single or multi mode) it adds the
+     * configured tenant column (nullable, indexed); in "none" mode it's a
+     * no-op — one migration file, correct schema in every mode. For tables
+     * created while the project was still in "none" mode, `php artisan
+     * tenant:migrations` generates the catch-up add-column migrations.
      */
     protected function registerTenancyMacros(): void
     {

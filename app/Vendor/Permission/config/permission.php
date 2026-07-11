@@ -71,27 +71,48 @@ return [
     | Declarative Roles & Permissions
     |--------------------------------------------------------------------------
     |
-    | The single place that decides what roles/permissions exist in this
-    | project — mirrors local/geo-seeder's config('geo_seeder.countries')
-    | convention. Edit here, then run `php artisan permission:seed` (it
-    | prints its plan before writing anything, and is safe to re-run).
+    | Project-wide roles and permissions — mirrors local/geo-seeder's
+    | config('geo_seeder.countries') convention. Edit here, then run
+    | `php artisan permission:seed` (it prints its plan before writing
+    | anything, and is safe to re-run).
+    |
+    | Permissions that belong to one module live in that module's own
+    | definition file (see definition_paths below) — keep this array for
+    | roles and any cross-cutting permissions that have no single owner.
     |
     | A role's permission list may include '*' to mean "every permission
-    | defined below".
+    | defined anywhere" (this array + every definition_paths file).
     |
     */
 
     'definitions' => [
         'permissions' => [
-            'users.view', 'users.create', 'users.update', 'users.delete',
-            'countries.view', 'countries.manage',
-            'cities.view', 'cities.manage',
+            // Module-owned permissions are declared in each module's
+            // Config/permissions.php — only cross-cutting ones go here.
         ],
 
         'roles' => [
             'admin' => ['*'],
             'manager' => ['users.view', 'countries.view', 'cities.view'],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Module-Owned Definition Files
+    |--------------------------------------------------------------------------
+    |
+    | Glob patterns (relative to base_path) of extra definition files, each
+    | returning the same ['permissions' => [], 'roles' => []] shape as
+    | "definitions" above. permission:seed merges every match with the
+    | central definitions — same-named roles union their permission lists.
+    | This is how a module declares the permissions of the resource it
+    | ships without editing this file.
+    |
+    */
+
+    'definition_paths' => [
+        'app/Modules/*/Config/permissions.php',
     ],
 
 ];
