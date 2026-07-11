@@ -26,6 +26,17 @@ class CityApiTest extends TestCase
         return City::factory()->create();
     }
 
+    // ── Authentication gate (writes only — reads are public reference data) ──
+
+    public function test_guests_cannot_write(): void
+    {
+        $record = $this->makeRecord();
+
+        $this->postJson('/api/v1/cities', [])->assertUnauthorized();
+        $this->putJson("/api/v1/cities/{$record->uuid}", [])->assertUnauthorized();
+        $this->deleteJson("/api/v1/cities/{$record->uuid}")->assertUnauthorized();
+    }
+
     public function test_index_returns_records(): void
     {
         $this->makeRecord();
@@ -37,6 +48,7 @@ class CityApiTest extends TestCase
 
     public function test_store_creates_a_record(): void
     {
+        $this->actingAsUser();
         $country = Country::factory()->create(['iso2' => 'EG']);
 
         $this->postJson('/api/v1/cities', [
@@ -49,6 +61,8 @@ class CityApiTest extends TestCase
 
     public function test_store_validates_country_exists(): void
     {
+        $this->actingAsUser();
+
         $this->postJson('/api/v1/cities', [
             'country_id' => (string) Str::uuid(),
             'name' => 'Nowhere',
@@ -57,6 +71,7 @@ class CityApiTest extends TestCase
 
     public function test_store_rejects_duplicate_name_within_the_same_country(): void
     {
+        $this->actingAsUser();
         $country = Country::factory()->create();
         City::factory()->create(['country_id' => $country->id, 'name' => 'Cairo']);
 
@@ -77,6 +92,7 @@ class CityApiTest extends TestCase
 
     public function test_update_modifies_a_record(): void
     {
+        $this->actingAsUser();
         $record = $this->makeRecord();
 
         $this->putJson("/api/v1/cities/{$record->uuid}", [
@@ -86,6 +102,7 @@ class CityApiTest extends TestCase
 
     public function test_destroy_deletes_a_record(): void
     {
+        $this->actingAsUser();
         $record = $this->makeRecord();
 
         $this->deleteJson("/api/v1/cities/{$record->uuid}")->assertOk();

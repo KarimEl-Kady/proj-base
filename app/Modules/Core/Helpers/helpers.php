@@ -10,10 +10,37 @@ if (! function_exists('tenant_id')) {
     }
 }
 
+if (! function_exists('tenancy_mode')) {
+    /**
+     * Normalized tenancy mode: "none", "single" or "multi".
+     * Unknown config values fall back to "none".
+     */
+    function tenancy_mode(): string
+    {
+        $mode = config('project.tenancy.mode', 'none');
+
+        return in_array($mode, ['single', 'multi'], true) ? $mode : 'none';
+    }
+}
+
+if (! function_exists('has_tenancy')) {
+    function has_tenancy(): bool
+    {
+        return tenancy_mode() !== 'none';
+    }
+}
+
+if (! function_exists('is_single_tenant')) {
+    function is_single_tenant(): bool
+    {
+        return tenancy_mode() === 'single';
+    }
+}
+
 if (! function_exists('is_multi_tenant')) {
     function is_multi_tenant(): bool
     {
-        return config('project.tenancy.mode') === 'multi';
+        return tenancy_mode() === 'multi';
     }
 }
 

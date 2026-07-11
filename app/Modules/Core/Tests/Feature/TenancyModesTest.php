@@ -85,6 +85,15 @@ class TenancyModesTest extends TestCase
         $this->assertSame(1, Tenant::count());
     }
 
+    public function test_single_mode_rejects_requests_when_default_tenant_is_deactivated(): void
+    {
+        config(['project.tenancy.mode' => 'single']);
+
+        Tenant::create(['name' => 'Default', 'slug' => 'default', 'is_active' => false]);
+
+        $this->getJson('/api/v1/countries')->assertStatus(400);
+    }
+
     public function test_single_mode_default_tenant_is_configurable(): void
     {
         config([

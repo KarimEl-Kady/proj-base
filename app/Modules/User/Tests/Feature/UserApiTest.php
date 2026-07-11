@@ -5,6 +5,7 @@ namespace App\Modules\User\Tests\Feature;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class UserApiTest extends TestCase
@@ -29,11 +30,37 @@ class UserApiTest extends TestCase
         ]);
     }
 
+    /**
+     * All /api/v1/users routes require auth:sanctum. Pass a user to act as
+     * one of the fixtures (keeps user counts in listing assertions exact).
+     */
+    protected function authenticate(?User $user = null): User
+    {
+        $user ??= $this->makeUser('Admin', 'admin@example.com');
+
+        Sanctum::actingAs($user);
+
+        return $user;
+    }
+
+    // ── Authentication gate ──────────────────────────────────────────
+
+    public function test_guests_are_rejected_on_every_endpoint(): void
+    {
+        $uuid = (string) Str::uuid();
+
+        $this->getJson('/api/v1/users')->assertUnauthorized();
+        $this->postJson('/api/v1/users', [])->assertUnauthorized();
+        $this->getJson("/api/v1/users/{$uuid}")->assertUnauthorized();
+        $this->putJson("/api/v1/users/{$uuid}", [])->assertUnauthorized();
+        $this->deleteJson("/api/v1/users/{$uuid}")->assertUnauthorized();
+    }
+
     // ── CRUD ─────────────────────────────────────────────────────────
 
     public function test_index_returns_paginated_users(): void
     {
-        $this->makeUser();
+        $this->authenticate();
 
         $this->getJson('/api/v1/users')
             ->assertOk()
@@ -43,6 +70,8 @@ class UserApiTest extends TestCase
 
     public function test_store_creates_a_user_with_uuid(): void
     {
+        $this->authenticate();
+
         $response = $this->postJson('/api/v1/users', [
             'name' => 'Bob',
             'email' => 'bob@example.com',
@@ -56,6 +85,8 @@ class UserApiTest extends TestCase
 
     public function test_store_validates_input(): void
     {
+        $this->authenticate();
+
         $this->postJson('/api/v1/users', ['email' => 'not-an-email'])
             ->assertStatus(422)
             ->assertJsonPath('success', false);
@@ -63,6 +94,8 @@ class UserApiTest extends TestCase
 
     public function test_show_returns_enveloped_404_for_unknown_uuid(): void
     {
+        $this->authenticate();
+
         $this->getJson('/api/v1/users/'.Str::uuid())
             ->assertNotFound()
             ->assertJsonPath('success', false);
@@ -71,6 +104,7 @@ class UserApiTest extends TestCase
     public function test_show_finds_a_user_by_uuid(): void
     {
         $user = $this->makeUser();
+        $this->authenticate($user);
 
         $this->getJson("/api/v1/users/{$user->uuid}")
             ->assertOk()
@@ -80,6 +114,7 @@ class UserApiTest extends TestCase
     public function test_update_modifies_a_user(): void
     {
         $user = $this->makeUser();
+        $this->authenticate($user);
 
         $this->putJson("/api/v1/users/{$user->uuid}", ['name' => 'Updated'])
             ->assertOk();
@@ -90,6 +125,7 @@ class UserApiTest extends TestCase
     public function test_destroy_deletes_a_user(): void
     {
         $user = $this->makeUser();
+        $this->authenticate();
 
         $this->deleteJson("/api/v1/users/{$user->uuid}")->assertOk();
 
@@ -100,8 +136,9 @@ class UserApiTest extends TestCase
 
     public function test_word_filter_searches_searchable_columns(): void
     {
-        $this->makeUser('Alice', 'alice@example.com');
+        $alice = $this->makeUser('Alice', 'alice@example.com');
         $this->makeUser('Bob', 'bob@example.com');
+        $this->authenticate($alice);
 
         $response = $this->getJson('/api/v1/users?word=alice');
 
@@ -110,10 +147,26 @@ class UserApiTest extends TestCase
         $this->assertSame('Alice', $response->json('data.data.0.name'));
     }
 
+    public function test_word_filter_treats_like_wildcards_as_literals(): void
+    {
+        $literal = $this->makeUser('100% Cotton', 'cotton@example.com');
+        $this->makeUser('100x Cotton', 'cottonx@example.com');
+        $this->authenticate($literal);
+
+        // Unescaped, "100%" would LIKE-match both rows; escaped it must
+        // match only the literal percent sign.
+        $response = $this->getJson('/api/v1/users?word='.urlencode('100%'));
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('data.data'));
+        $this->assertSame('100% Cotton', $response->json('data.data.0.name'));
+    }
+
     public function test_pagination_false_returns_full_set(): void
     {
-        $this->makeUser('Alice', 'alice@example.com');
+        $alice = $this->makeUser('Alice', 'alice@example.com');
         $this->makeUser('Bob', 'bob@example.com');
+        $this->authenticate($alice);
 
         $response = $this->getJson('/api/v1/users?pagination=false');
 
@@ -124,8 +177,9 @@ class UserApiTest extends TestCase
 
     public function test_per_page_is_respected_and_capped(): void
     {
-        $this->makeUser('Alice', 'alice@example.com');
+        $alice = $this->makeUser('Alice', 'alice@example.com');
         $this->makeUser('Bob', 'bob@example.com');
+        $this->authenticate($alice);
 
         $response = $this->getJson('/api/v1/users?per_page=1');
 
@@ -138,8 +192,9 @@ class UserApiTest extends TestCase
 
     public function test_sorting_is_whitelisted(): void
     {
-        $this->makeUser('Alice', 'alice@example.com');
+        $alice = $this->makeUser('Alice', 'alice@example.com');
         $this->makeUser('Bob', 'bob@example.com');
+        $this->authenticate($alice);
 
         $response = $this->getJson('/api/v1/users?sort_by=id&sort_dir=asc');
         $response->assertOk();

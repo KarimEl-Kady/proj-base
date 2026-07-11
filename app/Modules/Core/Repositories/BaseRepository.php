@@ -68,9 +68,15 @@ abstract class BaseRepository
         $columns = $this->searchableColumns();
 
         if ($word !== null && $columns !== []) {
-            $query->where(function (Builder $inner) use ($columns, $word) {
+            // LIKE wildcards in the search word are user data, not operators.
+            // "!" as the escape char is portable (backslash escaping differs
+            // between MySQL and SQLite).
+            $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $word);
+
+            $query->where(function (Builder $inner) use ($columns, $escaped) {
                 foreach ($columns as $column) {
-                    $inner->orWhere($column, 'like', "%{$word}%");
+                    $wrapped = $inner->getGrammar()->wrap($inner->qualifyColumn($column));
+                    $inner->orWhereRaw("{$wrapped} like ? escape '!'", ["%{$escaped}%"]);
                 }
             });
         }

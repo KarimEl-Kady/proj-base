@@ -24,6 +24,17 @@ class CountryApiTest extends TestCase
         return Country::factory()->create();
     }
 
+    // ── Authentication gate (writes only — reads are public reference data) ──
+
+    public function test_guests_cannot_write(): void
+    {
+        $record = $this->makeRecord();
+
+        $this->postJson('/api/v1/countries', [])->assertUnauthorized();
+        $this->putJson("/api/v1/countries/{$record->uuid}", [])->assertUnauthorized();
+        $this->deleteJson("/api/v1/countries/{$record->uuid}")->assertUnauthorized();
+    }
+
     public function test_index_returns_records(): void
     {
         $this->makeRecord();
@@ -35,6 +46,8 @@ class CountryApiTest extends TestCase
 
     public function test_store_creates_a_record(): void
     {
+        $this->actingAsUser();
+
         $this->postJson('/api/v1/countries', [
             'name' => 'Egypt',
             'iso2' => 'EG',
@@ -48,6 +61,7 @@ class CountryApiTest extends TestCase
 
     public function test_store_validates_unique_iso_codes(): void
     {
+        $this->actingAsUser();
         $this->makeRecord()->update(['iso2' => 'EG', 'iso3' => 'EGY']);
 
         $this->postJson('/api/v1/countries', [
@@ -68,6 +82,7 @@ class CountryApiTest extends TestCase
 
     public function test_update_modifies_a_record(): void
     {
+        $this->actingAsUser();
         $record = $this->makeRecord();
 
         $this->putJson("/api/v1/countries/{$record->uuid}", [
@@ -77,6 +92,7 @@ class CountryApiTest extends TestCase
 
     public function test_destroy_deletes_a_record(): void
     {
+        $this->actingAsUser();
         $record = $this->makeRecord();
 
         $this->deleteJson("/api/v1/countries/{$record->uuid}")->assertOk();

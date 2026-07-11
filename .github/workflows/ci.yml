@@ -127,6 +127,20 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
 
+      # Tests run on SQLite; this guards schema portability on the real
+      # driver (FK ordering, column types) in every tenancy mode.
+      - name: Migrations run on MySQL (schema portability guard)
+        run: |
+          PROJECT_TENANCY_MODE=none  php artisan migrate:fresh --force
+          PROJECT_TENANCY_MODE=multi php artisan migrate:fresh --force
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: proj_base_test
+          DB_USERNAME: root
+          DB_PASSWORD: rootsecret
+
       - name: Run tests
         run: php artisan test
         env:

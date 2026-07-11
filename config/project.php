@@ -164,12 +164,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | driver: "session", "token", "sanctum"
+    |   sanctum (default) issues Bearer tokens — what the API routes expect.
+    |   session authenticates on the web guard; it only works on routes that
+    |   have session state (the "web" group / statefulApi), not the plain
+    |   "api" group.
     | token_expiration: token lifetime in minutes
     |
     */
 
     'auth' => [
-        'driver' => env('PROJECT_AUTH_DRIVER', 'session'),
+        'driver' => env('PROJECT_AUTH_DRIVER', 'sanctum'),
         'token_expiration' => env('PROJECT_AUTH_TOKEN_EXPIRATION', 1440),
 
         // Role (from local/permission) assigned to every newly registered

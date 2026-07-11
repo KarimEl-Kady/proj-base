@@ -173,7 +173,7 @@ class ModuleMakeCommand extends Command
                     Schema::create('{$table}', function (Blueprint \$table) {
                         \$table->id();
                         \$table->uuid('uuid')->unique();
-                        \$table->tenantColumn(); // adds the tenant column only in multi-tenant mode
+                        \$table->tenantColumn(); // adds the tenant column when tenancy is active (single/multi)
                         \$table->timestamps();
                     });
             PHP;
@@ -619,8 +619,14 @@ class ModuleMakeCommand extends Command
                 ]);
             }
 
+            public function test_guests_are_rejected(): void
+            {
+                \$this->getJson('{$url}')->assertUnauthorized();
+            }
+
             public function test_index_returns_records(): void
             {
+                \$this->actingAsUser();
                 \$this->makeRecord();
 
                 \$this->getJson('{$url}')
@@ -630,6 +636,8 @@ class ModuleMakeCommand extends Command
 
             public function test_store_creates_a_record(): void
             {
+                \$this->actingAsUser();
+
                 \$this->postJson('{$url}', [
                     // payload matching Create{$base}Request rules
                 ])->assertCreated();
@@ -639,6 +647,7 @@ class ModuleMakeCommand extends Command
 
             public function test_show_returns_a_record(): void
             {
+                \$this->actingAsUser();
                 \$record = \$this->makeRecord();
 
                 \$this->getJson("{$url}/{\$record->uuid}")->assertOk();
@@ -646,6 +655,7 @@ class ModuleMakeCommand extends Command
 
             public function test_update_modifies_a_record(): void
             {
+                \$this->actingAsUser();
                 \$record = \$this->makeRecord();
 
                 \$this->putJson("{$url}/{\$record->uuid}", [
@@ -655,6 +665,7 @@ class ModuleMakeCommand extends Command
 
             public function test_destroy_deletes_a_record(): void
             {
+                \$this->actingAsUser();
                 \$record = \$this->makeRecord();
 
                 \$this->deleteJson("{$url}/{\$record->uuid}")->assertOk();

@@ -52,7 +52,9 @@ class TenantMiddleware
 
     /**
      * Single mode: the one tenant everything belongs to. Created on first
-     * use so single mode needs no seeding step.
+     * use so single mode needs no seeding step. Respects is_active the same
+     * way multi-mode lookup does — deactivating the default tenant stops
+     * serving requests (the tenant-level kill switch).
      */
     protected function resolveDefaultTenantId(): ?int
     {
@@ -69,7 +71,7 @@ class TenantMiddleware
             ['name' => $default['name'] ?? 'Default', 'is_active' => true],
         );
 
-        return $tenant->id;
+        return $tenant->is_active ? $tenant->id : null;
     }
 
     protected function resolveTenantId(Request $request): ?int

@@ -26,6 +26,7 @@ class TenantMigrationsTest extends TestCase
         Schema::dropIfExists('tenant_probes');
         Schema::dropIfExists('macro_probes');
         File::deleteDirectory($this->probePath);
+        File::delete(glob(module_path('User', 'Database/Migrations').'/*_add_tenant_id_to_users_table.php'));
 
         parent::tearDown();
     }
@@ -57,9 +58,21 @@ class TenantMigrationsTest extends TestCase
         $this->assertFalse(Schema::hasColumn('macro_probes', 'tenant_id'));
     }
 
-    public function test_macro_is_a_no_op_in_single_mode(): void
+    public function test_macro_adds_the_tenant_column_in_single_mode(): void
     {
         config(['project.tenancy.mode' => 'single']);
+
+        Schema::create('macro_probes', function (Blueprint $table) {
+            $table->id();
+            $table->tenantColumn();
+        });
+
+        $this->assertTrue(Schema::hasColumn('macro_probes', 'tenant_id'));
+    }
+
+    public function test_macro_is_a_no_op_in_none_mode(): void
+    {
+        config(['project.tenancy.mode' => 'none']);
 
         Schema::create('macro_probes', function (Blueprint $table) {
             $table->id();
@@ -71,12 +84,12 @@ class TenantMigrationsTest extends TestCase
 
     // ── tenant:migrations command ────────────────────────────────────
 
-    public function test_command_is_a_no_op_in_single_mode(): void
+    public function test_command_is_a_no_op_in_none_mode(): void
     {
-        config(['project.tenancy.mode' => 'single']);
+        config(['project.tenancy.mode' => 'none']);
 
         $this->artisan('tenant:migrations')
-            ->expectsOutputToContain('Tenancy mode is [single]')
+            ->expectsOutputToContain('Tenancy mode is [none]')
             ->assertSuccessful();
     }
 
@@ -84,7 +97,13 @@ class TenantMigrationsTest extends TestCase
     {
         config(['project.tenancy.mode' => 'multi']);
 
-        // users already carries tenant_id from the base migration
+        // Simulate a users table created while already in multi mode:
+        // the base migration's tenantColumn() macro is a no-op in the
+        // single-mode test environment, so add the column by hand.
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreignId('tenant_id')->nullable()->index();
+        });
+
         $this->artisan('tenant:migrations')->assertSuccessful();
 
         $this->assertSame(

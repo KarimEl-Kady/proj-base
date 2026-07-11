@@ -46,6 +46,11 @@ class AuthService
         if (config('project.auth.driver', 'session') === 'session') {
             Auth::guard('web')->login($user);
 
+            // New session id on privilege change — prevents session fixation.
+            if (request()->hasSession()) {
+                request()->session()->regenerate();
+            }
+
             return ['user' => $user, 'token' => null];
         }
 

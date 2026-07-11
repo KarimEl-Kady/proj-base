@@ -11,7 +11,7 @@
 | Lint (PHP) | `./vendor/bin/pint` | `make lint` |
 | Frontend dev | `npm run dev` | started automatically with `make dev` |
 | Frontend build | `npm run build` | `make npm c="run build"` |
-| Make module | `php artisan make:module Blog` | `make module name=Blog` |
+| Make module | `php artisan make:module` (interactive) | `make module` |
 | Module component | `php artisan module:make Blog model Post` | `make artisan c="module:make Blog model Post"` |
 | List modules | `php artisan module:list` | `make artisan c="module:list"` |
 | Make local package | `php artisan make:package Payment` | `make artisan c="make:package Payment"` |
@@ -31,7 +31,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - `CoreServiceProvider` (`app/Modules/Core/Providers/CoreServiceProvider.php:32`) auto-registers each active module's `{Module}ServiceProvider` at `app/Modules/{Module}/Providers/{Module}ServiceProvider.php`.
 - Use `module_path('Module')` helper to resolve module directories. Do NOT hardcode paths.
 - Module directory structure is defined in `config/project.php` under `module_structure` key.
-- Generate a new module: `php artisan make:module` with no arguments runs an **interactive wizard** (name, API/Web/both, extras: migration/seeder/factory, enable now). Non-interactive: `php artisan make:module Blog --api-only --with=migration --with=factory` (`--no-enable` to skip registration). New modules are registered as enabled in the registry automatically.
+- Generate a new module: `php artisan make:module` — takes no arguments or flags, purely an **interactive wizard** (name, API/Web/both, extras: migration/seeder/factory, enable now). New modules are registered as enabled in the registry automatically.
 - The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, and Resource — all wired with route attributes.
 - Module lifecycle commands (all prompt for the module when the argument is omitted): `module:list` (status table), `module:enable` / `module:disable` (toggle in the registry), `module:delete` (removes directory + registry entry).
 - **Module boundaries**: modules may depend only on Core plus dependencies declared in `config/project.php` → `boundaries.allow` (e.g. `'Auth' => ['User']`). `php artisan module:boundaries` verifies this and runs in CI — declare new cross-module deps there or the build fails.
@@ -109,7 +109,8 @@ The base's messaging architecture is **event-driven over Laravel's queue** (the 
 ### Auth module
 
 - Full auth implementation under `app/Modules/Auth`, routes at `/api/v1/auth/*`: register, login, logout, me, password forgot/reset, email verification (signed URLs, route name `verification.verify`), TOTP 2FA (`App\Modules\Auth\Support\Totp`, dependency-free RFC 6238), and named personal access tokens.
-- Driver via `PROJECT_AUTH_DRIVER`: `sanctum`/`token` issue Bearer tokens (lifetime `PROJECT_AUTH_TOKEN_EXPIRATION` minutes, wired to `sanctum.expiration`); `session` uses the web guard.
+- Driver via `PROJECT_AUTH_DRIVER` (default `sanctum`): `sanctum`/`token` issue Bearer tokens (lifetime `PROJECT_AUTH_TOKEN_EXPIRATION` minutes, wired to `sanctum.expiration`); `session` uses the web guard — it only works on routes with session state (the `web` group / `statefulApi`), not the plain `api` group, and regenerates the session id on login.
+- Password policy is centralized via `Password::defaults()` in `AuthServiceProvider`: min 8 everywhere; production additionally requires mixed case + numbers and rejects pwned passwords (`uncompromised()`, HIBP range API — production only so tests/offline dev make no network calls). Register/reset requests use `Password::defaults()`, never inline `min:` rules.
 - Every sub-feature is gated by its `PROJECT_FEATURE_*` flag and returns 403 when disabled. Login requires a `code` field when the user has confirmed 2FA.
 - Protected endpoints use `auth:sanctum`. `two_factor_secret` is stored encrypted and hidden from serialization.
 - New registrations optionally get a default role — set `PROJECT_AUTH_DEFAULT_ROLE` (see Events & listeners above).
@@ -123,19 +124,21 @@ The base's messaging architecture is **event-driven over Laravel's queue** (the 
 - `php artisan geo:seed` (in `App\Modules\Country\Commands\SeedGeoDataCommand`) is the entry point: prints a table of exactly which countries will be seeded (and which requested codes have no shipped data, so they're skipped rather than fatal) before running `CountrySeeder` then `CitySeeder`. `--countries=EG,KW` overrides `config('geo_seeder.countries')` for one run; `--fresh` deletes existing rows for just those countries first. Both seeders `updateOrCreate` (by `iso2`, and by `[country_id, name]`), so re-running — with or without the command — is always safe.
 - `FetchCityRequest` adds a `?country=EG` filter, implemented via `CityRepository::baseQuery()` (see Fetch pipeline above).
 
-### Multi-tenancy
+### Tenancy (three modes)
 
-- Controlled by `PROJECT_TENANCY_MODE` (default `single`). Set to `multi` to enable.
-- `TenantMiddleware` resolves tenant from subdomain, `X-Tenant-ID` header, or URL path segment based on `PROJECT_TENANT_IDENTIFICATION`.
-- Use `tenant_id()` helper to get current tenant, `is_multi_tenant()` to check mode.
-- Models should use `HasTenantScope` trait and call `scopeForTenant()` on queries.
+- Controlled by `PROJECT_TENANCY_MODE` (default `none`); unknown values behave as `none`. Read it via the helpers, never compare the raw config string: `tenancy_mode()` (normalized `none|single|multi`), `has_tenancy()`, `is_single_tenant()`, `is_multi_tenant()`, and `tenant_id()` for the current tenant.
+  - **`none`** — no tenancy: no tenant column, no scoping, no resolution. `TenantMiddleware` is a pass-through.
+  - **`single`** — one implicit tenant: every request runs under the **default tenant** (`project.tenancy.default_tenant`, env `PROJECT_TENANT_DEFAULT_NAME`/`_SLUG`), created on first use — no seeding step. The tenant column exists and rows are stamped, so flipping to `multi` later is a config change, not a data migration. Deactivating the default tenant (`is_active = false`) stops serving requests (400) — the tenant-level kill switch, same as multi mode.
+  - **`multi`** — full multi-tenancy: `TenantMiddleware` resolves the tenant from subdomain, `X-Tenant-ID` header, or URL path segment per `PROJECT_TENANT_IDENTIFICATION`, and aborts 400 when unidentifiable. Paths in `project.tenancy.exempt_paths` (default: `api/health`) skip tenant resolution so probes/monitors keep working tenant-less.
+- `TenantMiddleware` is always registered on both the `api` and `web` groups; the mode is honored at request time, so flipping modes never requires re-wiring. The tenant model is `project.tenancy.tenant_model` (default `App\Models\Tenant`).
+- Models opt in with the `HasTenantScope` trait: active in `single` and `multi` (no-op in `none`), it narrows queries to the Context tenant and stamps the tenant column on create. The `tenants` table itself is created in **every** mode (migration `0001_01_01_000000`) so a later mode flip finds it in place.
 
-**Tenant-aware migrations** — one migration file, correct schema in both modes:
+**Tenant-aware migrations** — one migration file, correct schema in all modes:
 
-- Create-table migrations call `$table->tenantColumn();` (a Blueprint macro registered by CoreServiceProvider; `module:make {M} migration create_x_table` generates it). In `multi` mode it adds the configured tenant column (nullable + indexed); in `single` mode it's a **no-op** — nothing to comment in/out per project.
-- Switching an existing project from `single` to `multi`: run `php artisan tenant:migrations`. It discovers every non-abstract model using `HasTenantScope` across active modules, prints a status table (ok / table missing / migration created), and generates `add_{column}_to_{table}_table` migrations into each owning module's `Database/Migrations` for tables missing the column — idempotent (re-running reports "migration already generated"), and a no-op with a hint in `single` mode.
+- Create-table migrations call `$table->tenantColumn();` (a Blueprint macro registered by CoreServiceProvider; `module:make {M} migration create_x_table` generates it). When tenancy is active (`single`/`multi`) it adds the configured tenant column (nullable + indexed); in `none` mode it's a **no-op** — nothing to comment in/out per project.
+- Switching an existing project from `none` to `single`/`multi`: run `php artisan tenant:migrations`. It discovers every non-abstract model using `HasTenantScope` across active modules, prints a status table (ok / table missing / migration created), and generates `add_{column}_to_{table}_table` migrations into each owning module's `Database/Migrations` for tables missing the column — idempotent (re-running reports "migration already generated"), and a no-op with a hint in `none` mode.
 - The generated catch-up migration adds column + index only, **no foreign key** on purpose — adding an FK to an existing table isn't portable across drivers (SQLite in particular); add one in a separate migration if the project needs it.
-- Verified lifecycle: create table in single mode (no column) → flip to multi → `tenant:migrations` + `migrate` (column added) → tables created afterwards get the column at create time via the macro.
+- Verified lifecycle: create table in `none` mode (no column) → flip to `single`/`multi` → `tenant:migrations` + `migrate` (column added) → tables created afterwards get the column at create time via the macro.
 
 ### Project config
 
@@ -144,6 +147,8 @@ All project-specific config lives in `config/project.php`, read via `project_con
 ### Routing conventions
 
 - Module API routes use prefix `api/v1/{resource}` (e.g. `api/v1/users`).
+- **Auth by default**: `make:module` generates API routes behind `auth:sanctum` — open up individual routes deliberately, not the other way around. Shipped modules follow the same posture: `/api/v1/users` requires auth on every endpoint (PII); Country/City reads are public reference data, writes require auth.
+- **Rate limiting**: every `api`-group route is throttled by `RateLimiter::for('api')` (registered in CoreServiceProvider), reading `project.api.rate_limit` (`PROJECT_API_RATE_LIMIT`, default 60 req/min, keyed per user id or IP). Routes with their own `throttle:` middleware (Auth's login/register) are limited by both.
 - Module web routes use prefix `{resource}` (e.g. `users`); dashboard routes use `{dashboard_prefix}/{resource}` (e.g. `dashboard/users`), authenticated by default.
 - Global `routes/api.php` and `routes/web.php` stay empty — all module routes come from each module's own `Routes/*.php` files, loaded by `CoreServiceProvider`.
 
@@ -153,7 +158,7 @@ All project-specific config lives in `config/project.php`, read via `project_con
 - Tests use SQLite in-memory database (configured in `phpunit.xml`).
 - Test suites (`phpunit.xml`): `Unit` (`tests/Unit`), `Feature` (`tests/Feature`), `Modules` (`app/Modules/*/Tests` — every module carries its own tests), `Packages` (`app/Vendor/*/tests`). All run together with `php artisan test`; run one with `--testsuite=Modules`.
 - Module tests live in `app/Modules/{Module}/Tests/{Feature,Unit}` and extend `Tests\TestCase`. Feature stubs skip themselves when the module is disabled in the registry.
-- Generate: `php artisan module:make {Module} test {Name}` (`--unit` for a unit test). When a matching API controller + model exist, the generator emits a full CRUD smoke test (index/store/show/update/destroy against the module's endpoints). `make:module --with=test` (wizard default) generates `{Module}ApiTest` automatically.
+- Generate: `php artisan module:make {Module} test {Name}` (`--unit` for a unit test). When a matching API controller + model exist, the generator emits a full CRUD smoke test (index/store/show/update/destroy against the module's endpoints). `make:module`'s wizard defaults its "extras" multiselect to include `test`, generating `{Module}ApiTest` automatically.
 - Reference example: `app/Modules/User/Tests/Feature/UserApiTest.php` covers CRUD, uuid exposure, and the fetch pipeline (word/pagination/per_page cap/sort whitelist).
 
 ## Docker
@@ -224,7 +229,7 @@ INSTALL_XDEBUG=true make rebuild
 GitHub Actions (`.github/workflows/ci.yml`) and a GitLab mirror (`.gitlab-ci.yml`) with the same stages. Runs on push/PR to `main` and `develop` (plus manual `workflow_dispatch`).
 
 - **Syntax job** (fast fail): `php -l` over app/config/database/routes/tests + `composer validate` — catches parse errors before installing anything.
-- **PHP job**: Pint lint, boot smoke check (`route:list` + `about` — catches urgent runtime errors), PHPUnit tests on PHP 8.3 & 8.4 (SQLite in-memory).
+- **PHP job**: Pint lint, boot smoke check (`route:list` + `about` — catches urgent runtime errors), a **MySQL migration guard** (`migrate:fresh` against the job's MySQL service in `none` and `multi` tenancy modes — catches schema portability bugs SQLite tolerates, e.g. FK ordering), then PHPUnit tests on PHP 8.3 & 8.4 (SQLite in-memory). The GitLab mirror runs the same guard as a separate `mysql-migrations` job.
 - **Frontend job**: `npm ci --ignore-scripts` + `npm run build` (Node 22).
 - **Security job**: `composer audit` for known vulnerability scanning.
 - **Deploy job** (`deploy-dev`): after all checks pass on a `develop` push (or manual dispatch), SSHes into the dev server and runs `deploy/deploy-dev.sh` there.

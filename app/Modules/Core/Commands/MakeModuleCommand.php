@@ -14,14 +14,9 @@ use function Laravel\Prompts\text;
 
 class MakeModuleCommand extends Command
 {
-    protected $signature = 'make:module
-                            {name? : Module name in StudlyCase (omit to run the interactive wizard)}
-                            {--api-only : Skip web controller}
-                            {--web-only : Skip API controller, fetch request, and resource}
-                            {--with=* : Extras to generate (migration, seeder, factory, test)}
-                            {--no-enable : Do not register the module in the registry}';
+    protected $signature = 'make:module';
 
-    protected $description = 'Scaffold a new HMVC module (interactive when no arguments are given)';
+    protected $description = 'Scaffold a new HMVC module (interactive wizard)';
 
     protected string $moduleName;
 
@@ -52,9 +47,7 @@ class MakeModuleCommand extends Command
 
     public function handle(): int
     {
-        $this->argument('name') !== null
-            ? $this->gatherFromArguments()
-            : $this->gatherInteractively();
+        $this->gatherInteractively();
 
         $this->prepareNames();
 
@@ -100,15 +93,6 @@ class MakeModuleCommand extends Command
     }
 
     // ── Input gathering ──────────────────────────────────────────────
-
-    protected function gatherFromArguments(): void
-    {
-        $this->moduleName = Str::studly($this->argument('name'));
-        $this->withApi = ! $this->option('web-only');
-        $this->withWeb = ! $this->option('api-only');
-        $this->extras = array_values(array_intersect($this->option('with'), ['migration', 'seeder', 'factory', 'test']));
-        $this->enable = ! $this->option('no-enable');
-    }
 
     protected function gatherInteractively(): void
     {
@@ -499,7 +483,9 @@ class MakeModuleCommand extends Command
         |
         */
 
-        Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->group(function () {
+        // Generated protected by default — remove the auth middleware (or move
+        // routes out of the group) only for endpoints that are truly public.
+        Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->middleware('auth:sanctum')->group(function () {
             Route::get('/', [{$controller}::class, 'index'])->name('api.{$this->pluralSnake}.index');
             Route::post('/', [{$controller}::class, 'store'])->name('api.{$this->pluralSnake}.store');
             Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('api.{$this->pluralSnake}.show');

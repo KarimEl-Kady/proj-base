@@ -20,9 +20,14 @@ class ProjectInfoCommand extends Command
         $this->twoColumnDetail('Auth driver', config('project.auth.driver'));
 
         $this->twoColumnDetail('<fg=cyan>Tenancy</>', '');
-        $this->twoColumnDetail('Mode', config('project.tenancy.mode'));
-        if (is_multi_tenant()) {
+        $this->twoColumnDetail('Mode', tenancy_mode());
+        if (has_tenancy()) {
             $this->twoColumnDetail('Tenant column', config('project.tenancy.tenant_column'));
+        }
+        if (is_single_tenant()) {
+            $this->twoColumnDetail('Default tenant', config('project.tenancy.default_tenant.slug'));
+        }
+        if (is_multi_tenant()) {
             $this->twoColumnDetail('Identification', config('project.tenancy.tenant_identification'));
         }
 

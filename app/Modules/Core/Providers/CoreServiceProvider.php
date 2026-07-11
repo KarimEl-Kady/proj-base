@@ -14,9 +14,12 @@ use App\Modules\Core\Commands\PackageListCommand;
 use App\Modules\Core\Commands\ProjectInfoCommand;
 use App\Modules\Core\Commands\TenantMigrationsCommand;
 use App\Modules\Core\Middleware\TenantMiddleware;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -57,10 +60,23 @@ class CoreServiceProvider extends ServiceProvider
         $this->registerTenancyMacros();
         $this->loadModuleResources();
         $this->loadModuleRouteFiles();
+        $this->registerTenantMiddleware();
+        $this->registerRateLimiting();
+    }
 
-        if (config('project.platform') === 'api' || config('project.platform') === 'hybrid') {
-            $this->registerApiMiddleware();
-        }
+    /**
+     * Project-wide API rate limit (project.api.rate_limit requests/min,
+     * keyed per user or IP). Routes with their own throttle middleware
+     * (e.g. the Auth module's login/register) are limited by both.
+     */
+    protected function registerRateLimiting(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute((int) config('project.api.rate_limit', 60))
+                ->by($request->user()?->getAuthIdentifier() ?? $request->ip());
+        });
+
+        $this->app['router']->prependMiddlewareToGroup('api', 'throttle:api');
     }
 
     protected function loadHelpers(): void
@@ -84,7 +100,7 @@ class CoreServiceProvider extends ServiceProvider
     {
         Blueprint::macro('tenantColumn', function (): Blueprint {
             /** @var Blueprint $this */
-            if (is_multi_tenant()) {
+            if (has_tenancy()) {
                 $column = config('project.tenancy.tenant_column', 'tenant_id');
                 $this->foreignId($column)->nullable()->index();
             }
@@ -157,11 +173,16 @@ class CoreServiceProvider extends ServiceProvider
         }
     }
 
-    protected function registerApiMiddleware(): void
+    /**
+     * Always registered on both route groups; the middleware itself is a
+     * pass-through when tenancy.mode is "none", so the mode is honored at
+     * request time (not frozen at boot) and flipping it never requires
+     * re-wiring.
+     */
+    protected function registerTenantMiddleware(): void
     {
-        if (is_multi_tenant()) {
-            $this->app['router']->pushMiddlewareToGroup('api', TenantMiddleware::class);
-        }
+        $this->app['router']->pushMiddlewareToGroup('api', TenantMiddleware::class);
+        $this->app['router']->pushMiddlewareToGroup('web', TenantMiddleware::class);
     }
 
     /**

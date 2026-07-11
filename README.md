@@ -82,12 +82,11 @@ app/Modules/{Module}/
 
 ## Generators
 
-All commands are interactive when called with no arguments, and scriptable with them:
+`make:module` is pure question-and-answer (no arguments/flags); the single-component generator below is interactive when called with no arguments, and scriptable with them:
 
 ```bash
 # New module — wizard asks: name, API/Web/both, extras, enable now?
 php artisan make:module
-php artisan make:module Blog --api-only --with=migration --with=test
 
 # Single component into an existing module
 php artisan module:make                       # interactive

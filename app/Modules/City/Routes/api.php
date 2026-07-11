@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('api/v1/cities')->group(function () {
+    // Reads are public reference data; writes require authentication.
     Route::get('/', [CityController::class, 'index'])->name('api.cities.index');
-    Route::post('/', [CityController::class, 'store'])->name('api.cities.store');
     Route::get('/{city}', [CityController::class, 'show'])->name('api.cities.show');
-    Route::put('/{city}', [CityController::class, 'update'])->name('api.cities.update');
-    Route::delete('/{city}', [CityController::class, 'destroy'])->name('api.cities.destroy');
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/', [CityController::class, 'store'])->name('api.cities.store');
+        Route::put('/{city}', [CityController::class, 'update'])->name('api.cities.update');
+        Route::delete('/{city}', [CityController::class, 'destroy'])->name('api.cities.destroy');
+    });
 });

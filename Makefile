@@ -137,12 +137,8 @@ tinker: ## Open Laravel Tinker REPL
 # ---------------------------------------------------------------------------
 # Module Management
 # ---------------------------------------------------------------------------
-module: ## Create a new module (use name=Blog, or omit name for the interactive wizard)
-ifdef name
-	$(EXEC) php artisan make:module $(name)
-else
-	$(EXEC) php artisan make:module
-endif
+module: ## Create a new module (interactive wizard)
+	$(EXEC_IT) php artisan make:module
 
 # ---------------------------------------------------------------------------
 # Queue
