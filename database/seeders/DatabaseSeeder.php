@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Modules\Core\Support\Tenancy;
 use App\Modules\User\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -23,9 +24,20 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        User::query()->firstOrCreate(
+        // User is tenant-scoped; seed under the default tenant when tenancy
+        // is active. The tenant column is set explicitly (not left to the
+        // creating() hook) because WithoutModelEvents mutes model events.
+        $seed = fn () => User::query()->firstOrCreate(
             ['email' => 'test@example.com'],
-            ['name' => 'Test User', 'password' => 'password'],
+            [
+                'name' => 'Test User',
+                'password' => 'password',
+                ...(has_tenancy()
+                    ? [config('project.tenancy.tenant_column', 'tenant_id') => tenant_id()]
+                    : []),
+            ],
         );
+
+        has_tenancy() ? with_tenant(Tenancy::defaultTenantId(), $seed) : $seed();
     }
 }

@@ -65,6 +65,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | mode: "none", "single" or "multi" (unknown values behave as "none")
+    | strict: fail closed — using a tenant-scoped model while tenancy is
+    |   active but no tenant is in Context (CLI, seeders, cron) throws
+    |   instead of silently running unscoped; wrap such code in
+    |   with_tenant() or without_tenant_scope(). Off = legacy fail-open.
     |   - none:   no tenancy at all — no tenant column, no scoping, no
     |             tenant resolution.
     |   - single: one implicit tenant. The tenant column is added to
@@ -90,6 +94,7 @@ return [
 
     'tenancy' => [
         'mode' => env('PROJECT_TENANCY_MODE', 'none'),
+        'strict' => env('PROJECT_TENANCY_STRICT', true),
         'tenant_column' => env('PROJECT_TENANT_COLUMN', 'tenant_id'),
         'tenant_identification' => env('PROJECT_TENANT_IDENTIFICATION', 'subdomain'),
         'tenant_model' => env('PROJECT_TENANT_MODEL', 'App\Models\Tenant'),
@@ -301,7 +306,10 @@ return [
         'registration' => env('PROJECT_FEATURE_REGISTRATION', true),
         'email_verification' => env('PROJECT_FEATURE_EMAIL_VERIFICATION', false),
         'two_factor_auth' => env('PROJECT_FEATURE_2FA', false),
-        'api_tokens' => env('PROJECT_FEATURE_API_TOKENS', false),
+        // Named personal access tokens (Auth's /tokens endpoints) — for
+        // integrations/CLI. Login always issues a session token regardless;
+        // this flag only gates *named* token management.
+        'personal_access_tokens' => env('PROJECT_FEATURE_PERSONAL_ACCESS_TOKENS', false),
     ],
 
     /*

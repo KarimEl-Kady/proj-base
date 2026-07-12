@@ -74,11 +74,11 @@ app/Modules/{Module}/
 | **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
 | **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
-| **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named API tokens — every part gated by feature flags |
+| **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named personal access tokens — every part gated by feature flags |
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
 | **Country/City reference data** | `Country` and `City` modules (full CRUD API) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
-| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution. Migrations adapt automatically: `$table->tenantColumn()` adds the tenant column only in multi mode, and `php artisan tenant:migrations` generates catch-up migrations when a single-tenant project goes multi |
-| **Feature flags** | Registration, email verification, 2FA, API tokens — togglable via env and actually implemented by the Auth module |
+| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution, cached per identifier and fail-closed by default (tenant-scoped models outside a tenant context throw; use `with_tenant()` / `without_tenant_scope()` in CLI code). Migrations adapt automatically: `$table->tenantColumn()` adds the tenant column when tenancy is active, and `php artisan tenant:migrations` generates catch-up migrations when a project turns tenancy on |
+| **Feature flags** | Registration, email verification, 2FA, personal access tokens — togglable via env and actually implemented by the Auth module |
 
 ## Generators
 
@@ -186,7 +186,7 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 | `POST /password/forgot`, `POST /password/reset` | Password reset via email (non-enumerating) |
 | `POST /email/resend`, `GET /email/verify/{id}/{hash}` | Email verification (signed URLs) — `PROJECT_FEATURE_EMAIL_VERIFICATION` |
 | `POST /2fa/enable`, `/2fa/confirm`, `/2fa/disable` | TOTP 2FA (Google Authenticator-compatible, dependency-free) — `PROJECT_FEATURE_2FA`; login then requires `code` |
-| `GET/POST/DELETE /tokens` | Named personal access tokens for integrations — `PROJECT_FEATURE_API_TOKENS` |
+| `GET/POST/DELETE /tokens` | Named personal access tokens for integrations — `PROJECT_FEATURE_PERSONAL_ACCESS_TOKENS` |
 
 ### Local packages
 

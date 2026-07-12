@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Tests\Feature;
 
 use App\Models\Tenant;
+use App\Modules\Core\Exceptions\MissingTenantContextException;
 use App\Modules\User\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
@@ -293,6 +294,85 @@ class TenancyModesTest extends TestCase
         $callback();
 
         return $count;
+    }
+
+    // ── strict mode & context helpers ────────────────────────────────
+
+    public function test_strict_mode_fails_closed_on_queries_without_tenant_context(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+
+        $this->expectException(MissingTenantContextException::class);
+
+        User::query()->get();
+    }
+
+    public function test_strict_mode_fails_closed_on_creates_without_tenant_context(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+
+        $this->expectException(MissingTenantContextException::class);
+
+        User::factory()->create();
+    }
+
+    public function test_with_tenant_establishes_context_and_restores_the_previous_one(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->addTenantColumnToUsers();
+
+        Context::add('tenant_id', 3);
+
+        $user = with_tenant(9, fn () => User::factory()->create());
+
+        $this->assertSame(9, (int) $user->getAttribute('tenant_id'));
+        $this->assertSame(3, tenant_id());
+    }
+
+    public function test_without_tenant_scope_allows_deliberate_cross_tenant_access(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->addTenantColumnToUsers();
+
+        with_tenant(7, fn () => User::factory()->create());
+        with_tenant(8, fn () => User::factory()->create());
+
+        // Scoped: each tenant sees only its own row.
+        $this->assertSame(1, with_tenant(7, fn () => User::query()->count()));
+
+        // Explicit bypass: all rows, no exception, no stamping.
+        $this->assertSame(2, without_tenant_scope(fn () => User::query()->count()));
+    }
+
+    public function test_strict_mode_respects_an_explicitly_preset_tenant_column(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->addTenantColumnToUsers();
+
+        // No tenant in Context, but the caller set the column deliberately —
+        // that decision wins and no exception is thrown.
+        $user = User::factory()->make();
+        $user->setAttribute('tenant_id', 42);
+        $user->save();
+
+        $this->assertSame(
+            42,
+            (int) without_tenant_scope(fn () => User::query()->value('tenant_id'))
+        );
+    }
+
+    public function test_disabling_strict_mode_restores_legacy_fail_open_behavior(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.strict' => false,
+        ]);
+        $this->addTenantColumnToUsers();
+
+        $user = User::factory()->create();
+
+        $this->assertNull($user->fresh()->getAttribute('tenant_id'));
+        $this->assertSame(1, User::query()->count());
     }
 
     // ── HasTenantScope ───────────────────────────────────────────────

@@ -102,13 +102,13 @@ class AuthApiTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
-    public function test_named_api_tokens_are_flag_gated(): void
+    public function test_named_personal_access_tokens_are_flag_gated(): void
     {
         $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
 
         $this->withToken($token)->postJson('/api/v1/auth/tokens', ['name' => 'ci'])->assertForbidden();
 
-        config(['project.features.api_tokens' => true]);
+        config(['project.features.personal_access_tokens' => true]);
 
         $created = $this->withToken($token)->postJson('/api/v1/auth/tokens', ['name' => 'ci']);
         $created->assertCreated();

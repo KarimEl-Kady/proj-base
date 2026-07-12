@@ -8,8 +8,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Named personal access tokens (PROJECT_FEATURE_API_TOKENS) — for
- * integrations/CLI use, separate from the login token flow.
+ * Named personal access tokens (PROJECT_FEATURE_PERSONAL_ACCESS_TOKENS) —
+ * for integrations/CLI use. Deliberately separate from the login flow:
+ * login always issues its session token regardless of this flag; the flag
+ * only gates creating/listing/revoking *named* tokens here.
  */
 class TokenController extends Controller
 {
@@ -46,6 +48,6 @@ class TokenController extends Controller
 
     protected function ensureFeatureEnabled(): void
     {
-        abort_unless(config('project.features.api_tokens', false), 403, 'API tokens are disabled.');
+        abort_unless(config('project.features.personal_access_tokens', false), 403, 'Personal access tokens are disabled.');
     }
 }

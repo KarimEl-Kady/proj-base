@@ -2,6 +2,7 @@
 
 namespace App\Modules\User\Commands;
 
+use App\Modules\Core\Support\Tenancy;
 use App\Modules\User\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -17,6 +18,11 @@ use function Laravel\Prompts\text;
  * if the email is unknown (interactive or via --name/--password), and
  * grants the role. Idempotent — re-running against an existing admin just
  * reports the current state.
+ *
+ * Tenancy-aware: User is tenant-scoped, so in single mode the command runs
+ * under the implicit default tenant, and in multi mode it requires
+ * --tenant= (slug or subdomain) — otherwise the created admin would carry
+ * no tenant stamp and be invisible to every scoped query (unable to log in).
  */
 class MakeAdminCommand extends Command
 {
@@ -24,7 +30,8 @@ class MakeAdminCommand extends Command
                             {email? : Email of the user to promote (prompted if omitted)}
                             {--name= : Name for the user when one has to be created}
                             {--password= : Password for the user when one has to be created}
-                            {--role=admin : Role to grant (must exist in the permission definitions)}';
+                            {--role=admin : Role to grant (must exist in the permission definitions)}
+                            {--tenant= : Tenant slug/subdomain to act under (required in multi mode)}';
 
     protected $description = 'Grant a user the admin role, seeding definitions and creating the user if needed';
 
@@ -36,6 +43,19 @@ class MakeAdminCommand extends Command
             return self::FAILURE;
         }
 
+        $tenantId = null;
+
+        if (has_tenancy() && ($tenantId = $this->resolveTenantId()) === null) {
+            return self::FAILURE;
+        }
+
+        return has_tenancy()
+            ? with_tenant($tenantId, fn (): int => $this->promote($role))
+            : $this->promote($role);
+    }
+
+    protected function promote(string $role): int
+    {
         $email = $this->argument('email') ?? text(
             label: 'Email of the admin user',
             required: true,
@@ -66,6 +86,40 @@ class MakeAdminCommand extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Which tenant to act under when tenancy is active. Single mode: the
+     * implicit default tenant. Multi mode: --tenant= is mandatory — there
+     * is no "no tenant" to create an admin in.
+     */
+    protected function resolveTenantId(): ?int
+    {
+        if (is_single_tenant()) {
+            $tenantId = Tenancy::defaultTenantId();
+
+            if ($tenantId === null) {
+                $this->error('The default tenant is deactivated — reactivate it before bootstrapping an admin.');
+            }
+
+            return $tenantId;
+        }
+
+        $identifier = (string) $this->option('tenant');
+
+        if ($identifier === '') {
+            $this->error('Multi-tenant mode: pass --tenant={slug or subdomain} to say which tenant this admin belongs to.');
+
+            return null;
+        }
+
+        $tenantId = Tenancy::lookupTenantId($identifier);
+
+        if ($tenantId === null) {
+            $this->error("No active tenant matches [{$identifier}].");
+        }
+
+        return $tenantId;
     }
 
     /**

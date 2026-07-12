@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "proj-base/platform",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Modular HMVC Laravel platform base — module system with enforced boundaries, three-mode tenancy, declarative roles & permissions, and a local package workflow.",
+    "keywords": ["laravel", "hmvc", "modular", "multi-tenancy", "permissions", "platform", "starter-kit"],
     "license": "MIT",
     "repositories": [
         {

@@ -2,8 +2,7 @@
 
 namespace App\Modules\Core\Middleware;
 
-use App\Models\Tenant;
-use App\Modules\Core\Support\TenantCache;
+use App\Modules\Core\Support\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
@@ -19,9 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
  * - multi:  the tenant is resolved from the request via
  *           tenancy.tenant_identification; unidentifiable requests get 400.
  *
- * Successful resolutions are cached through TenantCache (tenancy.cache
- * config) so steady-state requests skip the tenants-table query; tenant
- * writes flush their entries via the model hooks in App\Models\Tenant.
+ * Resolution lives in Core\Support\Tenancy (shared with CLI code) and is
+ * cached through TenantCache (tenancy.cache config) so steady-state
+ * requests skip the tenants-table query; tenant writes flush their entries
+ * via the model hooks in App\Models\Tenant.
  */
 class TenantMiddleware
 {
@@ -32,7 +32,7 @@ class TenantMiddleware
         }
 
         $tenantId = is_single_tenant()
-            ? $this->resolveDefaultTenantId()
+            ? Tenancy::defaultTenantId()
             : $this->resolveTenantId($request);
 
         if ($tenantId === null) {
@@ -53,33 +53,6 @@ class TenantMiddleware
         $paths = config('project.tenancy.exempt_paths', []);
 
         return $paths !== [] && $request->is(...$paths);
-    }
-
-    /**
-     * Single mode: the one tenant everything belongs to. Created on first
-     * use so single mode needs no seeding step. Respects is_active the same
-     * way multi-mode lookup does — deactivating the default tenant stops
-     * serving requests (the tenant-level kill switch).
-     */
-    protected function resolveDefaultTenantId(): ?int
-    {
-        $tenantModel = $this->tenantModel();
-
-        if (! class_exists($tenantModel)) {
-            return null;
-        }
-
-        $default = config('project.tenancy.default_tenant', []);
-        $slug = $default['slug'] ?? 'default';
-
-        return TenantCache::remember($slug, function () use ($tenantModel, $default, $slug): ?int {
-            $tenant = $tenantModel::query()->firstOrCreate(
-                ['slug' => $slug],
-                ['name' => $default['name'] ?? 'Default', 'is_active' => true],
-            );
-
-            return $tenant->is_active ? $tenant->id : null;
-        });
     }
 
     protected function resolveTenantId(Request $request): ?int
@@ -103,48 +76,20 @@ class TenantMiddleware
             return null;
         }
 
-        $subdomain = $parts[0];
-
-        return $this->lookupTenant($subdomain);
+        return Tenancy::lookupTenantId($parts[0]);
     }
 
     protected function resolveFromHeader(Request $request): ?int
     {
         $tenant = $request->header('X-Tenant-ID');
 
-        return $tenant !== null ? $this->lookupTenant($tenant) : null;
+        return $tenant !== null ? Tenancy::lookupTenantId($tenant) : null;
     }
 
     protected function resolveFromPath(Request $request): ?int
     {
         $segment = $request->segment(1);
 
-        return $segment !== null ? $this->lookupTenant($segment) : null;
-    }
-
-    protected function lookupTenant(string $identifier): ?int
-    {
-        $tenantModel = $this->tenantModel();
-
-        if (! class_exists($tenantModel)) {
-            return null;
-        }
-
-        return TenantCache::remember($identifier, function () use ($tenantModel, $identifier): ?int {
-            $tenant = $tenantModel::where('is_active', true)
-                ->where(function ($query) use ($identifier) {
-                    $query->where('slug', $identifier)
-                        ->orWhere('subdomain', $identifier);
-                })
-                ->first();
-
-            return $tenant?->id;
-        });
-    }
-
-    /** @return class-string */
-    protected function tenantModel(): string
-    {
-        return config('project.tenancy.tenant_model', Tenant::class);
+        return $segment !== null ? Tenancy::lookupTenantId($segment) : null;
     }
 }
