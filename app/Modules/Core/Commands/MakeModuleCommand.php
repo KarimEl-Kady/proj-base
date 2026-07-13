@@ -485,17 +485,18 @@ class MakeModuleCommand extends Command
         |
         */
 
-        // Generated protected by default — remove the auth middleware (or move
-        // routes out of the group) only for endpoints that are truly public.
-        // Add per-action authorization once this resource's permissions are
-        // declared in Config/permissions.php (see the User/Country/City
-        // modules for the pattern): ->middleware('permission:{$this->pluralSnake}.view')
+        // Authenticated AND authorized by default: every action requires its
+        // own permission (declared in Config/permissions.php, generated
+        // alongside this file). Run `php artisan permission:seed` and grant a
+        // role — until then these endpoints correctly 403 for everyone (fail
+        // closed). If a read is truly public, move it out of this group and
+        // drop its permission middleware deliberately.
         Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->middleware('auth:sanctum')->group(function () {
-            Route::get('/', [{$controller}::class, 'index'])->name('api.{$this->pluralSnake}.index');
-            Route::post('/', [{$controller}::class, 'store'])->name('api.{$this->pluralSnake}.store');
-            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('api.{$this->pluralSnake}.show');
-            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->name('api.{$this->pluralSnake}.update');
-            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->name('api.{$this->pluralSnake}.destroy');
+            Route::get('/', [{$controller}::class, 'index'])->middleware('permission:{$this->pluralSnake}.view')->name('api.{$this->pluralSnake}.index');
+            Route::post('/', [{$controller}::class, 'store'])->middleware('permission:{$this->pluralSnake}.create')->name('api.{$this->pluralSnake}.store');
+            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->middleware('permission:{$this->pluralSnake}.view')->name('api.{$this->pluralSnake}.show');
+            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->middleware('permission:{$this->pluralSnake}.update')->name('api.{$this->pluralSnake}.update');
+            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->middleware('permission:{$this->pluralSnake}.delete')->name('api.{$this->pluralSnake}.destroy');
         });
 
         PHP;
@@ -517,16 +518,21 @@ class MakeModuleCommand extends Command
         | local/permission's DefinitionLoader (config/permission.php →
         | definition_paths). Apply with: php artisan permission:seed
         |
-        | Uncomment (or reshape) the permissions below, gate the routes in
-        | Routes/api.php with permission: middleware, then re-seed.
+        | These four back the per-action permission: middleware already wired
+        | into Routes/api.php (and Routes/web.php). Reshape them if this
+        | resource wants a coarser split (e.g. a single '{$this->pluralSnake}.manage'
+        | for all writes) — just keep the route middleware in step. After
+        | editing, run `php artisan permission:seed` and grant a role.
         |
         */
 
         return [
 
             'permissions' => [
-                // '{$this->pluralSnake}.view',
-                // '{$this->pluralSnake}.manage',
+                '{$this->pluralSnake}.view',
+                '{$this->pluralSnake}.create',
+                '{$this->pluralSnake}.update',
+                '{$this->pluralSnake}.delete',
             ],
 
         ];
@@ -555,14 +561,18 @@ class MakeModuleCommand extends Command
         |
         */
 
-        Route::prefix('{$this->pluralKebab}')->group(function () {
-            Route::get('/', [{$controller}::class, 'index'])->name('{$this->pluralSnake}.index');
-            Route::get('/create', [{$controller}::class, 'create'])->name('{$this->pluralSnake}.create');
-            Route::post('/', [{$controller}::class, 'store'])->name('{$this->pluralSnake}.store');
-            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->name('{$this->pluralSnake}.show');
-            Route::get('/{{$this->paramName}}/edit', [{$controller}::class, 'edit'])->name('{$this->pluralSnake}.edit');
-            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->name('{$this->pluralSnake}.update');
-            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->name('{$this->pluralSnake}.destroy');
+        // Authenticated AND authorized by default, same posture as the API
+        // routes — each action requires its permission (Config/permissions.php).
+        // Move a read out of the group and drop its permission middleware only
+        // when it is deliberately public.
+        Route::prefix('{$this->pluralKebab}')->middleware('auth')->group(function () {
+            Route::get('/', [{$controller}::class, 'index'])->middleware('permission:{$this->pluralSnake}.view')->name('{$this->pluralSnake}.index');
+            Route::get('/create', [{$controller}::class, 'create'])->middleware('permission:{$this->pluralSnake}.create')->name('{$this->pluralSnake}.create');
+            Route::post('/', [{$controller}::class, 'store'])->middleware('permission:{$this->pluralSnake}.create')->name('{$this->pluralSnake}.store');
+            Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->middleware('permission:{$this->pluralSnake}.view')->name('{$this->pluralSnake}.show');
+            Route::get('/{{$this->paramName}}/edit', [{$controller}::class, 'edit'])->middleware('permission:{$this->pluralSnake}.update')->name('{$this->pluralSnake}.edit');
+            Route::put('/{{$this->paramName}}', [{$controller}::class, 'update'])->middleware('permission:{$this->pluralSnake}.update')->name('{$this->pluralSnake}.update');
+            Route::delete('/{{$this->paramName}}', [{$controller}::class, 'destroy'])->middleware('permission:{$this->pluralSnake}.delete')->name('{$this->pluralSnake}.destroy');
         });
 
         PHP;

@@ -19,13 +19,14 @@
         "laravel/framework": "^13.7",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",
-        "local/data-response": "*",
-        "local/geo-seeder": "*",
-        "local/media": "*",
-        "local/permission": "*"
+        "local/data-response": "^1.0",
+        "local/geo-seeder": "^1.0",
+        "local/media": "^1.0",
+        "local/permission": "^1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.10",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -60,6 +61,14 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
+            "@php artisan test"
+        ],
+        "analyse": "phpstan analyse --memory-limit=1G --debug",
+        "check": [
+            "@php vendor/bin/pint --test",
+            "@php vendor/bin/phpstan analyse --memory-limit=1G --debug --no-progress",
+            "@php artisan project:validate",
+            "@php artisan module:boundaries",
             "@php artisan test"
         ],
         "make:module": "php artisan make:module",

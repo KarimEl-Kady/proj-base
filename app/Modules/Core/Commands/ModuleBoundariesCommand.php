@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Commands;
 
+use App\Modules\Core\Support\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -15,6 +16,35 @@ class ModuleBoundariesCommand extends Command
     {
         $allowed = config('project.boundaries.allow', []);
         $violations = [];
+        $registry = ModuleRegistry::all();
+
+        foreach (array_keys(array_filter($registry)) as $module) {
+            $provider = module_path($module, "Providers/{$module}ServiceProvider.php");
+
+            if (! File::exists($provider)) {
+                $violations[] = [$module, 'missing-provider', str_replace(base_path().'/', '', $provider)];
+            }
+
+            foreach ($allowed[$module] ?? [] as $dependency) {
+                if (($registry[$dependency] ?? false) !== true) {
+                    $violations[] = [$module, $dependency, 'dependency is missing or disabled in config/project_modules.php'];
+                }
+            }
+        }
+
+        $allowedCycles = collect(config('project.boundaries.allow_cycles', []))
+            ->map(function (array $cycle): string {
+                sort($cycle);
+
+                return implode('|', $cycle);
+            })
+            ->all();
+
+        foreach ($this->cycles($allowed) as $cycle) {
+            if (! in_array(implode('|', $cycle), $allowedCycles, true)) {
+                $violations[] = [implode(' -> ', $cycle), 'dependency-cycle', 'Declare it in boundaries.allow_cycles only when intentional.'];
+            }
+        }
 
         foreach (File::directories(module_path()) as $dir) {
             $module = basename($dir);
@@ -51,9 +81,40 @@ class ModuleBoundariesCommand extends Command
         }
 
         $this->error('Undeclared cross-module dependencies found:');
-        $this->table(['Module', 'Depends on', 'File'], $violations);
+        $this->table(['Module', 'Dependency / issue', 'File / detail'], $violations);
         $this->line('Either remove the dependency or declare it in config/project.php under boundaries.allow.');
 
         return self::FAILURE;
+    }
+
+    /**
+     * @param  array<string, array<int, string>>  $graph
+     * @return array<int, array<int, string>>
+     */
+    protected function cycles(array $graph): array
+    {
+        $cycles = [];
+
+        $walk = function (string $origin, string $node, array $path) use (&$walk, &$cycles, $graph): void {
+            foreach ($graph[$node] ?? [] as $next) {
+                if ($next === $origin) {
+                    $cycle = array_values(array_unique([...$path, $node]));
+                    sort($cycle);
+                    $cycles[implode('|', $cycle)] = $cycle;
+
+                    continue;
+                }
+
+                if (! in_array($next, $path, true)) {
+                    $walk($origin, $next, [...$path, $node]);
+                }
+            }
+        };
+
+        foreach (array_keys($graph) as $module) {
+            $walk($module, $module, []);
+        }
+
+        return array_values($cycles);
     }
 }

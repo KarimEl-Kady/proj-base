@@ -624,9 +624,22 @@ class ModuleMakeCommand extends Command
                 \$this->getJson('{$url}')->assertUnauthorized();
             }
 
+            public function test_authenticated_users_without_permission_are_forbidden(): void
+            {
+                // Routes are authorized by default (Config/permissions.php) —
+                // auth alone is not enough. Prove the gate holds.
+                \$this->actingAsUser();
+                \$record = \$this->makeRecord();
+
+                \$this->getJson('{$url}')->assertForbidden();
+                \$this->postJson('{$url}', [])->assertForbidden();
+                \$this->putJson("{$url}/{\$record->uuid}", [])->assertForbidden();
+                \$this->deleteJson("{$url}/{\$record->uuid}")->assertForbidden();
+            }
+
             public function test_index_returns_records(): void
             {
-                \$this->actingAsUser();
+                \$this->actingAsUser('{$table}.view');
                 \$this->makeRecord();
 
                 \$this->getJson('{$url}')
@@ -636,7 +649,7 @@ class ModuleMakeCommand extends Command
 
             public function test_store_creates_a_record(): void
             {
-                \$this->actingAsUser();
+                \$this->actingAsUser('{$table}.create');
 
                 \$this->postJson('{$url}', [
                     // payload matching Create{$base}Request rules
@@ -647,7 +660,7 @@ class ModuleMakeCommand extends Command
 
             public function test_show_returns_a_record(): void
             {
-                \$this->actingAsUser();
+                \$this->actingAsUser('{$table}.view');
                 \$record = \$this->makeRecord();
 
                 \$this->getJson("{$url}/{\$record->uuid}")->assertOk();
@@ -655,7 +668,7 @@ class ModuleMakeCommand extends Command
 
             public function test_update_modifies_a_record(): void
             {
-                \$this->actingAsUser();
+                \$this->actingAsUser('{$table}.update');
                 \$record = \$this->makeRecord();
 
                 \$this->putJson("{$url}/{\$record->uuid}", [
@@ -665,7 +678,7 @@ class ModuleMakeCommand extends Command
 
             public function test_destroy_deletes_a_record(): void
             {
-                \$this->actingAsUser();
+                \$this->actingAsUser('{$table}.delete');
                 \$record = \$this->makeRecord();
 
                 \$this->deleteJson("{$url}/{\$record->uuid}")->assertOk();

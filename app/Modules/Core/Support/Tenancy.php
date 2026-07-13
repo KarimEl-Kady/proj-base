@@ -61,6 +61,27 @@ class Tenancy
         });
     }
 
+    public static function identifierForId(int|string $tenantId): ?string
+    {
+        $tenantModel = static::tenantModel();
+
+        if (! class_exists($tenantModel)) {
+            return null;
+        }
+
+        $tenant = $tenantModel::query()->find($tenantId);
+
+        if ($tenant === null) {
+            return null;
+        }
+
+        if (config('project.tenancy.tenant_identification') === 'subdomain') {
+            return $tenant->subdomain ?: $tenant->slug;
+        }
+
+        return $tenant->slug;
+    }
+
     /** @return class-string */
     protected static function tenantModel(): string
     {

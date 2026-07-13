@@ -6,6 +6,7 @@ use App\Modules\Core\Support\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -40,6 +41,10 @@ class TenantMiddleware
         }
 
         Context::add('tenant_id', $tenantId);
+
+        if (config('project.tenancy.tenant_identification') === 'path') {
+            $request->route()?->forgetParameter('tenant');
+        }
 
         return $next($request);
     }
@@ -82,6 +87,12 @@ class TenantMiddleware
     protected function resolveFromHeader(Request $request): ?int
     {
         $tenant = $request->header('X-Tenant-ID');
+
+        if ($tenant === null
+            && $request->query('tenant') !== null
+            && URL::hasValidSignature($request, absolute: false)) {
+            $tenant = $request->query('tenant');
+        }
 
         return $tenant !== null ? Tenancy::lookupTenantId($tenant) : null;
     }

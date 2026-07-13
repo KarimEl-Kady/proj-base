@@ -2,10 +2,11 @@
 
 namespace App\Modules\Auth\Services;
 
+use App\Modules\Auth\Events\UserRegistered;
 use App\Modules\Auth\Support\Totp;
 use App\Modules\User\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -17,15 +18,18 @@ class AuthService
      */
     public function register(array $data): array
     {
-        $user = User::query()->create($data);
+        $result = DB::transaction(function () use ($data): array {
+            $user = User::query()->create($data);
+            UserRegistered::dispatch($user);
 
-        event(new Registered($user));
+            return ['user' => $user, 'token' => $this->issueToken($user)];
+        });
 
         if (config('project.features.email_verification', false)) {
-            $user->sendEmailVerificationNotification();
+            $result['user']->sendEmailVerificationNotification();
         }
 
-        return ['user' => $user, 'token' => $this->issueToken($user)];
+        return $result;
     }
 
     /**

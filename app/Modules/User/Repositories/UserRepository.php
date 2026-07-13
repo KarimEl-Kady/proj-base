@@ -12,8 +12,13 @@ class UserRepository extends BaseRepository
         parent::__construct($model);
     }
 
+    /**
+     * Queries User directly rather than through BaseRepository::query(),
+     * whose builder is typed to the base Model — this keeps the ?User
+     * return type honest rather than annotated.
+     */
     public function findByEmail(string $email): ?User
     {
-        return $this->query()->where('email', $email)->first();
+        return User::query()->where('email', $email)->first();
     }
 }

@@ -5,10 +5,23 @@ namespace App\Modules\City\Models;
 use App\Modules\Core\Models\Model;
 use App\Modules\Country\Models\Country;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * Global reference data, not tenant-scoped — every tenant shares the same
  * country/city list, unlike HasTenantScope models.
+ *
+ * @property int $id
+ * @property string $uuid
+ * @property int $country_id
+ * @property string $name
+ * @property ?string $name_ar
+ * @property ?float $latitude
+ * @property ?float $longitude
+ * @property bool $is_active
+ * @property ?Country $country
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 class City extends Model
 {

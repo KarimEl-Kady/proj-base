@@ -4,6 +4,7 @@ namespace App\Modules\Core\Tests\Feature;
 
 use App\Models\Tenant;
 use App\Modules\Core\Exceptions\MissingTenantContextException;
+use App\Modules\Core\Exceptions\TenantContextMismatchException;
 use App\Modules\User\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Schema\Blueprint;
@@ -155,11 +156,10 @@ class TenancyModesTest extends TestCase
 
         // The wildcard exempts both the base path and any sub-paths —
         // none of them should be rejected with 400 (tenant required).
-        // /api/health is a real route (200); sub-paths may 404 but must
-        // never hit the 400 tenant-required gate.
+        // All health probes are real routes and stay tenantless.
         $this->getJson('/api/health')->assertOk();
-        $this->getJson('/api/health/live')->assertNotFound();   // route missing, but NOT 400
-        $this->getJson('/api/health/ready')->assertNotFound();  // route missing, but NOT 400
+        $this->getJson('/api/health/live')->assertOk();
+        $this->getJson('/api/health/ready')->assertOk();
     }
 
     public function test_inactive_tenant_is_rejected(): void
@@ -344,21 +344,30 @@ class TenancyModesTest extends TestCase
         $this->assertSame(2, without_tenant_scope(fn () => User::query()->count()));
     }
 
-    public function test_strict_mode_respects_an_explicitly_preset_tenant_column(): void
+    public function test_strict_mode_rejects_an_explicit_tenant_without_context(): void
     {
         config(['project.tenancy.mode' => 'multi']);
         $this->addTenantColumnToUsers();
 
-        // No tenant in Context, but the caller set the column deliberately —
-        // that decision wins and no exception is thrown.
+        $this->expectException(MissingTenantContextException::class);
+
         $user = User::factory()->make();
         $user->setAttribute('tenant_id', 42);
         $user->save();
+    }
 
-        $this->assertSame(
-            42,
-            (int) without_tenant_scope(fn () => User::query()->value('tenant_id'))
-        );
+    public function test_active_tenant_rejects_a_conflicting_preset_tenant_column(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->addTenantColumnToUsers();
+
+        Context::add('tenant_id', 7);
+
+        $this->expectException(TenantContextMismatchException::class);
+
+        $user = User::factory()->make();
+        $user->setAttribute('tenant_id', 42);
+        $user->save();
     }
 
     public function test_disabling_strict_mode_restores_legacy_fail_open_behavior(): void

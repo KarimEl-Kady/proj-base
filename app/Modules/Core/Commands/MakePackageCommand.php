@@ -49,16 +49,18 @@ class MakePackageCommand extends Command
         File::ensureDirectoryExists("{$path}/src");
         File::ensureDirectoryExists("{$path}/config");
         File::ensureDirectoryExists("{$path}/database/migrations");
+        File::ensureDirectoryExists("{$path}/tests");
 
         $this->writeComposerJson($path, $packageName, $namespace, $studly, $description);
         $this->writeServiceProvider($path, $namespace, $studly, $snake);
         $this->writeConfig($path, $snake);
         $this->writeReadme($path, $packageName, $studly, $description);
+        File::put("{$path}/CHANGELOG.md", "# Changelog\n\n## 1.0.0\n\n- Initial release.\n");
 
         $this->info("Package [{$packageName}] scaffolded at app/Vendor/{$studly}");
         $this->newLine();
         $this->line('Install it into the project:');
-        $this->line("  composer require {$packageName}:\"*\"");
+        $this->line("  composer require {$packageName}:\"^1.0\"");
 
         return self::SUCCESS;
     }
@@ -77,6 +79,11 @@ class MakePackageCommand extends Command
             'autoload' => [
                 'psr-4' => [
                     $namespace.'\\' => 'src/',
+                ],
+            ],
+            'autoload-dev' => [
+                'psr-4' => [
+                    $namespace.'\\Tests\\' => 'tests/',
                 ],
             ],
             'extra' => [
@@ -158,7 +165,7 @@ class MakePackageCommand extends Command
         ## Install
 
         ```bash
-        composer require {$packageName}:"*"
+        composer require {$packageName}:"^1.0"
         ```
         MD;
 

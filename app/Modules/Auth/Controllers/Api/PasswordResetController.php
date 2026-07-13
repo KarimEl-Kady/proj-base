@@ -5,8 +5,10 @@ namespace App\Modules\Auth\Controllers\Api;
 use App\Modules\Auth\Requests\ForgotPasswordRequest;
 use App\Modules\Auth\Requests\ResetPasswordRequest;
 use App\Modules\Core\Controllers\Controller;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class PasswordResetController extends Controller
 {
@@ -24,7 +26,10 @@ class PasswordResetController extends Controller
             $request->validated(),
             function ($user, string $password) {
                 $user->password = $password;
+                $user->setRememberToken(Str::random(60));
                 $user->save();
+                $user->tokens()->delete();
+                event(new PasswordReset($user));
             }
         );
 

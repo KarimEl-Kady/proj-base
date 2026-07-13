@@ -2,21 +2,29 @@
 
 namespace Local\Permission\Traits;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Local\Permission\Models\Permission;
-use Local\Permission\Models\Role;
-use Local\Permission\Support\PermissionRegistry;
 
+/**
+ * Direct (role-free) permission grants. Compose with HasRoles — or use
+ * HasRolesAndPermissions, which wires both together — for role-granted
+ * permissions as well.
+ *
+ * @phpstan-require-extends Model
+ */
 trait HasPermissions
 {
     /**
      * Permissions granted directly to this model, bypassing roles.
+     *
+     * @return MorphToMany<Permission, $this>
      */
     public function permissions(): MorphToMany
     {
         return $this->morphToMany(
-            config('permission.models.permission', Permission::class),
+            static::permissionClass(),
             'model',
             config('permission.table_names.model_has_permissions'),
             config('permission.column_names.model_morph_key', 'model_id'),
@@ -25,7 +33,22 @@ trait HasPermissions
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * The configured Permission model. Validated rather than trusted: a
+     * config typo would otherwise surface as an obscure relation error.
+     *
+     * @return class-string<Permission>
+     */
+    protected static function permissionClass(): string
+    {
+        $class = config('permission.models.permission', Permission::class);
+
+        return is_string($class) && is_a($class, Permission::class, true)
+            ? $class
+            : Permission::class;
+    }
+
+    /**
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function givePermissionTo(...$permissions): static
     {
@@ -36,7 +59,7 @@ trait HasPermissions
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function revokePermissionTo(...$permissions): static
     {
@@ -47,7 +70,7 @@ trait HasPermissions
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function syncPermissions(...$permissions): static
     {
@@ -65,34 +88,19 @@ trait HasPermissions
     }
 
     /**
-     * Direct grant OR granted via any assigned role.
+     * Direct grants only. Models that also carry roles use
+     * HasRolesAndPermissions, which overrides this to fall back to the
+     * role-granted permissions as well.
      */
     public function hasPermissionTo(string|Permission $permission): bool
     {
         $name = $permission instanceof Permission ? $permission->name : $permission;
 
-        if ($this->hasDirectPermission($name)) {
-            return true;
-        }
-
-        if (! method_exists($this, 'roles')) {
-            return false;
-        }
-
-        $registry = app(PermissionRegistry::class);
-
-        foreach ($this->roles as $role) {
-            /** @var Role $role */
-            if ($registry->permissionNamesForRole($role->id)->contains($name)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->hasDirectPermission($name);
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function hasAnyPermission(...$permissions): bool
     {
@@ -106,7 +114,7 @@ trait HasPermissions
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function hasAllPermissions(...$permissions): bool
     {
@@ -120,25 +128,14 @@ trait HasPermissions
     }
 
     /**
-     * All permission names this model has, direct + via roles.
+     * Directly-granted permission names. HasRolesAndPermissions overrides
+     * this to merge in the ones granted via roles.
      *
      * @return Collection<int, string>
      */
     public function getAllPermissions(): Collection
     {
-        $direct = $this->permissions->pluck('name');
-
-        if (! method_exists($this, 'roles')) {
-            return $direct->unique()->values();
-        }
-
-        $registry = app(PermissionRegistry::class);
-
-        $viaRoles = $this->roles->flatMap(
-            fn (Role $role) => $registry->permissionNamesForRole($role->id)
-        );
-
-        return $direct->merge($viaRoles)->unique()->values();
+        return $this->permissions->pluck('name')->unique()->values();
     }
 
     /**

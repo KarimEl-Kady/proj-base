@@ -53,7 +53,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Override the database connection driver at the project level.
-    | Supported: "mysql", "pgsql", "sqlite", "mariadb", "sqlsrv"
+    | Supported and CI-verified: "mysql", "pgsql", "sqlite"
     |
     */
 
@@ -103,7 +103,7 @@ return [
             'slug' => env('PROJECT_TENANT_DEFAULT_SLUG', 'default'),
         ],
         'exempt_paths' => [
-            'api/health',
+            'api/health*',
         ],
         'cache' => [
             'enabled' => env('PROJECT_TENANCY_CACHE_ENABLED', true),
@@ -180,13 +180,15 @@ return [
     |   session authenticates on the web guard; it only works on routes that
     |   have session state (the "web" group / statefulApi), not the plain
     |   "api" group.
-    | token_expiration: token lifetime in minutes
+    | token_expiration: login token lifetime in minutes
+    | personal_token_expiration: named integration token lifetime in minutes
     |
     */
 
     'auth' => [
         'driver' => env('PROJECT_AUTH_DRIVER', 'sanctum'),
         'token_expiration' => env('PROJECT_AUTH_TOKEN_EXPIRATION', 1440),
+        'personal_token_expiration' => env('PROJECT_AUTH_PERSONAL_TOKEN_EXPIRATION', 43200),
 
         // Role (from local/permission) assigned to every newly registered
         // user by Auth's AssignDefaultRole listener. null = don't assign.
@@ -253,6 +255,11 @@ return [
     */
 
     'boundaries' => [
+        // Cycles are rejected unless their complete module set is listed
+        // here. Country/City is intentional because both own a real relation.
+        'allow_cycles' => [
+            ['City', 'Country'],
+        ],
         'allow' => [
             'Auth' => ['User'],
             // Country <-> City is a genuinely bidirectional domain coupling:
@@ -282,18 +289,50 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Transactional Outbox
+    |--------------------------------------------------------------------------
+    |
+    | Publisher claims expire so a crashed publisher cannot strand work.
+    | Failed publishes back off and become dead-lettered at max_attempts;
+    | release them after investigation with `outbox:retry`.
+    |
+    */
+
+    'outbox' => [
+        'max_attempts' => (int) env('PROJECT_OUTBOX_MAX_ATTEMPTS', 10),
+        'claim_ttl_seconds' => (int) env('PROJECT_OUTBOX_CLAIM_TTL', 300),
+        'backoff' => [10, 60, 300, 900, 3600],
+        'retention' => [
+            'published_hours' => (int) env('PROJECT_OUTBOX_PUBLISHED_RETENTION', 168),
+            'failed_hours' => (int) env('PROJECT_OUTBOX_FAILED_RETENTION', 720),
+            'processed_hours' => (int) env('PROJECT_INBOX_PROCESSED_RETENTION', 720),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     |
     | Project-wide pagination defaults. "per_page" is used by BaseService /
     | BaseRepository when no explicit size is given; "max_per_page" caps any
-    | client-supplied ?per_page= value.
+    | client-supplied ?per_page= value; "unpaginated_cap" bounds how many
+    | rows ?pagination=false may return — a client toggle must never be able
+    | to pull an entire multi-million-row table into memory. Raise it (or
+    | the env var) deliberately for endpoints that truly need full exports.
     |
     */
 
     'pagination' => [
         'per_page' => (int) env('PROJECT_PAGINATION_PER_PAGE', 15),
         'max_per_page' => (int) env('PROJECT_PAGINATION_MAX_PER_PAGE', 100),
+        'unpaginated_cap' => (int) env('PROJECT_PAGINATION_UNPAGINATED_CAP', 1000),
+    ],
+
+    'health' => [
+        'require_queue_worker' => env('PROJECT_HEALTH_REQUIRE_QUEUE_WORKER', false),
+        'queue_heartbeat_ttl' => (int) env('PROJECT_HEALTH_QUEUE_HEARTBEAT_TTL', 120),
+        'queue_backlog_warning' => (int) env('PROJECT_HEALTH_QUEUE_BACKLOG_WARNING', 1000),
     ],
 
     /*

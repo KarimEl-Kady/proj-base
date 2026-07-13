@@ -3,13 +3,25 @@
 namespace Local\Media\Traits;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Http\UploadedFile;
 use Local\Media\Models\Media;
 use Local\Media\Services\MediaService;
 
+/**
+ * Implements the Contracts\Mediable interface — declare that interface on
+ * the model as well, so "model with media" stays a checkable type:
+ *
+ *     class Post extends Model implements Mediable { use HasMedia; }
+ *
+ * @phpstan-require-extends Model
+ */
 trait HasMedia
 {
+    /**
+     * @return MorphMany<Media, $this>
+     */
     public function media(): MorphMany
     {
         return $this->morphMany(Media::class, 'mediable');

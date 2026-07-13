@@ -210,6 +210,22 @@ class UserApiTest extends TestCase
         $this->assertNull($response->json('data.meta'));
     }
 
+    public function test_pagination_false_is_bounded_by_the_unpaginated_cap(): void
+    {
+        config(['project.pagination.unpaginated_cap' => 2]);
+
+        $alice = $this->makeUser('Alice', 'alice@example.com');
+        $this->makeUser('Bob', 'bob@example.com');
+        $this->makeUser('Carol', 'carol@example.com');
+        $this->authenticate($alice);
+
+        $response = $this->getJson('/api/v1/users?pagination=false');
+
+        // The toggle can never pull an unbounded table into memory.
+        $response->assertOk();
+        $this->assertCount(2, $response->json('data.data'));
+    }
+
     public function test_per_page_is_respected_and_capped(): void
     {
         $alice = $this->makeUser('Alice', 'alice@example.com');

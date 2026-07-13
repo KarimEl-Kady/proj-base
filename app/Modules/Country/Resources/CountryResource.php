@@ -3,8 +3,12 @@
 namespace App\Modules\Country\Resources;
 
 use App\Modules\Core\Resources\BaseResource;
+use App\Modules\Country\Models\Country;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin Country
+ */
 class CountryResource extends BaseResource
 {
     public function toArray(Request $request): array

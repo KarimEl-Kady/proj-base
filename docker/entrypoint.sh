@@ -86,7 +86,7 @@ if [ "$1" = "php-fpm" ]; then
     # Auto-migrate
     if [ "${AUTO_MIGRATE:-false}" = "true" ]; then
         echo "🔄 Running migrations..."
-        php artisan migrate --force --no-interaction 2>&1 || true
+        php artisan migrate --force --no-interaction
     fi
 
     # Cache configuration & routes in production

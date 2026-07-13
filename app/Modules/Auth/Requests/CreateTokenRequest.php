@@ -10,6 +10,8 @@ class CreateTokenRequest extends BaseRequest
     {
         return [
             'name' => ['required', 'string', 'max:64'],
+            'abilities' => ['sometimes', 'array', 'max:32'],
+            'abilities.*' => ['string', 'max:100', 'distinct'],
         ];
     }
 }

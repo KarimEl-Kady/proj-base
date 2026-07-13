@@ -1,23 +1,19 @@
 <?php
 
-use App\Modules\User\Controllers\Web\UserController;
-use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | User Web Routes
 |--------------------------------------------------------------------------
 |
-| Loaded under the "web" middleware group by CoreServiceProvider.
+| Loaded under the "web" middleware group by CoreServiceProvider. User is
+| API-first — no public web UI ships for PII, on purpose (managing users
+| belongs behind the authenticated dashboard, not on public web routes).
+|
+| If this project grows a public-facing user page, protect it explicitly:
+|
+|     Route::prefix('users')->middleware('auth')->group(function () {
+|         Route::get('/{user}', [ProfileController::class, 'show'])
+|             ->name('users.show');
+|     });
 |
 */
-
-Route::prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index'])->name('users.index');
-    Route::get('/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/', [UserController::class, 'store'])->name('users.store');
-    Route::get('/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-});

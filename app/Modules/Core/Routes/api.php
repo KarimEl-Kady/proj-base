@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Core\Controllers\Api\HealthController;
+use App\Modules\Core\Controllers\Api\LivenessController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,3 +14,5 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/api/health', HealthController::class)->name('api.health');
+Route::get('/api/health/live', LivenessController::class)->name('api.health.live');
+Route::get('/api/health/ready', HealthController::class)->name('api.health.ready');

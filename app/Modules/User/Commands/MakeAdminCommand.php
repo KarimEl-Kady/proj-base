@@ -130,14 +130,14 @@ class MakeAdminCommand extends Command
      */
     protected function ensureRoleIsSeeded(string $role): bool
     {
-        if (Role::query()->where('name', $role)->exists()) {
+        if ($this->roleExists($role)) {
             return true;
         }
 
         $this->line('Role not seeded yet — syncing roles/permissions from definitions…');
         $this->callSilently('permission:seed');
 
-        if (Role::query()->where('name', $role)->exists()) {
+        if ($this->roleExists($role)) {
             return true;
         }
 
@@ -147,6 +147,17 @@ class MakeAdminCommand extends Command
         );
 
         return false;
+    }
+
+    /**
+     * Hits the database each call — permission:seed runs between the two
+     * checks in ensureRoleIsSeeded() and is expected to change the answer.
+     *
+     * @phpstan-impure
+     */
+    protected function roleExists(string $role): bool
+    {
+        return Role::query()->where('name', $role)->exists();
     }
 
     protected function createUser(string $email): ?User

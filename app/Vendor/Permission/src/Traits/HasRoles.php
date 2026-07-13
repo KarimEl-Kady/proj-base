@@ -2,16 +2,23 @@
 
 namespace Local\Permission\Traits;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 use Local\Permission\Models\Role;
 
+/**
+ * @phpstan-require-extends Model
+ */
 trait HasRoles
 {
+    /**
+     * @return MorphToMany<Role, $this>
+     */
     public function roles(): MorphToMany
     {
         return $this->morphToMany(
-            config('permission.models.role', Role::class),
+            static::roleClass(),
             'model',
             config('permission.table_names.model_has_roles'),
             config('permission.column_names.model_morph_key', 'model_id'),
@@ -20,7 +27,22 @@ trait HasRoles
     }
 
     /**
-     * @param  string|Role  ...$roles
+     * The configured Role model. Validated rather than trusted: a config
+     * typo would otherwise surface as an obscure relation error.
+     *
+     * @return class-string<Role>
+     */
+    protected static function roleClass(): string
+    {
+        $class = config('permission.models.role', Role::class);
+
+        return is_string($class) && is_a($class, Role::class, true)
+            ? $class
+            : Role::class;
+    }
+
+    /**
+     * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function assignRole(...$roles): static
     {
@@ -31,7 +53,7 @@ trait HasRoles
     }
 
     /**
-     * @param  string|Role  ...$roles
+     * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function removeRole(...$roles): static
     {
@@ -42,7 +64,7 @@ trait HasRoles
     }
 
     /**
-     * @param  string|Role  ...$roles
+     * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function syncRoles(...$roles): static
     {
@@ -60,7 +82,7 @@ trait HasRoles
     }
 
     /**
-     * @param  string|Role  ...$roles
+     * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function hasAnyRole(...$roles): bool
     {
@@ -70,7 +92,7 @@ trait HasRoles
     }
 
     /**
-     * @param  string|Role  ...$roles
+     * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function hasAllRoles(...$roles): bool
     {

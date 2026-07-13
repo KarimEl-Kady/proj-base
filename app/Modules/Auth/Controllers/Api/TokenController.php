@@ -29,11 +29,20 @@ class TokenController extends Controller
     {
         $this->ensureFeatureEnabled();
 
-        $token = $request->user()->createToken($request->validated('name'));
+        $expiration = max(1, min(
+            (int) config('project.auth.personal_token_expiration', 43200),
+            525600,
+        ));
+        $token = $request->user()->createToken(
+            $request->validated('name'),
+            $request->validated('abilities', ['*']),
+            now()->addMinutes($expiration),
+        );
 
         return $this->successResponse([
             'token' => $token->plainTextToken,
             'token_type' => 'Bearer',
+            'expires_at' => $token->accessToken->expires_at,
         ], 'Token created successfully. Store it now — it will not be shown again.', 201);
     }
 

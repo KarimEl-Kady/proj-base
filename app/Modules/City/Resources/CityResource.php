@@ -2,9 +2,13 @@
 
 namespace App\Modules\City\Resources;
 
+use App\Modules\City\Models\City;
 use App\Modules\Core\Resources\BaseResource;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin City
+ */
 class CityResource extends BaseResource
 {
     public function toArray(Request $request): array

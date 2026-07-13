@@ -15,11 +15,11 @@ use RuntimeException;
  * Context (including tenant_id) is captured at dispatch and restored when
  * the job runs.
  */
-class MissingTenantContextException extends RuntimeException
+final class MissingTenantContextException extends RuntimeException
 {
-    public static function for(string $model, string $operation): static
+    public static function for(string $model, string $operation): self
     {
-        return new static(
+        return new self(
             "Cannot {$operation} tenant-scoped model [{$model}] without a tenant in Context. ".
             'Wrap the call in with_tenant($tenantId, fn () => ...) to act as one tenant, '.
             'or without_tenant_scope(fn () => ...) to deliberately run across all tenants. '.

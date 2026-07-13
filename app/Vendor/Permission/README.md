@@ -5,7 +5,7 @@ Roles and permissions (database-backed, cached, middleware-ready), installed as 
 ## Install
 
 ```bash
-composer require local/permission:"*"
+composer require local/permission:"^1.0"
 php artisan migrate
 ```
 

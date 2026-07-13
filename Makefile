@@ -125,6 +125,9 @@ test: ## Run PHPUnit tests
 lint: ## Run PHP Pint linter
 	$(EXEC) ./vendor/bin/pint
 
+analyse: ## Run PHPStan/Larastan static analysis
+	$(EXEC) ./vendor/bin/phpstan analyse --memory-limit=1G
+
 # ---------------------------------------------------------------------------
 # Shell Access
 # ---------------------------------------------------------------------------

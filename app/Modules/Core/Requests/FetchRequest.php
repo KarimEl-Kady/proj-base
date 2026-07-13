@@ -82,6 +82,6 @@ class FetchRequest extends BaseRequest
 
     protected function maxPerPage(): int
     {
-        return (int) config('project.pagination.max_per_page', 100);
+        return max(1, min((int) config('project.pagination.max_per_page', 100), 1000));
     }
 }

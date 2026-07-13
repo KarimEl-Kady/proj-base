@@ -31,7 +31,21 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withEvents(discover: $listenerPaths)
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $trustedProxies = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TRUSTED_PROXIES', '')),
+        )));
+
+        if ($trustedProxies !== []) {
+            $middleware->trustProxies(at: $trustedProxies);
+        }
+
+        // Auth is API-only by default, so there is no named "login" web
+        // route — without this, guests hitting an auth-protected web or
+        // dashboard route would get a RouteNotFoundException (500) instead
+        // of a redirect. JSON/API requests still receive 401 envelopes.
+        // Point this at the login page if the project adds a web login.
+        $middleware->redirectGuestsTo('/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Uniform {success, message, errors} envelope for API errors.

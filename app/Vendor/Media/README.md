@@ -5,7 +5,7 @@ Polymorphic media/attachments package, installed as a **local path package** fro
 ## Install
 
 ```bash
-composer require local/media:"*"
+composer require local/media:"^1.0"
 php artisan migrate
 ```
 
@@ -21,8 +21,9 @@ Add the trait to any Eloquent model:
 
 ```php
 use Local\Media\Traits\HasMedia;
+use Local\Media\Contracts\Mediable;
 
-class Post extends Model
+class Post extends Model implements Mediable
 {
     use HasMedia;
 }
@@ -55,4 +56,9 @@ app(Local\Media\Services\MediaService::class)->store($file, $post, 'gallery', ['
 | `disk` | `MEDIA_DISK` | `public` |
 | `directory` | `MEDIA_DIRECTORY` | `media` |
 | `max_file_size` (KB) | `MEDIA_MAX_FILE_SIZE` | `10240` |
-| `allowed_mime_types` | — | images, pdf, mp4, mp3 |
+| `allowed_mime_types` | — | raster images, pdf, mp4, mp3 |
+
+Stored extensions are derived from server-detected MIME data, never the client
+filename. SVG is excluded from the public-disk defaults because active SVG
+content can execute in a browser; projects that need SVG should sanitize it and
+serve it from an isolated origin.

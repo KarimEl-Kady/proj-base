@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
+/**
+ * Base for module repositories. Deliberately NOT generic over the model:
+ * Eloquent's `static`-returning builders don't resolve through a PHPStan
+ * template, so `@template TModel` would only produce unverifiable
+ * annotations. Repositories that want a narrower type than Model simply
+ * query their own model class directly (see UserRepository::findByEmail).
+ */
 abstract class BaseRepository
 {
     public function __construct(
@@ -90,7 +97,15 @@ abstract class BaseRepository
         }
 
         if (! $request->wantsPagination()) {
-            return $query->get();
+            // pagination=false is a client-controlled toggle — cap it so it
+            // can never load an unbounded table into memory (see
+            // project.pagination.unpaginated_cap).
+            $cap = max(1, min(
+                (int) config('project.pagination.unpaginated_cap', 1000),
+                10000,
+            ));
+
+            return $query->limit($cap)->get();
         }
 
         return $query->paginate($request->perPage())->appends($request->query());
@@ -134,11 +149,17 @@ abstract class BaseRepository
         return $this->query()->paginate($perPage);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(array $data): Model
     {
         return $this->query()->create($data);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(Model $model, array $data): bool
     {
         return $model->update($data);

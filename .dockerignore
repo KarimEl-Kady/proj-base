@@ -25,6 +25,8 @@ _ide_helper.php
 /.phpunit.cache
 /.phpunit.result.cache
 /tests
+/app/Modules/*/Tests
+/app/Vendor/*/tests
 
 # Storage (mounted as volume)
 /storage/logs/*
@@ -32,8 +34,9 @@ _ide_helper.php
 /storage/framework/sessions/*
 /storage/framework/views/*
 
-# Docker (don't send docker config into the build context)
-/docker
+# Docker orchestration files are not needed in the image. The docker/
+# directory itself must remain in context because Dockerfile copies PHP and
+# entrypoint configuration from it.
 docker-compose.yml
 docker-compose.override.yml
 Makefile
@@ -42,6 +45,10 @@ Makefile
 /public/build
 /public/hot
 /public/fonts-manifest.dev.json
+
+# Generated for the dependency set inside the image. Host caches may contain
+# service providers from require-dev packages that do not exist in production.
+/bootstrap/cache/*.php
 
 # OS
 .DS_Store

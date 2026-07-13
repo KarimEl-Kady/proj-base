@@ -8,11 +8,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Local\Media\Contracts\Mediable;
 use Local\Media\Services\MediaService;
 use Local\Media\Traits\HasMedia;
 use Tests\TestCase;
 
-class MediaTestModel extends User
+class MediaTestModel extends User implements Mediable
 {
     use HasMedia;
 

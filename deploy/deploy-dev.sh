@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Dev server deployment script
+# Dev server deployment script (mutable checkout; not for production)
 #
 # Executed ON the dev server (piped over SSH by CI, or run manually:
 #   ssh deploy@dev-server 'bash -s' < deploy/deploy-dev.sh
@@ -30,6 +30,12 @@ log() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 log "Deploying branch [$GIT_BRANCH] to $DEPLOY_PATH"
 cd "$DEPLOY_PATH"
 
+LOCK_DIR="$DEPLOY_PATH/.deploy.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    printf 'Another deployment is already running (%s).\n' "$LOCK_DIR" >&2
+    exit 1
+fi
+
 if [ "$USE_MAINTENANCE_MODE" = "true" ]; then
     log "Entering maintenance mode"
     "$PHP_BIN" artisan down --retry=15 || true
@@ -41,6 +47,7 @@ finish() {
         log "Leaving maintenance mode"
         "$PHP_BIN" artisan up || true
     fi
+    rmdir "$LOCK_DIR" 2>/dev/null || true
 }
 trap finish EXIT
 
@@ -63,6 +70,7 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
 fi
 
 log "Refreshing caches"
+"$PHP_BIN" artisan project:validate
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
@@ -70,7 +78,7 @@ log "Refreshing caches"
 
 if [ "$RESTART_QUEUE" = "true" ]; then
     log "Restarting queue workers"
-    "$PHP_BIN" artisan queue:restart || true
+    "$PHP_BIN" artisan queue:restart
 fi
 
 log "Deployment finished successfully"

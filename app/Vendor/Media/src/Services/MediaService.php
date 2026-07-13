@@ -4,8 +4,10 @@ namespace Local\Media\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Local\Media\Contracts\Mediable;
 use Local\Media\Models\Media;
 
 class MediaService
@@ -13,6 +15,7 @@ class MediaService
     /**
      * Store an uploaded file and attach it to a model.
      *
+     * @param  Model&Mediable  $model
      * @param  array<string, mixed>  $customProperties
      */
     public function store(
@@ -26,10 +29,11 @@ class MediaService
         $disk = config('media.disk', 'public');
         $directory = trim(config('media.directory', 'media'), '/');
 
-        $fileName = Str::uuid().'.'.$file->getClientOriginalExtension();
+        $extension = $file->extension() ?: 'bin';
+        $fileName = Str::uuid().'.'.$extension;
         $path = $file->storeAs("{$directory}/{$collection}", $fileName, $disk);
 
-        return $model->media()->create([
+        $media = new Media([
             'collection' => $collection,
             'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'file_name' => $fileName,
@@ -39,6 +43,16 @@ class MediaService
             'size' => $file->getSize() ?: 0,
             'custom_properties' => $customProperties,
         ]);
+
+        try {
+            $model->media()->save($media);
+        } catch (\Throwable $e) {
+            Storage::disk($disk)->delete($path);
+
+            throw $e;
+        }
+
+        return $media;
     }
 
     /**

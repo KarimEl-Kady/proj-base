@@ -1,0 +1,27 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    tmpDir: storage/framework/cache/phpstan
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    excludePaths:
+        # Local package config files are config, not code: they are pulled in
+        # via mergeConfigFrom(), which Laravel skips entirely when the config
+        # is cached — so env() in them is exactly as safe as env() in the root
+        # config/ directory, which Larastan already permits. They are plain
+        # declarative arrays with nothing to type-check.
+        - app/Vendor/*/config/*
+
+    # Several framework/vendor methods are annotated as non-nullable in their
+    # PHPDoc while genuinely returning null at runtime (e.g. Sanctum's
+    # currentAccessToken(), Seeder::$command). Trusting those PHPDocs as
+    # certain would push us to *remove* correct null handling, so they are
+    # treated as hints rather than guarantees.
+    treatPhpDocTypesAsCertain: false

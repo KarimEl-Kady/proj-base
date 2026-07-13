@@ -9,7 +9,7 @@ This package holds **only data + read access to it** — no Eloquent models, no 
 ## Install
 
 ```bash
-composer require local/geo-seeder:"*"
+composer require local/geo-seeder:"^1.0"
 ```
 
 ## Usage

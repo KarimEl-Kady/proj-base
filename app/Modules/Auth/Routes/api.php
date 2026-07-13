@@ -45,7 +45,7 @@ Route::prefix('api/v1/auth/email')->group(function () {
         ->name('api.auth.email.resend');
 
     Route::get('/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
-        ->middleware(['signed', 'throttle:6,1'])
+        ->middleware(['signed:relative', 'throttle:6,1'])
         ->name('verification.verify');
 });
 

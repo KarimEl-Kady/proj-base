@@ -12,13 +12,20 @@ use App\Modules\Core\Commands\ModuleListCommand;
 use App\Modules\Core\Commands\ModuleMakeCommand;
 use App\Modules\Core\Commands\PackageListCommand;
 use App\Modules\Core\Commands\ProjectInfoCommand;
+use App\Modules\Core\Commands\PruneMessagesCommand;
+use App\Modules\Core\Commands\PublishOutboxCommand;
+use App\Modules\Core\Commands\RetryOutboxCommand;
 use App\Modules\Core\Commands\TenantMigrationsCommand;
+use App\Modules\Core\Commands\ValidateProjectCommand;
+use App\Modules\Core\Middleware\RequestContextMiddleware;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -50,8 +57,12 @@ class CoreServiceProvider extends ServiceProvider
                 ModuleListCommand::class,
                 ModuleMakeCommand::class,
                 PackageListCommand::class,
+                PruneMessagesCommand::class,
+                PublishOutboxCommand::class,
                 ProjectInfoCommand::class,
+                RetryOutboxCommand::class,
                 TenantMigrationsCommand::class,
+                ValidateProjectCommand::class,
             ]);
 
             $this->registerModuleCommands();
@@ -61,7 +72,17 @@ class CoreServiceProvider extends ServiceProvider
         $this->loadModuleResources();
         $this->loadModuleRouteFiles();
         $this->registerTenantMiddleware();
+        $this->registerRequestContextMiddleware();
         $this->registerRateLimiting();
+        $this->registerQueueHeartbeat();
+    }
+
+    protected function registerQueueHeartbeat(): void
+    {
+        Queue::looping(function (): void {
+            $ttl = max(30, (int) config('project.health.queue_heartbeat_ttl', 120));
+            Cache::put('project.queue_worker_heartbeat', now()->timestamp, $ttl);
+        });
     }
 
     /**
@@ -72,7 +93,9 @@ class CoreServiceProvider extends ServiceProvider
     protected function registerRateLimiting(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute((int) config('project.api.rate_limit', 60))
+            $limit = max(1, min((int) config('project.api.rate_limit', 60), 10000));
+
+            return Limit::perMinute($limit)
                 ->by($request->user()?->getAuthIdentifier() ?? $request->ip());
         });
 
@@ -130,7 +153,7 @@ class CoreServiceProvider extends ServiceProvider
      */
     protected function loadModuleResources(): void
     {
-        foreach (config('project.modules', []) as $module) {
+        foreach (array_unique(array_merge(['Core'], config('project.modules', []))) as $module) {
             $migrations = module_path($module, 'Database/Migrations');
             if (is_dir($migrations)) {
                 $this->loadMigrationsFrom($migrations);
@@ -185,6 +208,12 @@ class CoreServiceProvider extends ServiceProvider
         $this->app['router']->pushMiddlewareToGroup('web', TenantMiddleware::class);
     }
 
+    protected function registerRequestContextMiddleware(): void
+    {
+        $this->app['router']->pushMiddlewareToGroup('api', RequestContextMiddleware::class);
+        $this->app['router']->pushMiddlewareToGroup('web', RequestContextMiddleware::class);
+    }
+
     /**
      * Module route files. Loaded for every active module (plus Core); each
      * file is optional, only existing ones are registered.
@@ -201,22 +230,42 @@ class CoreServiceProvider extends ServiceProvider
     protected function loadModuleRouteFiles(): void
     {
         $modules = array_unique(array_merge(['Core'], config('project.modules', [])));
+        $pathTenancy = is_multi_tenant()
+            && config('project.tenancy.tenant_identification') === 'path';
 
         foreach ($modules as $module) {
             $apiRoutes = module_path($module, 'Routes/api.php');
             if (is_file($apiRoutes)) {
-                Route::middleware('api')->group($apiRoutes);
+                $router = Route::middleware('api');
+
+                if ($pathTenancy && $module !== 'Core') {
+                    $router->prefix('{tenant}')->where(['tenant' => '[A-Za-z0-9-]+']);
+                }
+
+                $router->group($apiRoutes);
             }
 
             $webRoutes = module_path($module, 'Routes/web.php');
             if (is_file($webRoutes)) {
-                Route::middleware('web')->group($webRoutes);
+                $router = Route::middleware('web');
+
+                if ($pathTenancy && $module !== 'Core') {
+                    $router->prefix('{tenant}')->where(['tenant' => '[A-Za-z0-9-]+']);
+                }
+
+                $router->group($webRoutes);
             }
 
             $dashboardRoutes = module_path($module, 'Routes/dashboard.php');
             if (is_file($dashboardRoutes)) {
+                $prefix = config('project.routes.dashboard.prefix', 'dashboard');
+                if ($pathTenancy && $module !== 'Core') {
+                    $prefix = '{tenant}/'.$prefix;
+                }
+
                 Route::middleware(config('project.routes.dashboard.middleware', ['web']))
-                    ->prefix(config('project.routes.dashboard.prefix', 'dashboard'))
+                    ->prefix($prefix)
+                    ->where(['tenant' => '[A-Za-z0-9-]+'])
                     ->name(config('project.routes.dashboard.name_prefix', 'dashboard.'))
                     ->group($dashboardRoutes);
             }

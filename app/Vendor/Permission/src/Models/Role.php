@@ -46,7 +46,7 @@ class Role extends Model
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function givePermissionTo(...$permissions): static
     {
@@ -57,7 +57,7 @@ class Role extends Model
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function revokePermissionTo(...$permissions): static
     {
@@ -68,7 +68,7 @@ class Role extends Model
     }
 
     /**
-     * @param  string|Permission  ...$permissions
+     * @param  string|Permission|array<int, string|Permission>  ...$permissions
      */
     public function syncPermissions(...$permissions): static
     {

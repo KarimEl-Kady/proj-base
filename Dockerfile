@@ -81,6 +81,8 @@ WORKDIR /var/www/html
 FROM base AS composer
 
 COPY composer.json composer.lock ./
+# Composer path repositories must exist before dependency resolution.
+COPY app/Vendor/ app/Vendor/
 RUN composer install \
     --no-dev \
     --no-interaction \

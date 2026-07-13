@@ -6,14 +6,13 @@ use App\Modules\Core\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
 use Local\DataResponse\DataResponse;
 
 class HealthController extends Controller
 {
-    /**
-     * Quick liveness probe — always returns 200 if the app is up.
-     */
+    /** Dependency readiness probe. Use /api/health/live for liveness. */
     public function __invoke(): JsonResponse
     {
         $checks = [
@@ -55,7 +54,7 @@ class HealthController extends Controller
         } catch (\Throwable $e) {
             return [
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => $this->dependencyError($e),
             ];
         }
     }
@@ -75,7 +74,7 @@ class HealthController extends Controller
         } catch (\Throwable $e) {
             return [
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => $this->dependencyError($e),
             ];
         }
     }
@@ -94,7 +93,7 @@ class HealthController extends Controller
         } catch (\Throwable $e) {
             return [
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => $this->dependencyError($e),
             ];
         }
     }
@@ -104,16 +103,25 @@ class HealthController extends Controller
         try {
             $connection = config('queue.default');
             $driver = config("queue.connections.{$connection}.driver", $connection);
+            $backlog = Queue::connection($connection)->size();
+            $heartbeat = Cache::get('project.queue_worker_heartbeat');
+            $requiresWorker = (bool) config('project.health.require_queue_worker', false);
+            $workerAlive = $driver === 'sync' || $heartbeat !== null;
+            $warningAt = max(1, (int) config('project.health.queue_backlog_warning', 1000));
 
             return [
-                'status' => 'ok',
+                'status' => $requiresWorker && ! $workerAlive ? 'error' : 'ok',
                 'connection' => $connection,
                 'driver' => $driver,
+                'backlog' => $backlog,
+                'backlog_status' => $backlog >= $warningAt ? 'warning' : 'ok',
+                'worker_alive' => $workerAlive,
+                'heartbeat_at' => $heartbeat === null ? null : now()->setTimestamp((int) $heartbeat)->toIso8601String(),
             ];
         } catch (\Throwable $e) {
             return [
                 'status' => 'error',
-                'message' => $e->getMessage(),
+                'message' => $this->dependencyError($e),
             ];
         }
     }
@@ -123,5 +131,10 @@ class HealthController extends Controller
         return in_array(config('cache.default'), ['redis']) ||
                in_array(config('session.driver'), ['redis']) ||
                in_array(config('queue.default'), ['redis']);
+    }
+
+    protected function dependencyError(\Throwable $error): string
+    {
+        return config('app.debug') ? $error->getMessage() : 'Dependency unavailable.';
     }
 }

@@ -16,7 +16,7 @@ abstract class Model extends Eloquent
     use HasFactory;
     use HasUuid;
 
-    protected $guarded = ['id', 'uuid'];
+    protected $guarded = ['id', 'uuid', 'tenant_id'];
 
     /**
      * Columns matched by the free-text `word` filter in BaseRepository::fetch().

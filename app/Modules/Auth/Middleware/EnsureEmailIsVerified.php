@@ -3,6 +3,7 @@
 namespace App\Modules\Auth\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,9 +19,9 @@ use Symfony\Component\HttpFoundation\Response;
  * — this makes the base's posture explicit: verification emails are
  * informational until a route opts in with this middleware.
  *
- * Checks hasVerifiedEmail() by method (not the MustVerifyEmail contract)
- * because the shipped User model uses the trait without the marker
- * interface — the feature flag is this project's opt-in switch.
+ * Differs from Laravel's built-in `verified` middleware only in being
+ * feature-flag aware and returning a JSON-envelope 403 instead of
+ * redirecting to a (non-existent, API-first) verification notice route.
  */
 class EnsureEmailIsVerified
 {
@@ -32,9 +33,7 @@ class EnsureEmailIsVerified
 
         $user = $request->user();
 
-        if ($user !== null
-            && method_exists($user, 'hasVerifiedEmail')
-            && ! $user->hasVerifiedEmail()) {
+        if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
             abort(403, 'Your email address is not verified.');
         }
 

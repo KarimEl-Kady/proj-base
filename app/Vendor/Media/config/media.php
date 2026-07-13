@@ -33,7 +33,6 @@ return [
         'image/png',
         'image/gif',
         'image/webp',
-        'image/svg+xml',
         'application/pdf',
         'video/mp4',
         'audio/mpeg',

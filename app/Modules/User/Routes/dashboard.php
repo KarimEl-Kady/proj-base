@@ -1,8 +1,5 @@
 <?php
 
-use App\Modules\User\Controllers\Web\UserController;
-use Illuminate\Support\Facades\Route;
-
 /*
 |--------------------------------------------------------------------------
 | User Dashboard Routes
@@ -10,19 +7,18 @@ use Illuminate\Support\Facades\Route;
 |
 | Loaded under project.routes.dashboard (prefix "dashboard", middleware
 | ["web", "auth"], name prefix "dashboard.") by CoreServiceProvider.
-| Reuses the same Web controller/views as Routes/web.php — a real admin
-| backoffice would swap in a dedicated Controllers/Dashboard controller
-| instead.
 |
-| Final paths:  dashboard/users, dashboard/users/{user}, ...
-| Final names:  dashboard.users.index, dashboard.users.show, ...
+| Nothing ships here by default — the dashboard middleware only proves the
+| visitor is *authenticated*, and user management additionally needs
+| *authorization*. When this project builds its backoffice, add a dedicated
+| dashboard controller + views and gate every action with the users.*
+| permissions, mirroring the API routes:
+|
+|     Route::prefix('users')->group(function () {
+|         Route::get('/', [DashboardUserController::class, 'index'])
+|             ->middleware('permission:users.view')->name('users.index');
+|         Route::delete('/{user}', [DashboardUserController::class, 'destroy'])
+|             ->middleware('permission:users.delete')->name('users.destroy');
+|     });
 |
 */
-
-Route::prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index'])->name('users.index');
-    Route::get('/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::get('/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-});

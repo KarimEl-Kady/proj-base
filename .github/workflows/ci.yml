@@ -69,6 +69,20 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      pgsql:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: proj_base_test
+          POSTGRES_USER: proj_base
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U proj_base -d proj_base_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
       redis:
         image: redis:7-alpine
         ports:
@@ -113,12 +127,16 @@ jobs:
       - name: PHP Pint (lint)
         run: ./vendor/bin/pint --test
 
+      - name: PHPStan / Larastan (static analysis)
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
       # -----------------------------------------------------------------------
       # Test
       # -----------------------------------------------------------------------
       - name: Boot smoke check (catches urgent runtime errors)
         run: |
           php artisan config:clear --ansi
+          php artisan project:validate
           php artisan route:list > /dev/null
           php artisan route:cache && php artisan route:clear   # guard: routes must stay cacheable
           php artisan module:boundaries                        # guard: no undeclared cross-module deps
@@ -141,6 +159,18 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: rootsecret
 
+      - name: Migrations run on PostgreSQL (schema portability guard)
+        run: |
+          PROJECT_TENANCY_MODE=none  php artisan migrate:fresh --force
+          PROJECT_TENANCY_MODE=multi php artisan migrate:fresh --force
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: proj_base_test
+          DB_USERNAME: proj_base
+          DB_PASSWORD: secret
+
       - name: Run tests
         run: php artisan test
         env:
@@ -150,6 +180,19 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
+
+      - name: Redis queue and cache integration
+        run: php artisan test --filter=RedisQueueIntegrationTest
+        env:
+          RUN_REDIS_INTEGRATION: true
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: redis
+          QUEUE_CONNECTION: redis
+          SESSION_DRIVER: array
+          MAIL_MAILER: array
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
 
   # ---------------------------------------------------------------------------
   # Frontend — Build
@@ -174,6 +217,24 @@ jobs:
 
       - name: Build assets
         run: npm run build
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+  container:
+    name: Production Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build immutable production image
+        run: docker build --tag proj-base:ci .
+
+      - name: Smoke-test production image
+        run: docker run --rm --entrypoint php proj-base:ci artisan about --only=environment
 
   # ---------------------------------------------------------------------------
   # Security — Composer audit
@@ -224,7 +285,7 @@ jobs:
     name: Deploy → Dev Server
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [php, frontend, security]
+    needs: [php, frontend, container, security]
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
     environment: dev
 

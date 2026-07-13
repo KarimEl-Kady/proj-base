@@ -5,7 +5,7 @@ Standardized JSON response envelope, installed as a **local path package** from 
 ## Install
 
 ```bash
-composer require local/data-response:"*"
+composer require local/data-response:"^1.0"
 ```
 
 The service provider is auto-discovered. Publish the config to customize key names or default messages:

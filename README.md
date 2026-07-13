@@ -2,6 +2,10 @@
 
 A modular HMVC application foundation built on Laravel, designed to serve as a starting point for any platform — web, API, or hybrid. Batteries included: module generators, a standard API fetch pipeline, local composer packages, per-module tests, Docker, and CI/CD with dev-server deployment.
 
+See [Architecture Guide](docs/architecture.md) for ownership and scaling
+decisions and [Operations Runbook](docs/operations.md) for release, recovery,
+health, and queue procedures.
+
 ## Stack
 
 - **PHP** 8.3+ · **Laravel** 13.7 · **Sanctum** 4
@@ -69,15 +73,18 @@ app/Modules/{Module}/
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
 | **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
-| **Event-driven messaging** | `DomainEvent` base (after-commit dispatch, uuid + timestamp) fanned out to auto-discovered module listeners; `QueuedListener` base for async handlers over the queue — `event:cache`-compatible, disabled modules excluded |
-| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"*"` |
+| **Event-driven messaging** | Lightweight `DomainEvent` + queued listeners for ordinary reactions; transactional `Outbox` + `Inbox` deduplication for critical at-least-once integration messages |
+| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"^1.0"` |
 | **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
 | **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
 | **Full Auth module** | Register/login/logout/me (Sanctum bearer tokens or session), email verification, password reset, TOTP 2FA, named personal access tokens — every part gated by feature flags |
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
+| **Secure-by-default generators** | `make:module` emits routes behind `auth` **and** per-action `permission:` middleware, plus the matching `Config/permissions.php` — a new module can't accidentally ship CRUD open to every logged-in user |
+| **Static analysis** | PHPStan/Larastan level 5 at zero errors, enforced in CI (`composer analyse`) alongside Pint and the boundary check |
 | **Country/City reference data** | `Country` and `City` modules (full CRUD API) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
-| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or path-based tenant resolution, cached per identifier and fail-closed by default (tenant-scoped models outside a tenant context throw; use `with_tenant()` / `without_tenant_scope()` in CLI code). Migrations adapt automatically: `$table->tenantColumn()` adds the tenant column when tenancy is active, and `php artisan tenant:migrations` generates catch-up migrations when a project turns tenancy on |
+| **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or `/{tenant}/...` path resolution, cached and fail-closed. Active request context is authoritative on writes; deliberate cross-tenant work uses explicit helpers |
+| **Operations** | Separate liveness/readiness probes, request IDs propagated through Context, JSON stderr logging, queue heartbeat/backlog visibility, scheduled pruning, and fail-fast deployment validation |
 | **Feature flags** | Registration, email verification, 2FA, personal access tokens — togglable via env and actually implemented by the Auth module |
 
 ## Generators
@@ -109,7 +116,7 @@ php artisan tenant:migrations                 # single→multi: generate missing
 
 # Local packages (app/Vendor)
 php artisan make:package Payment
-composer require local/payment:"*"
+composer require local/payment:"^1.0"
 php artisan package:list
 
 # Project overview
@@ -123,7 +130,7 @@ GET /api/v1/users?word=alice&per_page=10&sort_by=id&sort_dir=asc
 GET /api/v1/users?pagination=false
 ```
 
-`word` searches the model's `$searchable` columns; `sort_by` is validated against the model's `$sortable` whitelist; `per_page` is capped by `project.pagination.max_per_page`. Extend `FetchRequest` per module to add custom filters.
+`word` searches the model's `$searchable` columns; `sort_by` is validated against the model's `$sortable` whitelist; `per_page` is capped by `project.pagination.max_per_page`; `pagination=false` is bounded by `project.pagination.unpaginated_cap` (default 1000). Extend `FetchRequest` per module to add custom filters.
 
 ### Routing
 
@@ -174,6 +181,23 @@ class NotifySubscribers extends QueuedListener
 
 Dispatch with `PostPublished::dispatch($post)`. `php artisan event:list` shows the discovered map (queued listeners labeled `ShouldQueue`), `event:cache` caches it (already in the deploy script), and disabling a module removes its listeners automatically.
 
+Use lightweight events when a rare queue-publication failure can be recovered by normal business reconciliation. For critical external delivery, record an outbox message inside the domain transaction:
+
+```php
+DB::transaction(function () use ($order) {
+    $order->markPaid();
+    app(Outbox::class)->record('orders.paid', ['order_id' => $order->uuid]);
+});
+```
+
+`outbox:publish` runs every minute. Publishers claim rows atomically, retry
+with bounded backoff, and dead-letter exhausted messages. Consumers type-hint
+`DurableMessage` and call `Inbox::consume($message, Consumer::class, fn () =>
+...)`; the Inbox claim and consumer database writes commit atomically,
+duplicate delivery is skipped, and tenant context is restored. Inspect and
+release dead letters with `outbox:retry {event_id}`; scheduled
+`messages:prune` enforces retention.
+
 Living examples: `Auth\Listeners\AssignDefaultRole` (sync — assigns `PROJECT_AUTH_DEFAULT_ROLE` to new registrations, atomic on purpose) and `User\Events\UserCreated` + `User\Listeners\RecordUserCreation` (async — fired from the model's `created` hook for every entry point, queued audit-log listener).
 
 ### Authentication (Auth module)
@@ -208,8 +232,9 @@ Rename the envelope keys or default messages project-wide via `config/data_respo
 
 ```php
 use Local\Media\Traits\HasMedia;
+use Local\Media\Contracts\Mediable;
 
-class Post extends Model { use HasMedia; }
+class Post extends Model implements Mediable { use HasMedia; }
 
 $post->addMedia($request->file('cover'), 'covers');
 $post->getFirstMediaUrl('covers');
@@ -301,7 +326,7 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `config/project_modules.php` | `['User' => true]` | Module registry (file, not env) |
-| `PROJECT_TENANCY_MODE` | `single` | `single` or `multi` |
+| `PROJECT_TENANCY_MODE` | `none` | `none`, `single`, or `multi` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
@@ -309,11 +334,25 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_DB_DRIVER` | `mysql` | Database driver |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |
+| `PROJECT_PAGINATION_UNPAGINATED_CAP` | `1000` | Hard cap for `?pagination=false` |
+| `PROJECT_AUTH_PERSONAL_TOKEN_EXPIRATION` | `43200` | Named token lifetime in minutes (30 days) |
+| `PROJECT_OUTBOX_MAX_ATTEMPTS` / `PROJECT_OUTBOX_CLAIM_TTL` | `10` / `300` | Dead-letter threshold and crashed-publisher claim expiry |
 | `MEDIA_DISK` / `MEDIA_MAX_FILE_SIZE` | `public` / `10240` KB | Media package |
 | `GEO_SEED_COUNTRIES` | `EG,KW,AE,SA` | ISO2 codes the `geo:seed` command / seeders act on |
 | `PERMISSION_CACHE_ENABLED` / `PERMISSION_CACHE_TTL` | `true` / `3600` | Permission package's role→permission map cache |
 
 See `.env.example` for all options.
+
+Run `php artisan project:validate` after changing environment configuration. It is enforced by CI and deployment.
+
+## Operations
+
+- `GET /api/health/live` proves the Laravel process can answer.
+- `GET /api/health/ready` (and `/api/health`) checks database, cache, Redis, queue backlog, and optional worker heartbeat.
+- Every API/web response includes `X-Request-ID`; a valid incoming ID is preserved and propagated through Laravel Context into queued work and logs.
+- Docker logs use structured JSON on stderr by default.
+- The scheduler prunes failed jobs, tokens, reset records, outbox history, and Inbox deduplication records; it also publishes pending outbox messages.
+- Container migrations are opt-in (`AUTO_MIGRATE=false`) and fail startup when enabled and unsuccessful. Production releases should run migrations as a dedicated release step.
 
 ## Testing
 
@@ -333,14 +372,19 @@ GitHub Actions (`.github/workflows/ci.yml`) and a GitLab mirror (`.gitlab-ci.yml
 
 1. **Syntax** — `php -l` over the whole codebase + `composer validate` (fast fail)
 2. **Lint + Test** — Pint, boot smoke check (`route:list`, `route:cache` guard, `module:boundaries`), PHPUnit on PHP 8.3/8.4
-3. **Frontend** — `npm ci` + Vite build · **Security** — `composer audit`
-4. **Deploy → dev server** — on `develop` pushes (after all checks pass), SSHes in and runs `deploy/deploy-dev.sh`
+3. **Integration** — real Redis queue/cache round-trip plus MySQL/PostgreSQL migration guards
+4. **Build/security** — production Docker image, Vite build, `composer audit`, and `npm audit`
+5. **Deploy → dev server** — on `develop` pushes, SSHes in and runs the mutable `deploy/deploy-dev.sh` workflow
 
 Deployment is configured with repo secrets — `DEV_SSH_PRIVATE_KEY`, `DEV_SSH_HOST`, `DEV_SSH_USER` (+ optional `DEV_SSH_PORT`, `DEV_DEPLOY_PATH`, `DEV_SSH_KNOWN_HOSTS`). Until they're set, the deploy job skips with a notice. Server-side behaviour (path, branch, migrations, asset build, queue restart, maintenance mode) is customized in the CONFIGURATION block of `deploy/deploy-dev.sh`, which also works standalone:
 
 ```bash
 ssh deploy@dev-server 'bash -s' < deploy/deploy-dev.sh
 ```
+
+Production releases use immutable images: a `v*` tag publishes to GHCR (and
+GitLab tags publish to its registry). See [`deploy/README.md`](deploy/README.md)
+for the migration-once and digest-based rollout procedure.
 
 ## Development
 

@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Traits;
 
 use App\Modules\Core\Exceptions\MissingTenantContextException;
+use App\Modules\Core\Exceptions\TenantContextMismatchException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Context;
 
@@ -50,14 +51,6 @@ trait HasTenantScope
                 return;
             }
 
-            $column = config('project.tenancy.tenant_column', 'tenant_id');
-
-            // An explicitly pre-set tenant column always wins — the caller
-            // has already decided which tenant this row belongs to.
-            if (! empty($model->getAttribute($column))) {
-                return;
-            }
-
             $tenantId = Context::get('tenant_id');
 
             if ($tenantId === null) {
@@ -66,6 +59,17 @@ trait HasTenantScope
                 }
 
                 return;
+            }
+
+            $column = config('project.tenancy.tenant_column', 'tenant_id');
+            $suppliedTenantId = $model->getAttribute($column);
+
+            if ($suppliedTenantId !== null && (string) $suppliedTenantId !== (string) $tenantId) {
+                throw TenantContextMismatchException::for(
+                    $model::class,
+                    $tenantId,
+                    $suppliedTenantId,
+                );
             }
 
             $model->setAttribute($column, $tenantId);

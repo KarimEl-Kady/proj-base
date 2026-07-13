@@ -11,10 +11,12 @@ use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\Access\Authorizable as AuthorizableContract;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
 use Local\Permission\Traits\HasRolesAndPermissions;
 
@@ -24,10 +26,23 @@ use Local\Permission\Traits\HasRolesAndPermissions;
  * newFactory() override with the trait's own (returns null unless
  * static::$factory is set), breaking User::factory() resolution. See
  * App\Modules\User\Database\Factories\UserFactory.
+ *
+ * MustVerifyEmailContract must be declared alongside the trait, not just
+ * the trait alone: Laravel's own `verified` middleware and the Verified
+ * event both gate on `instanceof MustVerifyEmail`, so a model carrying only
+ * the trait silently skips verification enforcement.
+ *
+ * @property string $uuid
+ * @property string $name
+ * @property string $email
+ * @property string $password
+ * @property ?string $two_factor_secret
+ * @property ?Carbon $two_factor_confirmed_at
+ * @property ?Carbon $email_verified_at
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret'])]
-class User extends Model implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract
+class User extends Model implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract, MustVerifyEmailContract
 {
     use Authenticatable, Authorizable, CanResetPassword, MustVerifyEmail;
     use HasApiTokens, Notifiable;

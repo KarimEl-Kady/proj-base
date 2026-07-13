@@ -2,7 +2,7 @@
 
 namespace App\Modules\Auth\Listeners;
 
-use Illuminate\Auth\Events\Registered;
+use App\Modules\Auth\Events\UserRegistered;
 
 /**
  * Gives every newly registered user the role named in
@@ -16,7 +16,7 @@ use Illuminate\Auth\Events\Registered;
  */
 class AssignDefaultRole
 {
-    public function handle(Registered $event): void
+    public function handle(UserRegistered $event): void
     {
         $role = config('project.auth.default_role');
 
@@ -24,8 +24,6 @@ class AssignDefaultRole
             return;
         }
 
-        if (method_exists($event->user, 'assignRole')) {
-            $event->user->assignRole($role);
-        }
+        $event->user->assignRole($role);
     }
 }

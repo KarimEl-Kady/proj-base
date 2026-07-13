@@ -2,10 +2,11 @@
 
 namespace App\Modules\Auth\Tests\Feature;
 
+use App\Modules\Auth\Events\UserRegistered;
 use App\Modules\Auth\Listeners\AssignDefaultRole;
 use App\Modules\User\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Local\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -37,7 +38,7 @@ class AssignDefaultRoleTest extends TestCase
 
     public function test_listener_is_auto_discovered_from_the_module_listeners_directory(): void
     {
-        $raw = collect(app('events')->getRawListeners()[Registered::class] ?? [])
+        $raw = collect(app('events')->getRawListeners()[UserRegistered::class] ?? [])
             ->map(fn ($listener) => is_string($listener) ? $listener : (is_array($listener) ? implode('@', $listener) : get_debug_type($listener)));
 
         $this->assertTrue(
@@ -76,5 +77,21 @@ class AssignDefaultRoleTest extends TestCase
 
         $this->assertTrue($user->roles->contains('id', $existing->id));
         $this->assertSame(1, Role::query()->where('name', 'customer')->count());
+    }
+
+    public function test_registration_rolls_back_when_its_synchronous_lifecycle_fails(): void
+    {
+        Event::listen(UserRegistered::class, function (): void {
+            throw new \RuntimeException('Registration lifecycle failed.');
+        });
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Alice',
+            'email' => 'alice@example.com',
+            'password' => 'secret-password',
+        ])->assertServerError();
+
+        $this->assertDatabaseMissing('users', ['email' => 'alice@example.com']);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 }
