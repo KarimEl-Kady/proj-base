@@ -110,6 +110,23 @@ class TenancyModesTest extends TestCase
         $this->assertNotNull(Tenant::where('slug', 'acme')->where('name', 'Acme')->first());
     }
 
+    public function test_tenants_are_soft_deleted_for_data_retention(): void
+    {
+        $tenant = Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $tenant->delete();
+
+        $this->assertSoftDeleted('tenants', ['id' => $tenant->id]);
+    }
+
+    public function test_soft_deleted_default_tenant_stops_single_tenant_requests(): void
+    {
+        config(['project.tenancy.mode' => 'single']);
+        Tenant::create(['name' => 'Default', 'slug' => 'default'])->delete();
+
+        $this->getJson('/api/v1/countries')->assertStatus(400);
+    }
+
     // ── middleware: multi ────────────────────────────────────────────
 
     public function test_multi_mode_resolves_the_tenant_from_the_header(): void

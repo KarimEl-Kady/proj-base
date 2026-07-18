@@ -55,6 +55,7 @@ class MakePackageCommand extends Command
         $this->writeServiceProvider($path, $namespace, $studly, $snake);
         $this->writeConfig($path, $snake);
         $this->writeReadme($path, $packageName, $studly, $description);
+        File::copy(base_path('LICENSE'), "{$path}/LICENSE");
         File::put("{$path}/CHANGELOG.md", "# Changelog\n\n## 1.0.0\n\n- Initial release.\n");
 
         $this->info("Package [{$packageName}] scaffolded at app/Vendor/{$studly}");
@@ -72,7 +73,7 @@ class MakePackageCommand extends Command
             'description' => $description,
             'type' => 'library',
             'version' => '1.0.0',
-            'license' => 'proprietary',
+            'license' => 'MIT',
             'require' => [
                 'php' => '^8.3',
             ],

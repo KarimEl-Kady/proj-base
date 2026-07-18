@@ -2,6 +2,9 @@
 
 namespace App\Modules\Core\Providers;
 
+use App\Models\Tenant;
+use App\Modules\Core\Commands\BackfillTenantDataCommand;
+use App\Modules\Core\Commands\CheckTenantDataCommand;
 use App\Modules\Core\Commands\MakeModuleCommand;
 use App\Modules\Core\Commands\MakePackageCommand;
 use App\Modules\Core\Commands\ModuleBoundariesCommand;
@@ -21,6 +24,7 @@ use App\Modules\Core\Middleware\RequestContextMiddleware;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -50,6 +54,8 @@ class CoreServiceProvider extends ServiceProvider
             $this->commands([
                 MakeModuleCommand::class,
                 MakePackageCommand::class,
+                BackfillTenantDataCommand::class,
+                CheckTenantDataCommand::class,
                 ModuleBoundariesCommand::class,
                 ModuleDeleteCommand::class,
                 ModuleDisableCommand::class,
@@ -114,9 +120,9 @@ class CoreServiceProvider extends ServiceProvider
      *     $table->tenantColumn();
      *
      * Whenever tenancy is active (single or multi mode) it adds the
-     * configured tenant column (nullable, indexed); in "none" mode it's a
-     * no-op — one migration file, correct schema in every mode. For tables
-     * created while the project was still in "none" mode, `php artisan
+     * configured tenant column (nullable, indexed) referencing the configured
+     * tenant model's table; in "none" mode it's a no-op. For tables created
+     * while the project was still in "none" mode, `php artisan
      * tenant:migrations` generates the catch-up add-column migrations.
      */
     protected function registerTenancyMacros(): void
@@ -125,7 +131,14 @@ class CoreServiceProvider extends ServiceProvider
             /** @var Blueprint $this */
             if (has_tenancy()) {
                 $column = config('project.tenancy.tenant_column', 'tenant_id');
-                $this->foreignId($column)->nullable()->index();
+                /** @var class-string<Model> $tenantModel */
+                $tenantModel = config('project.tenancy.tenant_model', Tenant::class);
+                $tenantTable = (new $tenantModel)->getTable();
+                $this->foreignId($column)
+                    ->nullable()
+                    ->index()
+                    ->constrained($tenantTable)
+                    ->restrictOnDelete();
             }
 
             return $this;
@@ -222,27 +235,36 @@ class CoreServiceProvider extends ServiceProvider
      * - Routes/web.php        under the "web" middleware group
      * - Routes/dashboard.php  under "web" + project.routes.dashboard config
      *
-     * Prefixes/names for api.php/web.php are declared inside each file
-     * itself. dashboard.php gets its prefix/name/middleware centrally from
-     * project.routes.dashboard so every module's backoffice section is
-     * consistent.
+     * API files declare only their resource-relative prefix. The project API
+     * prefix/version and optional path-tenant segment are applied centrally.
+     * Web route prefixes stay in their files; dashboard.php gets its
+     * prefix/name/middleware centrally from project.routes.dashboard.
      */
     protected function loadModuleRouteFiles(): void
     {
         $modules = array_unique(array_merge(['Core'], config('project.modules', [])));
         $pathTenancy = is_multi_tenant()
             && config('project.tenancy.tenant_identification') === 'path';
+        $apiEnabled = (bool) config('project.api.enabled', true);
+        $apiPrefix = trim((string) config('project.api.prefix', 'api'), '/');
+        $apiVersion = trim((string) config('project.api.version', 'v1'), '/');
+        $apiMiddleware = config('project.api.middleware', ['api']);
 
         foreach ($modules as $module) {
             $apiRoutes = module_path($module, 'Routes/api.php');
-            if (is_file($apiRoutes)) {
-                $router = Route::middleware('api');
+            if (is_file($apiRoutes) && ($apiEnabled || $module === 'Core')) {
+                $prefix = $module === 'Core'
+                    ? $apiPrefix
+                    : "{$apiPrefix}/{$apiVersion}";
 
+                $router = Route::middleware($apiMiddleware);
                 if ($pathTenancy && $module !== 'Core') {
-                    $router->prefix('{tenant}')->where(['tenant' => '[A-Za-z0-9-]+']);
+                    $prefix = '{tenant}/'.$prefix;
                 }
 
-                $router->group($apiRoutes);
+                $router->prefix($prefix)
+                    ->where(['tenant' => '[A-Za-z0-9-]+'])
+                    ->group($apiRoutes);
             }
 
             $webRoutes = module_path($module, 'Routes/web.php');

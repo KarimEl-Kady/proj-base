@@ -71,6 +71,28 @@ class AuthApiTest extends TestCase
         $this->assertNotEmpty($response->json('data.token'));
     }
 
+    public function test_email_identity_is_case_insensitive(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Alice',
+            'email' => ' Alice@Example.COM ',
+            'password' => 'secret-password',
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Duplicate',
+            'email' => 'alice@example.com',
+            'password' => 'secret-password',
+        ])->assertUnprocessable();
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'ALICE@EXAMPLE.COM',
+            'password' => 'secret-password',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', ['email' => 'alice@example.com']);
+    }
+
     public function test_login_rejects_wrong_password(): void
     {
         $this->postJson('/api/v1/auth/register', $this->registerPayload());

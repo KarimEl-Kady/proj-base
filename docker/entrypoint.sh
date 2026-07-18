@@ -7,10 +7,10 @@ set -e
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# Resolve database host based on PROJECT_DB_DRIVER
+# Resolve database host based on Laravel's DB_CONNECTION
 # ---------------------------------------------------------------------------
 resolve_db_host() {
-    case "${PROJECT_DB_DRIVER:-mysql}" in
+    case "${DB_CONNECTION:-mysql}" in
         mysql|mariadb)
             DB_WAIT_HOST="${DB_HOST:-mysql}"
             DB_WAIT_PORT="${DB_PORT:-3306}"
@@ -60,17 +60,59 @@ wait_for_service() {
 }
 
 # ---------------------------------------------------------------------------
+# Wait until the configured database accepts an authenticated PDO connection.
+# A listening TCP port is not sufficient: MySQL exposes its port during parts
+# of initialization before it can complete a client handshake.
+# ---------------------------------------------------------------------------
+wait_for_database() {
+    local max_attempts="${1:-30}"
+    local attempt=0
+
+    if [ -z "$DB_WAIT_HOST" ]; then
+        return 0
+    fi
+
+    echo "Waiting for Database at ${DB_WAIT_HOST}:${DB_WAIT_PORT}..."
+
+    while [ $attempt -lt $max_attempts ]; do
+        if php -r '
+            $driver = getenv("DB_CONNECTION") ?: "mysql";
+            $host = getenv("DB_HOST") ?: ($driver === "pgsql" ? "pgsql" : "mysql");
+            $port = getenv("DB_PORT") ?: ($driver === "pgsql" ? "5432" : "3306");
+            $database = getenv("DB_DATABASE") ?: "laravel";
+            $username = getenv("DB_USERNAME") ?: "root";
+            $password = getenv("DB_PASSWORD") ?: "";
+            $socket = getenv("DB_SOCKET") ?: "";
+
+            $dsn = $driver === "pgsql"
+                ? "pgsql:host={$host};port={$port};dbname={$database}"
+                : ($socket !== ""
+                    ? "mysql:unix_socket={$socket};dbname={$database}"
+                    : "mysql:host={$host};port={$port};dbname={$database}");
+
+            new PDO($dsn, $username, $password);
+        ' >/dev/null 2>&1; then
+            echo "Database is ready."
+            return 0
+        fi
+
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+
+    echo "Database at ${DB_WAIT_HOST}:${DB_WAIT_PORT} not available after ${max_attempts}s"
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-
-# Install netcat for TCP checks (if not present)
-command -v nc >/dev/null 2>&1 || apk add --no-cache netcat-openbsd >/dev/null 2>&1 || true
 
 resolve_db_host
 
 # Wait for database
 if [ -n "$DB_WAIT_HOST" ]; then
-    wait_for_service "$DB_WAIT_HOST" "$DB_WAIT_PORT" "Database"
+    wait_for_database
 fi
 
 # Wait for Redis (if configured)

@@ -19,6 +19,6 @@ class UserRepository extends BaseRepository
      */
     public function findByEmail(string $email): ?User
     {
-        return User::query()->where('email', $email)->first();
+        return User::query()->where('email', mb_strtolower(trim($email)))->first();
     }
 }

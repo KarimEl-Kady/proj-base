@@ -248,9 +248,6 @@ class ModuleMakeCommand extends Command
             return $result;
         }
 
-        $apiPrefix = config('project.api.prefix', 'api');
-        $apiVersion = config('project.api.version', 'v1');
-
         $result = $this->write("Controllers/Api/{$name}.php", <<<PHP
         <?php
 
@@ -270,7 +267,7 @@ class ModuleMakeCommand extends Command
 
         $this->hintRouteFile(
             'api',
-            "Route::get('/{$apiPrefix}/{$apiVersion}/{$pluralKebab}', [{$this->namespace}\\Controllers\\Api\\{$name}::class, 'index'])->name('api.{$pluralSnake}.index');"
+            "Route::get('/{$pluralKebab}', [{$this->namespace}\\Controllers\\Api\\{$name}::class, 'index'])->name('api.{$pluralSnake}.index');"
         );
 
         return $result;

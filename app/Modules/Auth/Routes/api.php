@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('api/v1/auth')->group(function () {
+Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])
         ->middleware('throttle:10,1')
         ->name('api.auth.register');
@@ -34,12 +34,12 @@ Route::prefix('api/v1/auth')->group(function () {
         ->name('api.auth.me');
 });
 
-Route::prefix('api/v1/auth/password')->middleware('throttle:6,1')->group(function () {
+Route::prefix('auth/password')->middleware('throttle:6,1')->group(function () {
     Route::post('/forgot', [PasswordResetController::class, 'forgot'])->name('api.auth.password.forgot');
     Route::post('/reset', [PasswordResetController::class, 'reset'])->name('api.auth.password.reset');
 });
 
-Route::prefix('api/v1/auth/email')->group(function () {
+Route::prefix('auth/email')->group(function () {
     Route::post('/resend', [EmailVerificationController::class, 'resend'])
         ->middleware(['auth:sanctum', 'throttle:6,1'])
         ->name('api.auth.email.resend');
@@ -49,13 +49,13 @@ Route::prefix('api/v1/auth/email')->group(function () {
         ->name('verification.verify');
 });
 
-Route::prefix('api/v1/auth/2fa')->middleware('auth:sanctum')->group(function () {
+Route::prefix('auth/2fa')->middleware('auth:sanctum')->group(function () {
     Route::post('/enable', [TwoFactorController::class, 'enable'])->name('api.auth.2fa.enable');
     Route::post('/confirm', [TwoFactorController::class, 'confirm'])->name('api.auth.2fa.confirm');
     Route::post('/disable', [TwoFactorController::class, 'disable'])->name('api.auth.2fa.disable');
 });
 
-Route::prefix('api/v1/auth/tokens')->middleware('auth:sanctum')->group(function () {
+Route::prefix('auth/tokens')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [TokenController::class, 'index'])->name('api.auth.tokens.index');
     Route::post('/', [TokenController::class, 'store'])->name('api.auth.tokens.store');
     Route::delete('/{id}', [TokenController::class, 'destroy'])->name('api.auth.tokens.destroy');

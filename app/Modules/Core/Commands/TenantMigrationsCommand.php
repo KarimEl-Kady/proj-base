@@ -2,12 +2,11 @@
 
 namespace App\Modules\Core\Commands;
 
-use App\Modules\Core\Traits\HasTenantScope;
+use App\Modules\Core\Support\TenantModelDiscovery;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use ReflectionClass;
 
 /**
  * Catch-up path for projects that started with tenancy mode "none" and
@@ -34,7 +33,7 @@ class TenantMigrationsCommand extends Command
         }
 
         $column = config('project.tenancy.tenant_column', 'tenant_id');
-        $models = $this->tenantScopedModels();
+        $models = TenantModelDiscovery::discover($this->option('module'));
 
         if ($models === []) {
             $this->warn('No models using HasTenantScope found in active modules.');
@@ -57,7 +56,7 @@ class TenantMigrationsCommand extends Command
 
         $this->newLine();
         $created > 0
-            ? $this->info("{$created} migration(s) generated — review them, then run: php artisan migrate")
+            ? $this->info("{$created} migration(s) generated — review them, run migrate, then tenant:backfill")
             : $this->info('Nothing to generate — all tenant-scoped tables are covered.');
 
         return self::SUCCESS;
@@ -84,12 +83,19 @@ class TenantMigrationsCommand extends Command
             return ['<fg=yellow>migration already generated — run migrate</>', false];
         }
 
-        $this->writeMigration($migrationsDir, $table, $column);
+        $model = new $class;
+        $tenantUniqueColumns = method_exists($model, 'tenantUniqueColumns')
+            ? $model->tenantUniqueColumns()
+            : [];
+        $this->writeMigration($migrationsDir, $table, $column, $tenantUniqueColumns);
 
         return ['<fg=green>migration created</>', true];
     }
 
-    protected function writeMigration(string $dir, string $table, string $column): void
+    /**
+     * @param  array<int, array<int, string>>  $tenantUniqueColumns
+     */
+    protected function writeMigration(string $dir, string $table, string $column, array $tenantUniqueColumns): void
     {
         $timestamp = now()->format('Y_m_d_His');
         $path = "{$dir}/{$timestamp}_add_{$column}_to_{$table}_table.php";
@@ -97,6 +103,25 @@ class TenantMigrationsCommand extends Command
         // Column + index only — no foreign key on purpose: adding an FK to an
         // existing table isn't portable across drivers (SQLite in particular).
         // Add one in a separate migration if the project needs it.
+        $upIndexes = collect($tenantUniqueColumns)
+            ->map(function (array $columns) use ($column): string {
+                $global = implode("', '", $columns);
+                $scoped = implode("', '", [$column, ...$columns]);
+
+                return "            \$table->dropUnique(['{$global}']);\n".
+                    "            \$table->unique(['{$scoped}']);";
+            })
+            ->implode("\n");
+        $downIndexes = collect($tenantUniqueColumns)
+            ->map(function (array $columns) use ($column): string {
+                $global = implode("', '", $columns);
+                $scoped = implode("', '", [$column, ...$columns]);
+
+                return "            \$table->dropUnique(['{$scoped}']);\n".
+                    "            \$table->unique(['{$global}']);";
+            })
+            ->implode("\n");
+
         $content = <<<PHP
         <?php
 
@@ -110,12 +135,14 @@ class TenantMigrationsCommand extends Command
             {
                 Schema::table('{$table}', function (Blueprint \$table) {
                     \$table->foreignId('{$column}')->nullable()->index();
+        {$upIndexes}
                 });
             }
 
             public function down(): void
             {
                 Schema::table('{$table}', function (Blueprint \$table) {
+        {$downIndexes}
                     \$table->dropColumn('{$column}');
                 });
             }
@@ -125,51 +152,5 @@ class TenantMigrationsCommand extends Command
 
         File::ensureDirectoryExists($dir);
         File::put($path, $content);
-    }
-
-    /**
-     * Active modules to scan, narrowed by --module= when given.
-     *
-     * @return array<int, string>
-     */
-    protected function targetModules(): array
-    {
-        $active = config('project.modules', []);
-        $requested = $this->option('module');
-
-        return $requested === [] ? $active : array_values(array_intersect($active, $requested));
-    }
-
-    /**
-     * Non-abstract models using HasTenantScope across the target modules.
-     *
-     * @return array<int, class-string>
-     */
-    protected function tenantScopedModels(): array
-    {
-        $models = [];
-
-        foreach ($this->targetModules() as $module) {
-            $dir = module_path($module, 'Models');
-
-            if (! is_dir($dir)) {
-                continue;
-            }
-
-            foreach (File::allFiles($dir) as $file) {
-                $class = "App\\Modules\\{$module}\\Models\\".Str::before($file->getRelativePathname(), '.php');
-                $class = str_replace('/', '\\', $class);
-
-                if (! class_exists($class) || (new ReflectionClass($class))->isAbstract()) {
-                    continue;
-                }
-
-                if (in_array(HasTenantScope::class, class_uses_recursive($class), true)) {
-                    $models[] = $class;
-                }
-            }
-        }
-
-        return $models;
     }
 }

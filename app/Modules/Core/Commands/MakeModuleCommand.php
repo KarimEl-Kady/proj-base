@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Commands;
 
 use App\Modules\Core\Support\ModuleRegistry;
+use App\Modules\Core\Support\ModuleRuntimeCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -86,7 +87,8 @@ class MakeModuleCommand extends Command
 
         if ($this->enable) {
             ModuleRegistry::set($this->moduleName, true);
-            $this->info('Registered as enabled in config/project_modules.php.');
+            ModuleRuntimeCache::clear();
+            $this->info('Registered as enabled; config, route, and event caches cleared.');
         } else {
             $this->line("Enable it later with: php artisan module:enable {$this->moduleName}");
         }
@@ -467,8 +469,6 @@ class MakeModuleCommand extends Command
     protected function makeApiRoutes(): void
     {
         $controller = "{$this->moduleName}Controller";
-        $apiPrefix = config('project.api.prefix', 'api');
-        $apiVersion = config('project.api.version', 'v1');
 
         $content = <<<PHP
         <?php
@@ -491,7 +491,7 @@ class MakeModuleCommand extends Command
         // role — until then these endpoints correctly 403 for everyone (fail
         // closed). If a read is truly public, move it out of this group and
         // drop its permission middleware deliberately.
-        Route::prefix('{$apiPrefix}/{$apiVersion}/{$this->pluralKebab}')->middleware('auth:sanctum')->group(function () {
+        Route::prefix('{$this->pluralKebab}')->middleware('auth:sanctum')->group(function () {
             Route::get('/', [{$controller}::class, 'index'])->middleware('permission:{$this->pluralSnake}.view')->name('api.{$this->pluralSnake}.index');
             Route::post('/', [{$controller}::class, 'store'])->middleware('permission:{$this->pluralSnake}.create')->name('api.{$this->pluralSnake}.store');
             Route::get('/{{$this->paramName}}', [{$controller}::class, 'show'])->middleware('permission:{$this->pluralSnake}.view')->name('api.{$this->pluralSnake}.show');

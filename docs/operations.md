@@ -6,8 +6,14 @@
 2. Run `composer check` and the frontend build.
 3. Back up the database before destructive or irreversible migrations.
 4. Run `php artisan project:validate` and migrations as a single release job.
-5. Warm config, route, view, and event caches.
-6. Restart queue workers and verify `/api/health/ready`.
+5. When enabling tenancy on existing data, run `tenant:backfill` and require
+   `tenant:check` to pass before application traffic resumes.
+6. Warm config, route, view, and event caches.
+7. Restart queue workers and verify `/api/health/ready`.
+
+Migration `2026_07_18_000001` rebuilds the ephemeral password-reset token
+table around user UUIDs. Existing email-only reset links are deliberately
+invalidated and users must request a new link after that deployment.
 
 See [`deploy/README.md`](../deploy/README.md) for immutable image publishing
 and rollout. `deploy-dev.sh` is a mutable development-server convenience, not
@@ -22,6 +28,8 @@ stops the container.
 Application rollback means deploying the previous immutable artifact. Database
 rollback is not automatic: prefer backward-compatible expand/contract
 migrations. Restore from backup when an irreversible migration corrupts data.
+Do not downgrade active tenancy after per-tenant unique values have diverged
+without first reconciling those values.
 
 ## Backup And Restore
 

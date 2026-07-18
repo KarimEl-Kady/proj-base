@@ -24,15 +24,17 @@ stages:
 
 variables:
   COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
+  PHP_VERSION: "8.3"
 
 .php-base:
-  image: php:8.3-cli
+  image: "php:${PHP_VERSION}-cli"
   before_script:
     - apt-get update -qq && apt-get install -qq -y git unzip > /dev/null
     - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
     - composer install --no-interaction --prefer-dist --no-progress
   cache:
     key:
+      prefix: "composer-${PHP_VERSION}"
       files:
         - composer.lock
     paths:
@@ -44,10 +46,11 @@ variables:
 # -----------------------------------------------------------------------------
 php-syntax:
   stage: syntax
-  image: php:8.3-cli
+  image: composer:2
   script:
     - find app config database routes tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
     - echo "No syntax errors detected."
+    - composer validate --no-check-publish
 
 # -----------------------------------------------------------------------------
 # Lint + Test
@@ -55,6 +58,9 @@ php-syntax:
 php-test:
   stage: test
   extends: .php-base
+  parallel:
+    matrix:
+      - PHP_VERSION: ["8.3", "8.4"]
   services:
     - name: redis:7-alpine
       alias: redis
@@ -66,6 +72,8 @@ php-test:
     - php artisan project:validate
     - php artisan config:clear --ansi
     - php artisan route:list > /dev/null   # boot smoke check
+    - php artisan route:cache && php artisan route:clear
+    - php artisan module:boundaries
     - php artisan test
     - apt-get install -qq -y autoconf g++ make > /dev/null
     - pecl install redis > /dev/null && docker-php-ext-enable redis

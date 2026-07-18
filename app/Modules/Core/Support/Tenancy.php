@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Support;
 
 use App\Models\Tenant;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Tenant resolution shared by TenantMiddleware (per request) and CLI/console
@@ -29,10 +30,21 @@ class Tenancy
         $slug = $default['slug'] ?? 'default';
 
         return TenantCache::remember($slug, function () use ($tenantModel, $default, $slug): ?int {
-            $tenant = $tenantModel::query()->firstOrCreate(
-                ['slug' => $slug],
-                ['name' => $default['name'] ?? 'Default', 'is_active' => true],
-            );
+            $usesSoftDeletes = in_array(SoftDeletes::class, class_uses_recursive($tenantModel), true);
+            $query = $usesSoftDeletes ? $tenantModel::withTrashed() : $tenantModel::query();
+            $tenant = $query->where('slug', $slug)->first();
+
+            if ($tenant === null) {
+                $tenant = $tenantModel::query()->create([
+                    'slug' => $slug,
+                    'name' => $default['name'] ?? 'Default',
+                    'is_active' => true,
+                ]);
+            }
+
+            if ($usesSoftDeletes && $tenant->trashed()) {
+                return null;
+            }
 
             return $tenant->is_active ? $tenant->id : null;
         });

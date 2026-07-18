@@ -28,6 +28,7 @@ RUN apk add --no-cache \
     icu-dev \
     oniguruma-dev \
     linux-headers \
+    netcat-openbsd \
     postgresql-dev \
     supervisor \
     dcron \

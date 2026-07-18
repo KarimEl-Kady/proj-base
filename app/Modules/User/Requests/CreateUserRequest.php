@@ -3,6 +3,8 @@
 namespace App\Modules\User\Requests;
 
 use App\Modules\Core\Requests\BaseRequest;
+use App\Modules\User\Support\UserRules;
+use Illuminate\Validation\Rules\Password;
 
 class CreateUserRequest extends BaseRequest
 {
@@ -10,8 +12,8 @@ class CreateUserRequest extends BaseRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
+            'email' => ['required', 'string', 'email', 'max:255', UserRules::uniqueEmail()],
+            'password' => ['required', 'string', Password::defaults()],
         ];
     }
 }

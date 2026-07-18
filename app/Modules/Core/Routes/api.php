@@ -13,6 +13,6 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/api/health', HealthController::class)->name('api.health');
-Route::get('/api/health/live', LivenessController::class)->name('api.health.live');
-Route::get('/api/health/ready', HealthController::class)->name('api.health.ready');
+Route::get('/health', HealthController::class)->name('api.health');
+Route::get('/health/live', LivenessController::class)->name('api.health.live');
+Route::get('/health/ready', HealthController::class)->name('api.health.ready');

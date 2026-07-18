@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 // User records are PII — every endpoint requires authentication, and each
 // action requires its own permission (see config/permission.php). Grant
 // them via roles: php artisan permission:seed, then $user->assignRole('admin').
-Route::prefix('api/v1/users')->middleware('auth:sanctum')->group(function () {
+Route::prefix('users')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [UserController::class, 'index'])->middleware('permission:users.view')->name('api.users.index');
     Route::post('/', [UserController::class, 'store'])->middleware('permission:users.create')->name('api.users.store');
     Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:users.view')->name('api.users.show');

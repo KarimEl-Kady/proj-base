@@ -63,6 +63,7 @@ class MakeAdminCommand extends Command
                 ? null
                 : 'Enter a valid email address.',
         );
+        $email = mb_strtolower(trim((string) $email));
 
         $user = User::query()->where('email', $email)->first()
             ?? $this->createUser($email);

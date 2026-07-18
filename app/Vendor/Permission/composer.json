@@ -3,7 +3,7 @@
     "description": "Roles and permissions (database-backed, cached, middleware-ready) — local path package",
     "type": "library",
     "version": "1.0.0",
-    "license": "proprietary",
+    "license": "MIT",
     "require": {
         "php": "^8.3",
         "illuminate/support": "^13.0",

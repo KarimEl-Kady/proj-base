@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('api/v1/cities')->group(function () {
+Route::prefix('cities')->group(function () {
     // Reads are public reference data; writes require authentication.
     Route::get('/', [CityController::class, 'index'])->name('api.cities.index');
     Route::get('/{city}', [CityController::class, 'show'])->name('api.cities.show');

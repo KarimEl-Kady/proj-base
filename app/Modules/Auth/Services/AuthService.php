@@ -37,7 +37,7 @@ class AuthService
      */
     public function login(string $email, string $password, ?string $code = null, string $device = 'api'): array
     {
-        $user = User::query()->where('email', $email)->first();
+        $user = User::query()->where('email', mb_strtolower(trim($email)))->first();
 
         if ($user === null || ! Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([

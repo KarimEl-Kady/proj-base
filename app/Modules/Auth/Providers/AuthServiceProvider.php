@@ -3,14 +3,42 @@
 namespace App\Modules\Auth\Providers;
 
 use App\Modules\Auth\Middleware\EnsureEmailIsVerified;
+use App\Modules\Auth\Support\UserUuidPasswordBrokerManager;
 use App\Modules\Core\Support\TenantUrl;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
 class AuthServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        // PasswordResetServiceProvider is deferred and may be loaded while
+        // other providers boot. Replace both service keys only after every
+        // provider has booted, then remove their deferred mappings so neither
+        // can restore Laravel's email-keyed token repository later.
+        $this->app->booted(function (Application $app): void {
+            $app->removeDeferredServices([
+                'auth.password',
+                'auth.password.broker',
+            ]);
+            $app->forgetInstance('auth.password');
+            $app->forgetInstance('auth.password.broker');
+            $app->singleton(
+                'auth.password',
+                fn ($app) => new UserUuidPasswordBrokerManager($app),
+            );
+            $app->bind(
+                'auth.password.broker',
+                fn ($app) => $app->make('auth.password')->broker(),
+            );
+            Facade::clearResolvedInstance('auth.password');
+        });
+    }
+
     public function boot(): void
     {
         // Sanctum token lifetime follows the project-level auth config.

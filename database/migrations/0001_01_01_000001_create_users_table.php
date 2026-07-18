@@ -16,7 +16,10 @@ return new class extends Migration
             $table->uuid()->unique()->nullable();
             $table->tenantColumn();
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email');
+            has_tenancy()
+                ? $table->unique([config('project.tenancy.tenant_column', 'tenant_id'), 'email'])
+                : $table->unique('email');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

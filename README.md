@@ -71,10 +71,10 @@ app/Modules/{Module}/
 |---------|---------|
 | **Module registry** | `config/project_modules.php` is the single source of truth (`'Blog' => true`) — managed via artisan or edited by hand |
 | **Interactive generators** | Every `make:*` / `module:*` command runs a prompt-driven wizard when called without arguments |
-| **Routing** | Plain `Routes/{api,web,dashboard}.php` per module — no attributes, no scanning, just `Route::` calls you can grep and diff |
+| **Routing** | Plain `Routes/{api,web,dashboard}.php` per module. API prefix/version and optional path tenant are applied centrally, so one config change moves every API route |
 | **Fetch pipeline** | Standard listing keys on every index endpoint: `?word=`, `?pagination=false`, `?per_page=`, `?sort_by=`, `?sort_dir=` — validated by `FetchRequest`, executed by `BaseRepository::fetch()` |
 | **Event-driven messaging** | Lightweight `DomainEvent` + queued listeners for ordinary reactions; transactional `Outbox` + `Inbox` deduplication for critical at-least-once integration messages |
-| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — scaffold with `make:package`, install with `composer require local/name:"^1.0"` |
+| **Local packages** | `app/Vendor/{Name}` composer path packages (`local/media`, `local/data-response`, `local/geo-seeder`, `local/permission`) — forbidden from importing `App\` classes by the boundary gate |
 | **Roles & permissions** | `local/permission` package — `$user->assignRole('admin')`, `$user->hasPermissionTo('posts.create')`, `role:`/`permission:` route middleware, cached, config-driven via `php artisan permission:seed` |
 | **Public UUIDs** | Auto-increment integer PKs internally; a `uuid` column is the public identifier (API `id`, route binding, repository lookup) |
 | **Uniform API envelope** | `local/data-response` package builds every success/error response — `{success, message, data/errors}`, including validation, 404, 401, 403, 500, with renameable keys |
@@ -112,7 +112,10 @@ php artisan module:enable Blog                # or omit the name to pick from a 
 php artisan module:disable Blog
 php artisan module:delete Blog
 php artisan module:boundaries                 # verify cross-module dependencies
-php artisan tenant:migrations                 # single→multi: generate missing tenant-column migrations
+php artisan tenant:migrations                 # none→active: generate missing columns/index changes
+php artisan migrate
+php artisan tenant:backfill --tenant=acme     # omit --tenant in single mode
+php artisan tenant:check                      # fail if tenant data is not ready
 
 # Local packages (app/Vendor)
 php artisan make:package Payment
@@ -138,19 +141,47 @@ Every module registers routes through plain files, loaded automatically by `Core
 
 | File | Middleware | Prefix / name |
 |------|-----------|----------------|
-| `Routes/api.php` | `api` | whatever the file declares (e.g. `api/v1/users`) |
+| `Routes/api.php` | configured API middleware | central API prefix/version + the file's resource prefix |
 | `Routes/web.php` | `web` | whatever the file declares |
 | `Routes/dashboard.php` | `web` + config | centrally applied from `project.routes.dashboard` (`prefix`, `middleware`, `name_prefix` — defaults to `dashboard`, `['web','auth']`, `dashboard.`) |
 
 ```php
 // app/Modules/Blog/Routes/api.php
-Route::prefix('api/v1/posts')->group(function () {
+Route::prefix('posts')->group(function () {
     Route::get('/', [PostController::class, 'index'])->name('api.posts.index');
     // ...
 });
 ```
 
-`make:module` generates all three files (matching the controllers it scaffolds) so a new module works immediately. `module:make controller` (single-component) prints the `Route::` line to add by hand, since it can't safely append to an existing file.
+With the defaults, that route is `/api/v1/posts`. `PROJECT_API_ENABLED=false`
+removes business API routes while keeping health probes available.
+`make:module` generates all three files (matching the controllers it
+scaffolds) so a new module works immediately. `module:make controller`
+(single-component) prints the resource-relative `Route::` line to add by
+hand, since it can't safely append to an existing file.
+
+### Tenancy lifecycle
+
+The `tenants` table is migrated in every mode. Tenant-scoped tables add a
+configured, indexed foreign key only in `single` or `multi` mode. New tenant
+deletions are soft deletes; active-schema foreign keys restrict hard deletion.
+
+For a project that already has data in `none` mode, enabling tenancy is a data
+migration, not only an environment change:
+
+```bash
+# set PROJECT_TENANCY_MODE=single or multi
+php artisan tenant:migrations
+php artisan migrate
+php artisan tenant:backfill --dry-run --tenant=acme
+php artisan tenant:backfill --force --tenant=acme
+php artisan tenant:check
+```
+
+In `single` mode, omit `--tenant`; the configured default tenant is used.
+Models with global unique keys that become tenant-owned declare
+`tenantUniqueColumns()` so generated catch-up migrations convert those
+indexes. User email is lowercase-normalized and unique per tenant.
 
 ### Events & listeners (event-driven messaging)
 
@@ -202,7 +233,9 @@ Living examples: `Auth\Listeners\AssignDefaultRole` (sync — assigns `PROJECT_A
 
 ### Authentication (Auth module)
 
-Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `session`. All endpoints under `/api/v1/auth`:
+Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when
+`session`. With default API prefix/version settings, endpoints are under
+`/api/v1/auth`:
 
 | Endpoint | Description |
 |----------|-------------|
@@ -212,9 +245,18 @@ Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when `se
 | `POST /2fa/enable`, `/2fa/confirm`, `/2fa/disable` | TOTP 2FA (Google Authenticator-compatible, dependency-free) — `PROJECT_FEATURE_2FA`; login then requires `code` |
 | `GET/POST/DELETE /tokens` | Named personal access tokens for integrations — `PROJECT_FEATURE_PERSONAL_ACCESS_TOKENS` |
 
+Password-reset tokens are bound to the user's globally unique UUID rather than
+email, so same-email users in different tenants cannot consume each other's
+links. Migration `2026_07_18_000001` intentionally invalidates outstanding
+legacy email-only reset links while rebuilding the ephemeral token table.
+
 ### Local packages
 
-Non-Packagist packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through a composer `path` repository (symlinked) and auto-discovered by Laravel. Four first-party examples ship with the base:
+Non-Packagist packages live in `app/Vendor/{Name}` with their own
+`composer.json`, installed through a composer `path` repository (symlinked)
+and auto-discovered by Laravel. They must stay host-agnostic:
+`module:boundaries` fails when package production code imports `App\`
+classes. Four first-party examples ship with the base:
 
 **`local/data-response`** — every JSON response in the app is built here. `App\Modules\Core\Controllers\Controller` already includes its trait, so `successResponse()`/`failedResponse()` work everywhere for free; the exception handler uses it too, so validation/404/401/403/500 all share the same shape:
 
@@ -327,11 +369,14 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 |---------|---------|-------------|
 | `config/project_modules.php` | `['User' => true]` | Module registry (file, not env) |
 | `PROJECT_TENANCY_MODE` | `none` | `none`, `single`, or `multi` |
+| `PROJECT_TENANT_COLUMN` | `tenant_id` | Tenant column; the referenced table comes from `PROJECT_TENANT_MODEL` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
+| `PROJECT_API_ENABLED` | `true` | Register business API routes; health routes remain available |
+| `PROJECT_API_PREFIX` / `PROJECT_API_VERSION` | `api` / `v1` | Central prefix applied to every module API |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
 | `PROJECT_EVENTS_QUEUE` / `PROJECT_EVENTS_TRIES` | *(default queue)* / `3` | Queue + retries for listeners extending `QueuedListener` |
-| `PROJECT_DB_DRIVER` | `mysql` | Database driver |
+| `DB_CONNECTION` | `sqlite` locally / `mysql` in Docker | Single driver authority: `mysql`, `pgsql`, or `sqlite` |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |
 | `PROJECT_PAGINATION_UNPAGINATED_CAP` | `1000` | Hard cap for `?pagination=false` |

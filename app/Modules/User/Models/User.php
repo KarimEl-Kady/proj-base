@@ -14,6 +14,7 @@ use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\Access\Authorizable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -53,6 +54,18 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
 
     /** Columns matched by the FetchRequest `word` filter. */
     protected array $searchable = ['name', 'email'];
+
+    public function tenantUniqueColumns(): array
+    {
+        return [['email']];
+    }
+
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (string $value): string => mb_strtolower(trim($value)),
+        );
+    }
 
     protected static function booted(): void
     {

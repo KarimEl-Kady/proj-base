@@ -23,6 +23,12 @@ class PathTenancyTest extends TestCase
         putenv('PROJECT_TENANT_IDENTIFICATION=path');
     }
 
+    public static function tearDownAfterClass(): void
+    {
+        putenv('PROJECT_TENANCY_MODE');
+        putenv('PROJECT_TENANT_IDENTIFICATION');
+    }
+
     public function test_module_routes_are_prefixed_and_resolve_the_path_tenant(): void
     {
         $tenant = Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);

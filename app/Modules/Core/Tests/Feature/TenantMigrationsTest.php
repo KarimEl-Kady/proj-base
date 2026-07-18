@@ -2,8 +2,12 @@
 
 namespace App\Modules\Core\Tests\Feature;
 
+use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -25,6 +29,7 @@ class TenantMigrationsTest extends TestCase
     {
         Schema::dropIfExists('tenant_probes');
         Schema::dropIfExists('macro_probes');
+        Schema::dropIfExists('organizations');
         File::deleteDirectory($this->probePath);
 
         parent::tearDown();
@@ -67,6 +72,26 @@ class TenantMigrationsTest extends TestCase
         });
 
         $this->assertTrue(Schema::hasColumn('macro_probes', 'tenant_id'));
+    }
+
+    public function test_macro_references_the_configured_tenant_models_table(): void
+    {
+        config([
+            'project.tenancy.mode' => 'multi',
+            'project.tenancy.tenant_model' => TenantModelProbe::class,
+        ]);
+
+        Schema::create('organizations', function (Blueprint $table) {
+            $table->id();
+        });
+        Schema::create('macro_probes', function (Blueprint $table) {
+            $table->id();
+            $table->tenantColumn();
+        });
+
+        $foreignKeys = DB::select("PRAGMA foreign_key_list('macro_probes')");
+
+        $this->assertSame('organizations', $foreignKeys[0]->table);
     }
 
     public function test_macro_is_a_no_op_in_none_mode(): void
@@ -124,6 +149,7 @@ class TenantMigrationsTest extends TestCase
         // Table created single-tenant style: no tenant column.
         Schema::create('tenant_probes', function (Blueprint $table) {
             $table->id();
+            $table->string('code')->unique();
         });
 
         // --module=TenantProbe: without this, the command would also process
@@ -140,7 +166,10 @@ class TenantMigrationsTest extends TestCase
         $content = file_get_contents($generated[0]);
         $this->assertStringContainsString("Schema::table('tenant_probes'", $content);
         $this->assertStringContainsString("foreignId('tenant_id')->nullable()->index()", $content);
+        $this->assertStringContainsString("dropUnique(['code'])", $content);
+        $this->assertStringContainsString("unique(['tenant_id', 'code'])", $content);
         $this->assertStringContainsString("dropColumn('tenant_id')", $content);
+        $this->assertInstanceOf(Migration::class, require $generated[0]);
 
         // Second run must not create a second file.
         $this->artisan('tenant:migrations', ['--module' => ['TenantProbe']])
@@ -162,6 +191,54 @@ class TenantMigrationsTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_backfill_assigns_legacy_rows_and_check_detects_readiness(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->makeProbeModule();
+        config(['project.modules' => [...config('project.modules'), 'TenantProbe']]);
+        $tenant = Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);
+
+        Schema::create('tenant_probes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('tenant_id')->nullable()->index();
+            $table->string('code');
+        });
+        DB::table('tenant_probes')->insert(['code' => 'legacy']);
+
+        $this->artisan('tenant:check', ['--module' => ['TenantProbe']])->assertFailed();
+        $this->artisan('tenant:backfill', [
+            '--module' => ['TenantProbe'],
+            '--tenant' => 'acme',
+            '--force' => true,
+        ])->assertSuccessful();
+        $this->artisan('tenant:check', ['--module' => ['TenantProbe']])->assertSuccessful();
+
+        $this->assertDatabaseHas('tenant_probes', [
+            'code' => 'legacy',
+            'tenant_id' => $tenant->id,
+        ]);
+    }
+
+    public function test_backfill_fails_when_the_tenant_schema_is_incomplete(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $this->makeProbeModule();
+        config(['project.modules' => [...config('project.modules'), 'TenantProbe']]);
+        Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);
+
+        Schema::create('tenant_probes', function (Blueprint $table) {
+            $table->id();
+            $table->string('code');
+        });
+
+        $this->artisan('tenant:backfill', [
+            '--module' => ['TenantProbe'],
+            '--tenant' => 'acme',
+            '--force' => true,
+        ])->expectsOutputToContain('Tenant schema is incomplete')
+            ->assertFailed();
+    }
+
     protected function makeProbeModule(): void
     {
         File::ensureDirectoryExists("{$this->probePath}/Models");
@@ -180,7 +257,17 @@ class TenantMigrationsTest extends TestCase
             use HasTenantScope;
 
             protected $table = 'tenant_probes';
+
+            public function tenantUniqueColumns(): array
+            {
+                return [['code']];
+            }
         }
         PHP);
     }
+}
+
+class TenantModelProbe extends EloquentModel
+{
+    protected $table = 'organizations';
 }

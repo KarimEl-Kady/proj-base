@@ -157,6 +157,17 @@ class UserApiTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Updated']);
     }
 
+    public function test_update_accepts_the_current_email_with_uuid_routes(): void
+    {
+        $user = $this->makeUser();
+        $this->authenticate($user);
+
+        $this->putJson("/api/v1/users/{$user->uuid}", [
+            'name' => 'Updated',
+            'email' => $user->email,
+        ])->assertOk();
+    }
+
     public function test_destroy_deletes_a_user(): void
     {
         $user = $this->makeUser();

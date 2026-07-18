@@ -2098,7 +2098,7 @@
             "dist": {
                 "type": "path",
                 "url": "app/Vendor/DataResponse",
-                "reference": "507d145bf36a5194b70f69cba527444ee4cfde16"
+                "reference": "3b1848033cb5f3c358bb61d7f8d759d99c56eef2"
             },
             "require": {
                 "illuminate/http": "^13.0",
@@ -2119,7 +2119,7 @@
                 }
             },
             "license": [
-                "proprietary"
+                "MIT"
             ],
             "description": "Standardized JSON response envelope (success/message/data/errors) — local path package",
             "transport-options": {
@@ -2133,7 +2133,7 @@
             "dist": {
                 "type": "path",
                 "url": "app/Vendor/GeoSeeder",
-                "reference": "dea31fd7252c92de92454e5b27e813a08719b574"
+                "reference": "357167514e1692ac255fd7671d77bc3d5b5fc6c6"
             },
             "require": {
                 "illuminate/support": "^13.0",
@@ -2153,7 +2153,7 @@
                 }
             },
             "license": [
-                "proprietary"
+                "MIT"
             ],
             "description": "Country + city reference data for seeding (Egypt, Kuwait, UAE, KSA) — local path package",
             "transport-options": {
@@ -2167,7 +2167,7 @@
             "dist": {
                 "type": "path",
                 "url": "app/Vendor/Media",
-                "reference": "fa94f834e783c72575d684955b2f2001cb8dc430"
+                "reference": "d46bb8e1622c96cd70eedf5973bb852f21f5b533"
             },
             "require": {
                 "illuminate/database": "^13.0",
@@ -2188,7 +2188,7 @@
                 }
             },
             "license": [
-                "proprietary"
+                "MIT"
             ],
             "description": "Polymorphic media/attachments package (local path package)",
             "transport-options": {
@@ -2202,7 +2202,7 @@
             "dist": {
                 "type": "path",
                 "url": "app/Vendor/Permission",
-                "reference": "66e73631ddad839350e1b1b153cfd43d2d10d879"
+                "reference": "fdf914db983f5bbe3dd6128168e91580f656034c"
             },
             "require": {
                 "illuminate/auth": "^13.0",
@@ -2224,7 +2224,7 @@
                 }
             },
             "license": [
-                "proprietary"
+                "MIT"
             ],
             "description": "Roles and permissions (database-backed, cached, middleware-ready) — local path package",
             "transport-options": {

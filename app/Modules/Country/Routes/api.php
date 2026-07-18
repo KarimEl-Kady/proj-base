@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('api/v1/countries')->group(function () {
+Route::prefix('countries')->group(function () {
     // Reads are public reference data; writes require authentication.
     Route::get('/', [CountryController::class, 'index'])->name('api.countries.index');
     Route::get('/{country}', [CountryController::class, 'show'])->name('api.countries.show');

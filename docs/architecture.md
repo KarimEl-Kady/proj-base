@@ -10,7 +10,8 @@ Use a local package for a host-agnostic capability that should work in several
 projects: response envelopes, media attachments, permissions, or reference
 data. Packages must not import `App\` classes. Promote a package to its own
 repository when it needs an independent release cadence or compatibility
-matrix.
+matrix. `php artisan module:boundaries` enforces both module declarations and
+package independence.
 
 ## Request Flow
 
@@ -41,6 +42,39 @@ The scheduled publisher emits `DurableMessage`; consumers use
 at-least-once, so external side effects must also use idempotency keys. Inbox
 claims and consumer database writes commit atomically. Publisher claims expire
 after a crash; failures use bounded backoff and move to a dead-letter state.
+
+## Tenancy
+
+The tenancy mode is part of the persistence design:
+
+- `none` creates no tenant columns, but still creates the `tenants` table.
+- `single` stamps every tenant-owned row with one implicit default tenant.
+- `multi` resolves the tenant per request and scopes tenant-owned models.
+
+Tenant-owned models use `HasTenantScope`; global reference data does not.
+Strict mode fails closed when scoped models are used without an explicit
+context. Tenant records are soft-deleted, and active-schema foreign keys
+restrict hard deletion.
+
+Email is tenant-relative identity, while user UUID is globally unique.
+Authentication lookups run inside tenant context, and password-reset tokens
+are stored and verified by user UUID so credentials cannot cross tenant
+boundaries when two tenants use the same email address.
+
+Changing an existing database from `none` to an active mode requires
+`tenant:migrations`, `migrate`, `tenant:backfill`, then `tenant:check`.
+`tenantUniqueColumns()` declares global indexes that must become composite
+tenant indexes during that transition. Once tenants contain duplicate values
+for a formerly global unique key, downgrading to `none` is a deliberate data
+consolidation project, not an automatic rollback.
+
+## Routing
+
+Module API route files own resource-relative paths only. Core applies
+`PROJECT_API_PREFIX`, `PROJECT_API_VERSION`, middleware, and path-tenancy
+prefixes centrally. Health routes are identified by route name, so they remain
+tenant-exempt when the API prefix changes. Disabling the API removes business
+API routes but preserves liveness/readiness endpoints.
 
 ## Scaling Path
 

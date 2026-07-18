@@ -94,6 +94,9 @@ return [
 
     'passwords' => [
         'users' => [
+            // Auth's UUID-bound token repository requires database storage;
+            // the cache driver keys tokens by email and is not tenant-safe.
+            'driver' => 'database',
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,

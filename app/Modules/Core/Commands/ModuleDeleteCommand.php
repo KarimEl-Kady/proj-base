@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Commands;
 
 use App\Modules\Core\Support\ModuleRegistry;
+use App\Modules\Core\Support\ModuleRuntimeCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -52,8 +53,9 @@ class ModuleDeleteCommand extends Command
 
         File::deleteDirectory($path);
         ModuleRegistry::remove($module);
+        ModuleRuntimeCache::clear();
 
-        $this->info("Module [{$module}] deleted and removed from the registry.");
+        $this->info("Module [{$module}] deleted, removed from the registry, and runtime caches cleared.");
         $this->warn('Remember to drop any tables/migrations that belonged to this module.');
 
         return self::SUCCESS;

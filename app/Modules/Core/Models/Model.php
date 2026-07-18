@@ -18,6 +18,25 @@ abstract class Model extends Eloquent
 
     protected $guarded = ['id', 'uuid', 'tenant_id'];
 
+    public function getGuarded(): array
+    {
+        return array_values(array_unique([
+            ...parent::getGuarded(),
+            (string) config('project.tenancy.tenant_column', 'tenant_id'),
+        ]));
+    }
+
+    /**
+     * Columns that are globally unique in none mode and unique per tenant
+     * when tenancy is active.
+     *
+     * @return array<int, array<int, string>>
+     */
+    public function tenantUniqueColumns(): array
+    {
+        return [];
+    }
+
     /**
      * Columns matched by the free-text `word` filter in BaseRepository::fetch().
      *

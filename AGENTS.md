@@ -34,8 +34,9 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 - Use `module_path('Module')` helper to resolve module directories. Do NOT hardcode paths.
 - Module directory structure is defined in `config/project.php` under `module_structure` key.
 - Generate a new module: `php artisan make:module` — takes no arguments or flags, purely an **interactive wizard** (name, API/Web/both, extras: migration/seeder/factory, enable now). New modules are registered as enabled in the registry automatically.
-- The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, and Resource — all wired with route attributes.
+- The command creates: ServiceProvider, Model, Repository, Service, ApiController (FetchRequest-driven index), WebController, Fetch/Create/Update Requests, Resource, and plain route files.
 - Module lifecycle commands (all prompt for the module when the argument is omitted): `module:list` (status table), `module:enable` / `module:disable` (toggle in the registry), `module:delete` (removes directory + registry entry).
+- Module creation, enable, disable, and deletion automatically clear config, route, and event caches so cached runtime state cannot disagree with the registry.
 - **Module boundaries**: modules may depend only on Core plus dependencies declared in `config/project.php` → `boundaries.allow` (e.g. `'Auth' => ['User']`). `php artisan module:boundaries` verifies this and runs in CI — declare new cross-module deps there or the build fails.
 - Generate a single component into an existing module: `php artisan module:make` (interactive) or `php artisan module:make {Module} {type} {Name}` — types: `model`, `migration`, `controller` (`--web` for web), `request` (`--fetch` to extend FetchRequest), `resource`, `service`, `repository`, `seeder`, `factory`, `command`, `job`, `event`, `listener` (`--event=` for the type-hint auto-discovery needs, `--queued` to extend Core's QueuedListener — see Events & listeners), `middleware`, `policy`, `observer`.
 - `CoreServiceProvider` auto-loads each active module's `Database/Migrations`, `Views` (namespaced `view('blog::index')`), `Lang` (namespaced `__('blog::messages.key')`), and registers any artisan commands in the module's `Commands/` directory.
@@ -44,6 +45,7 @@ Laravel 13.7, PHP 8.3+, Vite 8 + Tailwind CSS 4. Modular app structure under `ap
 ### Local packages (`app/Vendor`)
 
 - Local (non-Packagist) composer packages live in `app/Vendor/{Name}` with their own `composer.json`, installed through the `path` repository (`app/Vendor/*`, symlinked) declared in the root `composer.json`.
+- Package production code must not import `App\` classes; `module:boundaries` enforces this so packages remain reusable outside the host project.
 - Convention: composer name `local/{kebab-name}`, PSR-4 namespace `Local\{Name}\` → `src/` (configurable via `project.vendor.*` config).
 - Scaffold one: `php artisan make:package Payment`, then install: `composer require local/payment:"^1.0"`. Providers are auto-discovered via `extra.laravel.providers`.
 - Inspect: `php artisan package:list`.
@@ -60,10 +62,11 @@ No route attributes, no directory scanning — routes are registered from ordina
 - `Routes/web.php` under the `web` middleware group.
 - `Routes/dashboard.php` under `project.routes.dashboard` config (prefix/middleware/name applied centrally — default prefix `dashboard`, middleware `['web', 'auth']`, name prefix `dashboard.`).
 
-Prefixes/names for `api.php`/`web.php` are declared inside the file itself:
+API files declare resource-relative prefixes and route names; Core applies the
+global API prefix/version. Web files declare their own prefixes and names:
 ```php
 // app/Modules/User/Routes/api.php
-Route::prefix('api/v1/users')->group(function () {
+Route::prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index'])->name('api.users.index');
     // ...
 });
@@ -116,6 +119,7 @@ The base's messaging architecture is **event-driven over Laravel's queue** (the 
 - Every sub-feature is gated by its `PROJECT_FEATURE_*` flag and returns 403 when disabled. Login requires a `code` field when the user has confirmed 2FA.
 - Protected endpoints use `auth:sanctum`. `two_factor_secret` is stored encrypted and hidden from serialization.
 - New registrations optionally get a default role — set `PROJECT_AUTH_DEFAULT_ROLE` (see Events & listeners above).
+- Password-reset tokens use Auth's UUID-bound database repository, never Laravel's email-keyed repository. This isolates same-email users across tenants; migration `2026_07_18_000001` invalidates legacy reset links while rebuilding that ephemeral table.
 
 ### Country / City modules
 
@@ -139,10 +143,10 @@ The base's messaging architecture is **event-driven over Laravel's queue** (the 
 
 **Tenant-aware migrations** — one migration file, correct schema in all modes:
 
-- Create-table migrations call `$table->tenantColumn();` (a Blueprint macro registered by CoreServiceProvider; `module:make {M} migration create_x_table` generates it). When tenancy is active (`single`/`multi`) it adds the configured tenant column (nullable + indexed); in `none` mode it's a **no-op** — nothing to comment in/out per project.
-- Switching an existing project from `none` to `single`/`multi`: run `php artisan tenant:migrations`. It discovers every non-abstract model using `HasTenantScope` across active modules, prints a status table (ok / table missing / migration created), and generates `add_{column}_to_{table}_table` migrations into each owning module's `Database/Migrations` for tables missing the column — idempotent (re-running reports "migration already generated"), and a no-op with a hint in `none` mode. `--module=Name` (repeatable) narrows the scan to specific module(s) instead of every active one — useful on a large project, and how the command's own tests isolate themselves from real module directories.
+- Create-table migrations call `$table->tenantColumn();` (a Blueprint macro registered by CoreServiceProvider; `module:make {M} migration create_x_table` generates it). When tenancy is active (`single`/`multi`) it adds the configured tenant column as a nullable, indexed foreign key with restricted deletion; in `none` mode it's a **no-op** — nothing to comment in/out per project.
+- Switching an existing project from `none` to `single`/`multi`: run `tenant:migrations`, review and run `migrate`, assign legacy rows with `tenant:backfill`, then require `tenant:check` to pass. `tenant:migrations` discovers every non-abstract model using `HasTenantScope`, generates missing columns, and converts indexes declared by `tenantUniqueColumns()` from global to tenant-composite uniqueness. `--module=Name` (repeatable) narrows all three commands.
 - The generated catch-up migration adds column + index only, **no foreign key** on purpose — adding an FK to an existing table isn't portable across drivers (SQLite in particular); add one in a separate migration if the project needs it.
-- Verified lifecycle: create table in `none` mode (no column) → flip to `single`/`multi` → `tenant:migrations` + `migrate` (column added) → tables created afterwards get the column at create time via the macro.
+- Verified lifecycle: create table in `none` mode (no column) → flip to `single`/`multi` → `tenant:migrations` + `migrate` + `tenant:backfill` + `tenant:check` → tables created afterwards get the indexed, restricted tenant foreign key at create time via the macro. Tenants are soft-deleted.
 
 ### Project config
 
@@ -150,7 +154,7 @@ All project-specific config lives in `config/project.php`, read via `project_con
 
 ### Routing conventions
 
-- Module API routes use prefix `api/v1/{resource}` (e.g. `api/v1/users`).
+- Module API files use a resource-relative prefix (e.g. `users`); Core centrally applies `PROJECT_API_PREFIX` + `PROJECT_API_VERSION` (default final URL: `api/v1/users`). `PROJECT_API_ENABLED=false` removes business API routes while preserving health probes.
 - **Auth by default**: `make:module` generates API routes behind `auth:sanctum` — open up individual routes deliberately, not the other way around. Shipped modules follow the same posture: `/api/v1/users` requires auth on every endpoint (PII); Country/City reads are public reference data, writes require auth.
 - **Authorization, not just authentication**: `auth:sanctum` only proves *who*, not *what they may do* — shipped write/mutate routes additionally require a `permission:` check (`local/permission`, see below), e.g. `/api/v1/users` requires `users.view`/`users.create`/`users.update`/`users.delete` per action, Country/City writes require `countries.manage`/`cities.manage`. **Definitions are module-owned**: each module declares the permissions of the resource it ships in its own `Config/permissions.php` (returning `['permissions' => [], 'roles' => []]`), discovered via `config/permission.php` → `definition_paths` (glob, default `app/Modules/*/Config/permissions.php`); the central `definitions` array keeps roles and cross-cutting permissions. `permission:seed` merges every source (same-named roles union their lists; a role's `'*'` means "every permission from every source"). **Bootstrapping a fresh install**: `php artisan user:make-admin you@example.com` does the whole thing — seeds the definitions if the role isn't in the DB yet, creates the user if the email is unknown (interactive, or `--name=`/`--password=` for scripting), and grants `admin` (`--role=` for another role; roles must come from the definitions, it refuses to grant an undefined one). **Generated modules are authorized by default, not just authenticated**: `make:module` emits a populated `Config/permissions.php` (`{resource}.view/.create/.update/.delete`) *and* wires the matching `permission:` middleware onto every generated API and web route, so a new module can never silently ship CRUD that is open to every logged-in user. Until you run `permission:seed` and grant a role, those endpoints correctly 403 for everyone (fail closed). Coarsen the split (e.g. one `{resource}.manage` for writes) by editing both the config file and the route middleware together. `app/Modules/Core/Tests/Feature/MakeModuleCommandTest.php` pins this posture — it generates a module and asserts the routes are permission-gated, the permissions are declared, and the generated files are valid PHP.
 - **Email verification posture**: verification emails (when `PROJECT_FEATURE_EMAIL_VERIFICATION` is on) are informational by default — no shipped route requires a verified email. Routes that should enforce it carry the `verified.feature` middleware (Auth module alias): a pass-through while the flag is off, 403 for unverified users while it's on — annotate once, flip enforcement globally with the flag.
@@ -202,9 +206,9 @@ make dev                       # start all services + Vite HMR
 
 ### Database driver mapping
 
-`PROJECT_DB_DRIVER` in `.env` controls which DB service to use:
+`DB_CONNECTION` in `.env` controls which database driver and service to use:
 
-| `PROJECT_DB_DRIVER` | Compose service | Notes |
+| `DB_CONNECTION` | Compose service | Notes |
 |---------------------|-----------------|-------|
 | `mysql` (default) | `mysql` | MySQL 8.4, active by default |
 | `pgsql` | `pgsql` | Uncomment in `docker-compose.yml`, update `DB_HOST=pgsql` |
@@ -219,7 +223,7 @@ make dev                       # start all services + Vite HMR
 ### Environment
 
 - All `PROJECT_*` env vars are forwarded from `.env` to the containers.
-- Docker-specific overrides (`DB_HOST=mysql`, `REDIS_HOST=redis`) are set in `docker-compose.yml`.
+- Docker defaults to `DB_HOST=mysql` and `REDIS_HOST=redis`; both can be overridden from `.env`.
 - `.env.example` includes commented Docker overrides — uncomment when switching to Docker.
 - Use `docker-compose.override.yml` (gitignored) for local-only tweaks.
 

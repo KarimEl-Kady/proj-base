@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Commands;
 
 use App\Modules\Core\Support\ModuleRegistry;
+use App\Modules\Core\Support\ModuleRuntimeCache;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -40,8 +41,9 @@ class ModuleEnableCommand extends Command
         }
 
         ModuleRegistry::set($module, true);
+        ModuleRuntimeCache::clear();
 
-        $this->info("Module [{$module}] enabled. Run `php artisan config:clear` if config is cached.");
+        $this->info("Module [{$module}] enabled. Config, route, and event caches cleared.");
 
         return self::SUCCESS;
     }

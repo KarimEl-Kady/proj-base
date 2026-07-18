@@ -74,6 +74,26 @@ class ModuleBoundariesCommand extends Command
             }
         }
 
+        $vendorPath = base_path(config('project.paths.vendor', 'app/Vendor'));
+        if (is_dir($vendorPath)) {
+            foreach (File::directories($vendorPath) as $packageDir) {
+                foreach (File::allFiles($packageDir) as $file) {
+                    if ($file->getExtension() !== 'php'
+                        || str_starts_with($file->getRelativePathname(), 'tests'.DIRECTORY_SEPARATOR)) {
+                        continue;
+                    }
+
+                    if (preg_match('/\bApp\\\\/', $file->getContents()) === 1) {
+                        $violations[] = [
+                            'package:'.basename($packageDir),
+                            'application-coupling',
+                            str_replace(base_path().'/', '', $file->getPathname()),
+                        ];
+                    }
+                }
+            }
+        }
+
         if ($violations === []) {
             $this->info('Module boundaries OK — no undeclared cross-module dependencies.');
 

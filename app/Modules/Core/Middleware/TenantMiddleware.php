@@ -57,7 +57,8 @@ class TenantMiddleware
     {
         $paths = config('project.tenancy.exempt_paths', []);
 
-        return $paths !== [] && $request->is(...$paths);
+        return $request->routeIs('api.health*')
+            || ($paths !== [] && $request->is(...$paths));
     }
 
     protected function resolveTenantId(Request $request): ?int

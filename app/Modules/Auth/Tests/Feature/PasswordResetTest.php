@@ -4,9 +4,12 @@ namespace App\Modules\Auth\Tests\Feature;
 
 use App\Modules\User\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -82,5 +85,38 @@ class PasswordResetTest extends TestCase
             'password' => 'new-password-123',
             'password_confirmation' => 'new-password-123',
         ])->assertStatus(422);
+    }
+
+    public function test_reset_tokens_are_stored_by_user_uuid(): void
+    {
+        $user = $this->makeUser();
+
+        Password::createToken($user);
+
+        $this->assertDatabaseHas('password_reset_tokens', [
+            'user_uuid' => $user->uuid,
+            'email' => $user->email,
+        ]);
+        $this->assertTrue(Schema::hasColumn('password_reset_tokens', 'user_uuid'));
+    }
+
+    public function test_security_upgrade_rebuilds_the_legacy_email_token_table(): void
+    {
+        Schema::drop('password_reset_tokens');
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+        DB::table('password_reset_tokens')->insert([
+            'email' => 'legacy@example.com',
+            'token' => 'legacy-token',
+        ]);
+
+        $migration = require database_path('migrations/2026_07_18_000001_bind_password_reset_tokens_to_user_uuid.php');
+        $migration->up();
+
+        $this->assertTrue(Schema::hasColumn('password_reset_tokens', 'user_uuid'));
+        $this->assertDatabaseCount('password_reset_tokens', 0);
     }
 }

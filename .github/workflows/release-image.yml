@@ -79,18 +79,21 @@ jobs:
           load: true
           push: false
           tags: proj-base:release
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke-test release image
         run: docker run --rm --entrypoint php proj-base:release artisan about --only=environment
 
-      - name: Publish verified image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Publish the exact smoke-tested image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker tag proj-base:release "$tag"
+            docker push "$tag"
+          done <<EOF
+          $IMAGE_TAGS
+          EOF

@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 
 class ValidateProjectCommand extends Command
 {
@@ -18,6 +19,7 @@ class ValidateProjectCommand extends Command
         $this->enum($errors, 'project.tenancy.tenant_identification', ['subdomain', 'header', 'path']);
         $this->enum($errors, 'project.platform', ['web', 'api', 'hybrid']);
         $this->enum($errors, 'project.auth.driver', ['sanctum', 'token', 'session']);
+        $this->enum($errors, 'database.default', ['mysql', 'pgsql', 'sqlite']);
 
         $this->integer($errors, 'project.api.rate_limit', 1, 10000);
         $this->integer($errors, 'project.pagination.per_page', 1, 1000);
@@ -32,6 +34,23 @@ class ValidateProjectCommand extends Command
         $this->integer($errors, 'project.outbox.retention.failed_hours', 1, 87600);
         $this->integer($errors, 'project.outbox.retention.processed_hours', 1, 87600);
         $this->integer($errors, 'project.tenancy.cache.ttl_seconds', 1, 86400);
+        $this->integer($errors, 'project.health.queue_heartbeat_ttl', 30, 3600);
+        $this->integer($errors, 'project.health.queue_backlog_warning', 1, 10000000);
+
+        $this->identifier($errors, 'project.tenancy.tenant_column');
+        $this->pathSegment($errors, 'project.api.prefix');
+        $this->pathSegment($errors, 'project.api.version');
+
+        $defaultSlug = config('project.tenancy.default_tenant.slug');
+        if (! is_string($defaultSlug) || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $defaultSlug) !== 1) {
+            $errors[] = 'project.tenancy.default_tenant.slug must be a lowercase URL slug.';
+        }
+
+        $tenantModel = config('project.tenancy.tenant_model');
+        if (! is_string($tenantModel) || ! class_exists($tenantModel)
+            || ! is_subclass_of($tenantModel, Model::class)) {
+            $errors[] = 'project.tenancy.tenant_model must be an Eloquent model class.';
+        }
 
         $backoff = config('project.outbox.backoff');
         if (! is_array($backoff) || $backoff === [] || collect($backoff)->contains(
@@ -76,6 +95,26 @@ class ValidateProjectCommand extends Command
 
         if (! is_numeric($value) || (int) $value < $min || (int) $value > $max) {
             $errors[] = "{$key} must be an integer between {$min} and {$max}.";
+        }
+    }
+
+    /** @param array<int, string> $errors */
+    protected function identifier(array &$errors, string $key): void
+    {
+        $value = config($key);
+
+        if (! is_string($value) || preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $value) !== 1) {
+            $errors[] = "{$key} must be a valid SQL identifier.";
+        }
+    }
+
+    /** @param array<int, string> $errors */
+    protected function pathSegment(array &$errors, string $key): void
+    {
+        $value = config($key);
+
+        if (! is_string($value) || preg_match('/^[A-Za-z0-9][A-Za-z0-9_-]*$/', $value) !== 1) {
+            $errors[] = "{$key} must be one URL path segment.";
         }
     }
 }

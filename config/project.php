@@ -49,18 +49,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Database Driver
-    |--------------------------------------------------------------------------
-    |
-    | Override the database connection driver at the project level.
-    | Supported and CI-verified: "mysql", "pgsql", "sqlite"
-    |
-    */
-
-    'db_driver' => env('PROJECT_DB_DRIVER', 'mysql'),
-
-    /*
-    |--------------------------------------------------------------------------
     | Tenancy Configuration
     |--------------------------------------------------------------------------
     |
