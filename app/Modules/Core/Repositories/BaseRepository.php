@@ -2,6 +2,8 @@
 
 namespace App\Modules\Core\Repositories;
 
+use App\Modules\Core\Repositories\Search\LikeSearch;
+use App\Modules\Core\Repositories\Search\SearchStrategy;
 use App\Modules\Core\Requests\FetchRequest;
 use App\Modules\Core\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,17 +77,7 @@ abstract class BaseRepository
         $columns = $this->searchableColumns();
 
         if ($word !== null && $columns !== []) {
-            // LIKE wildcards in the search word are user data, not operators.
-            // "!" as the escape char is portable (backslash escaping differs
-            // between MySQL and SQLite).
-            $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $word);
-
-            $query->where(function (Builder $inner) use ($columns, $escaped) {
-                foreach ($columns as $column) {
-                    $wrapped = $inner->getGrammar()->wrap($inner->qualifyColumn($column));
-                    $inner->orWhereRaw("{$wrapped} like ? escape '!'", ["%{$escaped}%"]);
-                }
-            });
+            $this->searchStrategy()->apply($query, $word, $columns);
         }
 
         $sortBy = $request->sortBy();
@@ -119,6 +111,16 @@ abstract class BaseRepository
     protected function baseQuery(FetchRequest $request): Builder
     {
         return $this->query();
+    }
+
+    /**
+     * How fetch() applies `?word=` — LikeSearch by default (see that
+     * class's docblock for the tradeoff). Override in a repository whose
+     * table has grown large enough to need FullTextSearch instead.
+     */
+    protected function searchStrategy(): SearchStrategy
+    {
+        return new LikeSearch;
     }
 
     /**

@@ -7,11 +7,9 @@ use App\Modules\Core\Exceptions\MissingTenantContextException;
 use App\Modules\Core\Exceptions\TenantContextMismatchException;
 use App\Modules\User\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -336,26 +334,28 @@ class TenancyModesTest extends TestCase
     public function test_with_tenant_establishes_context_and_restores_the_previous_one(): void
     {
         config(['project.tenancy.mode' => 'multi']);
-        $this->addTenantColumnToUsers();
+        $tenantA = Tenant::create(['name' => 'Tenant A', 'slug' => 'tenant-a']);
+        $tenantB = Tenant::create(['name' => 'Tenant B', 'slug' => 'tenant-b']);
 
-        Context::add('tenant_id', 3);
+        Context::add('tenant_id', $tenantA->id);
 
-        $user = with_tenant(9, fn () => User::factory()->create());
+        $user = with_tenant($tenantB->id, fn () => User::factory()->create());
 
-        $this->assertSame(9, (int) $user->getAttribute('tenant_id'));
-        $this->assertSame(3, tenant_id());
+        $this->assertSame($tenantB->id, (int) $user->getAttribute('tenant_id'));
+        $this->assertSame($tenantA->id, tenant_id());
     }
 
     public function test_without_tenant_scope_allows_deliberate_cross_tenant_access(): void
     {
         config(['project.tenancy.mode' => 'multi']);
-        $this->addTenantColumnToUsers();
+        $tenantA = Tenant::create(['name' => 'Tenant A', 'slug' => 'tenant-a']);
+        $tenantB = Tenant::create(['name' => 'Tenant B', 'slug' => 'tenant-b']);
 
-        with_tenant(7, fn () => User::factory()->create());
-        with_tenant(8, fn () => User::factory()->create());
+        with_tenant($tenantA->id, fn () => User::factory()->create());
+        with_tenant($tenantB->id, fn () => User::factory()->create());
 
         // Scoped: each tenant sees only its own row.
-        $this->assertSame(1, with_tenant(7, fn () => User::query()->count()));
+        $this->assertSame(1, with_tenant($tenantA->id, fn () => User::query()->count()));
 
         // Explicit bypass: all rows, no exception, no stamping.
         $this->assertSame(2, without_tenant_scope(fn () => User::query()->count()));
@@ -364,7 +364,6 @@ class TenancyModesTest extends TestCase
     public function test_strict_mode_rejects_an_explicit_tenant_without_context(): void
     {
         config(['project.tenancy.mode' => 'multi']);
-        $this->addTenantColumnToUsers();
 
         $this->expectException(MissingTenantContextException::class);
 
@@ -376,7 +375,6 @@ class TenancyModesTest extends TestCase
     public function test_active_tenant_rejects_a_conflicting_preset_tenant_column(): void
     {
         config(['project.tenancy.mode' => 'multi']);
-        $this->addTenantColumnToUsers();
 
         Context::add('tenant_id', 7);
 
@@ -393,7 +391,6 @@ class TenancyModesTest extends TestCase
             'project.tenancy.mode' => 'multi',
             'project.tenancy.strict' => false,
         ]);
-        $this->addTenantColumnToUsers();
 
         $user = User::factory()->create();
 
@@ -406,40 +403,28 @@ class TenancyModesTest extends TestCase
     public function test_scope_stamps_and_filters_by_tenant_when_tenancy_is_active(): void
     {
         config(['project.tenancy.mode' => 'single']);
-        $this->addTenantColumnToUsers();
+        $tenantA = Tenant::create(['name' => 'Tenant A', 'slug' => 'tenant-a']);
+        $tenantB = Tenant::create(['name' => 'Tenant B', 'slug' => 'tenant-b']);
 
-        Context::add('tenant_id', 7);
+        Context::add('tenant_id', $tenantA->id);
         $mine = User::factory()->create();
 
-        Context::add('tenant_id', 8);
+        Context::add('tenant_id', $tenantB->id);
         User::factory()->create();
 
-        Context::add('tenant_id', 7);
-        $this->assertSame(7, (int) $mine->fresh()->getAttribute('tenant_id'));
+        Context::add('tenant_id', $tenantA->id);
+        $this->assertSame($tenantA->id, (int) $mine->fresh()->getAttribute('tenant_id'));
         $this->assertSame([$mine->id], User::query()->pluck('id')->all());
     }
 
     public function test_scope_is_inert_in_none_mode(): void
     {
         config(['project.tenancy.mode' => 'none']);
-        $this->addTenantColumnToUsers();
 
         Context::add('tenant_id', 7);
         $user = User::factory()->create();
 
         $this->assertNull($user->fresh()->getAttribute('tenant_id'));
         $this->assertSame(1, User::query()->count());
-    }
-
-    /**
-     * The test database migrates under the suite's default mode ("none"),
-     * where tenantColumn() is a no-op — add the column by hand to exercise
-     * the scope.
-     */
-    protected function addTenantColumnToUsers(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->index();
-        });
     }
 }

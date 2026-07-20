@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proj-base-nginx
+  labels:
+    app.kubernetes.io/name: proj-base
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        root /var/www/html/public;
+        index index.php index.html;
+
+        charset utf-8;
+
+        gzip on;
+        gzip_comp_level 5;
+        gzip_min_length 256;
+        gzip_proxied any;
+        gzip_vary on;
+        gzip_types
+            application/javascript
+            application/json
+            application/xml
+            application/rss+xml
+            image/svg+xml
+            text/css
+            text/javascript
+            text/plain
+            text/xml;
+
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+
+        # Static assets — long cache, skip PHP.
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|map)$ {
+            expires 30d;
+            access_log off;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+
+        # Laravel — route everything through index.php.
+        location / {
+            try_files $uri $uri/ /index.php?$query_string;
+        }
+
+        # PHP-FPM upstream — same pod as the app container, so localhost.
+        location ~ \.php$ {
+            fastcgi_pass 127.0.0.1:9000;
+            fastcgi_index index.php;
+            fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+            include fastcgi_params;
+
+            fastcgi_buffering on;
+            fastcgi_buffer_size 16k;
+            fastcgi_buffers 16 16k;
+
+            fastcgi_read_timeout 60s;
+            fastcgi_send_timeout 60s;
+        }
+
+        # Deny dotfiles (except .well-known for ACME/Let's Encrypt).
+        location ~ /\.(?!well-known) {
+            deny all;
+            access_log off;
+            log_not_found off;
+        }
+
+        # Liveness/readiness probe target — see deployment.yaml.
+        location = /nginx-health {
+            access_log off;
+            return 200 'OK';
+            add_header Content-Type text/plain;
+        }
+    }

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /app/app/Modules/Core/Commands</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../../../_css/bootstrap.min.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../../_css/billboard.min.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../../_css/style.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../../../index.html">/app/app</a></li>
+         <li class="breadcrumb-item"><a href="../../index.html">Modules</a></li>
+         <li class="breadcrumb-item"><a href="../index.html">Core</a></li>
+         <li class="breadcrumb-item"><a href="index.html">Commands</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classesCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="ModuleDeleteCommand.php.html#14">App\Modules\Core\Commands\ModuleDeleteCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#12">App\Modules\Core\Commands\ModuleDisableCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#13">App\Modules\Core\Commands\ModuleEnableCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#9">App\Modules\Core\Commands\ModuleListCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#8">App\Modules\Core\Commands\PackageListCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ProjectInfoCommand.php.html#7">App\Modules\Core\Commands\ProjectInfoCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="TenantClassifyCommand.php.html#16">App\Modules\Core\Commands\TenantClassifyCommand</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#13">App\Modules\Core\Commands\ModuleMakeCommand</a></td><td class="text-right">23%</td></tr>
+       <tr><td><a href="CheckTenantDataCommand.php.html#11">App\Modules\Core\Commands\CheckTenantDataCommand</a></td><td class="text-right">68%</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#10">App\Modules\Core\Commands\ModuleBoundariesCommand</a></td><td class="text-right">73%</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#12">App\Modules\Core\Commands\BackfillTenantDataCommand</a></td><td class="text-right">74%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#16">App\Modules\Core\Commands\MakeModuleCommand</a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="RetryOutboxCommand.php.html#8">App\Modules\Core\Commands\RetryOutboxCommand</a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#8">App\Modules\Core\Commands\ValidateProjectCommand</a></td><td class="text-right">89%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+         <th class="text-right">Complexity</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="ModuleMakeCommand.php.html#13">App\Modules\Core\Commands\ModuleMakeCommand</a></td><td class="text-right">24.0%</td><td class="text-right">82</td><td class="text-right">3036</td></tr>
+       <tr><td><a href="ModuleDeleteCommand.php.html#14">App\Modules\Core\Commands\ModuleDeleteCommand</a></td><td class="text-right">0.0%</td><td class="text-right">9</td><td class="text-right">90</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#9">App\Modules\Core\Commands\ModuleListCommand</a></td><td class="text-right">0.0%</td><td class="text-right">9</td><td class="text-right">90</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#16">App\Modules\Core\Commands\MakeModuleCommand</a></td><td class="text-right">75.0%</td><td class="text-right">48</td><td class="text-right">84</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#13">App\Modules\Core\Commands\ModuleEnableCommand</a></td><td class="text-right">0.0%</td><td class="text-right">8</td><td class="text-right">72</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#8">App\Modules\Core\Commands\PackageListCommand</a></td><td class="text-right">0.0%</td><td class="text-right">8</td><td class="text-right">72</td></tr>
+       <tr><td><a href="ProjectInfoCommand.php.html#7">App\Modules\Core\Commands\ProjectInfoCommand</a></td><td class="text-right">0.0%</td><td class="text-right">8</td><td class="text-right">72</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#12">App\Modules\Core\Commands\ModuleDisableCommand</a></td><td class="text-right">0.0%</td><td class="text-right">7</td><td class="text-right">56</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#10">App\Modules\Core\Commands\ModuleBoundariesCommand</a></td><td class="text-right">73.5%</td><td class="text-right">25</td><td class="text-right">36</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#8">App\Modules\Core\Commands\ValidateProjectCommand</a></td><td class="text-right">89.5%</td><td class="text-right">28</td><td class="text-right">28</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#12">App\Modules\Core\Commands\BackfillTenantDataCommand</a></td><td class="text-right">74.1%</td><td class="text-right">20</td><td class="text-right">26</td></tr>
+       <tr><td><a href="TenantClassifyCommand.php.html#16">App\Modules\Core\Commands\TenantClassifyCommand</a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="CheckTenantDataCommand.php.html#11">App\Modules\Core\Commands\CheckTenantDataCommand</a></td><td class="text-right">68.0%</td><td class="text-right">8</td><td class="text-right">10</td></tr>
+       <tr><td><a href="RetryOutboxCommand.php.html#8">App\Modules\Core\Commands\RetryOutboxCommand</a></td><td class="text-right">88.9%</td><td class="text-right">4</td><td class="text-right">4</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2 style="margin-top: 3rem;">Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodsCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="MakeModuleCommand.php.html#427"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::makeWebController">makeWebController</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#586"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::makeWebRoutes">makeWebRoutes</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleDeleteCommand.php.html#22"><abbr title="App\Modules\Core\Commands\ModuleDeleteCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleDeleteCommand.php.html#64"><abbr title="App\Modules\Core\Commands\ModuleDeleteCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#18"><abbr title="App\Modules\Core\Commands\ModuleDisableCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#50"><abbr title="App\Modules\Core\Commands\ModuleDisableCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#19"><abbr title="App\Modules\Core\Commands\ModuleEnableCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#51"><abbr title="App\Modules\Core\Commands\ModuleEnableCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#15"><abbr title="App\Modules\Core\Commands\ModuleListCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#60"><abbr title="App\Modules\Core\Commands\ModuleListCommand::countFiles">countFiles</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#96"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#110"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::askForName">askForName</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#121"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeModel">makeModel</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#212"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeController">makeController</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#282"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::hintRouteFile">hintRouteFile</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#289"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeRequest">makeRequest</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#340"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeResource">makeResource</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#368"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeService">makeService</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#399"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeRepository">makeRepository</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#429"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeSeeder">makeSeeder</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#452"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeFactory">makeFactory</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#485"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeCommand">makeCommand</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#515"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeSimple">makeSimple</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#691"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::jobStub">jobStub</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#718"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::eventStub">eventStub</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#744"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeListener">makeListener</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#823"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::middlewareStub">middlewareStub</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#844"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::policyStub">policyStub</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#858"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::observerStub">observerStub</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#14"><abbr title="App\Modules\Core\Commands\PackageListCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#60"><abbr title="App\Modules\Core\Commands\PackageListCommand::rootRequirements">rootRequirements</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ProjectInfoCommand.php.html#13"><abbr title="App\Modules\Core\Commands\ProjectInfoCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="ProjectInfoCommand.php.html#53"><abbr title="App\Modules\Core\Commands\ProjectInfoCommand::twoColumnDetail">twoColumnDetail</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="TenantClassifyCommand.php.html#23"><abbr title="App\Modules\Core\Commands\TenantClassifyCommand::handle">handle</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#624"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::makeDashboardRoutes">makeDashboardRoutes</abbr></a></td><td class="text-right">31%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#40"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::handle">handle</abbr></a></td><td class="text-right">38%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#520"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeTest">makeTest</abbr></a></td><td class="text-right">40%</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#94"><abbr title="App\Modules\Core\Commands\BackfillTenantDataCommand::targetTenantId">targetTenantId</abbr></a></td><td class="text-right">46%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#778"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::cleanContent">cleanContent</abbr></a></td><td class="text-right">62%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#874"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::guessTableName">guessTableName</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#102"><abbr title="App\Modules\Core\Commands\ValidateProjectCommand::identifier">identifier</abbr></a></td><td class="text-right">66%</td></tr>
+       <tr><td><a href="CheckTenantDataCommand.php.html#17"><abbr title="App\Modules\Core\Commands\CheckTenantDataCommand::handle">handle</abbr></a></td><td class="text-right">68%</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#113"><abbr title="App\Modules\Core\Commands\ModuleBoundariesCommand::cycles">cycles</abbr></a></td><td class="text-right">71%</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#16"><abbr title="App\Modules\Core\Commands\ModuleBoundariesCommand::handle">handle</abbr></a></td><td class="text-right">74%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#166"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeMigration">makeMigration</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#883"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::write">write</abbr></a></td><td class="text-right">75%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#173"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::recordOwnership">recordOwnership</abbr></a></td><td class="text-right">81%</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#22"><abbr title="App\Modules\Core\Commands\BackfillTenantDataCommand::handle">handle</abbr></a></td><td class="text-right">82%</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#51"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::handle">handle</abbr></a></td><td class="text-right">83%</td></tr>
+       <tr><td><a href="TenantMigrationsCommand.php.html#61"><abbr title="App\Modules\Core\Commands\TenantMigrationsCommand::process">process</abbr></a></td><td class="text-right">86%</td></tr>
+       <tr><td><a href="RetryOutboxCommand.php.html#16"><abbr title="App\Modules\Core\Commands\RetryOutboxCommand::handle">handle</abbr></a></td><td class="text-right">88%</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#14"><abbr title="App\Modules\Core\Commands\ValidateProjectCommand::handle">handle</abbr></a></td><td class="text-right">89%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+         <th class="text-right">Complexity</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="ModuleMakeCommand.php.html#40"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::handle">handle</abbr></a></td><td class="text-right">38.9%</td><td class="text-right">22</td><td class="text-right">132</td></tr>
+       <tr><td><a href="ModuleDeleteCommand.php.html#22"><abbr title="App\Modules\Core\Commands\ModuleDeleteCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">7</td><td class="text-right">56</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#15"><abbr title="App\Modules\Core\Commands\ModuleListCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">7</td><td class="text-right">56</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#744"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeListener">makeListener</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">7</td><td class="text-right">56</td></tr>
+       <tr><td><a href="ProjectInfoCommand.php.html#13"><abbr title="App\Modules\Core\Commands\ProjectInfoCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">7</td><td class="text-right">56</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#14"><abbr title="App\Modules\Core\Commands\PackageListCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">6</td><td class="text-right">42</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#18"><abbr title="App\Modules\Core\Commands\ModuleDisableCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">5</td><td class="text-right">30</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#19"><abbr title="App\Modules\Core\Commands\ModuleEnableCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">5</td><td class="text-right">30</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#212"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeController">makeController</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">5</td><td class="text-right">30</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#289"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeRequest">makeRequest</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">5</td><td class="text-right">30</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#16"><abbr title="App\Modules\Core\Commands\ModuleBoundariesCommand::handle">handle</abbr></a></td><td class="text-right">74.1%</td><td class="text-right">20</td><td class="text-right">26</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#520"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeTest">makeTest</abbr></a></td><td class="text-right">40.0%</td><td class="text-right">8</td><td class="text-right">21</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#22"><abbr title="App\Modules\Core\Commands\BackfillTenantDataCommand::handle">handle</abbr></a></td><td class="text-right">82.9%</td><td class="text-right">15</td><td class="text-right">16</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#14"><abbr title="App\Modules\Core\Commands\ValidateProjectCommand::handle">handle</abbr></a></td><td class="text-right">89.1%</td><td class="text-right">16</td><td class="text-right">16</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#778"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::cleanContent">cleanContent</abbr></a></td><td class="text-right">62.5%</td><td class="text-right">9</td><td class="text-right">13</td></tr>
+       <tr><td><a href="ModuleEnableCommand.php.html#51"><abbr title="App\Modules\Core\Commands\ModuleEnableCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#121"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeModel">makeModel</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#368"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeService">makeService</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#399"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeRepository">makeRepository</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="TenantClassifyCommand.php.html#23"><abbr title="App\Modules\Core\Commands\TenantClassifyCommand::handle">handle</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">3</td><td class="text-right">12</td></tr>
+       <tr><td><a href="CheckTenantDataCommand.php.html#17"><abbr title="App\Modules\Core\Commands\CheckTenantDataCommand::handle">handle</abbr></a></td><td class="text-right">68.0%</td><td class="text-right">8</td><td class="text-right">10</td></tr>
+       <tr><td><a href="BackfillTenantDataCommand.php.html#94"><abbr title="App\Modules\Core\Commands\BackfillTenantDataCommand::targetTenantId">targetTenantId</abbr></a></td><td class="text-right">46.2%</td><td class="text-right">5</td><td class="text-right">8</td></tr>
+       <tr><td><a href="ModuleDeleteCommand.php.html#64"><abbr title="App\Modules\Core\Commands\ModuleDeleteCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleDisableCommand.php.html#50"><abbr title="App\Modules\Core\Commands\ModuleDisableCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleListCommand.php.html#60"><abbr title="App\Modules\Core\Commands\ModuleListCommand::countFiles">countFiles</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#96"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::askForModule">askForModule</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#110"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::askForName">askForName</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#340"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeResource">makeResource</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#429"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeSeeder">makeSeeder</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#452"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeFactory">makeFactory</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#485"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeCommand">makeCommand</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="PackageListCommand.php.html#60"><abbr title="App\Modules\Core\Commands\PackageListCommand::rootRequirements">rootRequirements</abbr></a></td><td class="text-right">0.0%</td><td class="text-right">2</td><td class="text-right">6</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#51"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::handle">handle</abbr></a></td><td class="text-right">83.9%</td><td class="text-right">5</td><td class="text-right">5</td></tr>
+       <tr><td><a href="ModuleBoundariesCommand.php.html#113"><abbr title="App\Modules\Core\Commands\ModuleBoundariesCommand::cycles">cycles</abbr></a></td><td class="text-right">71.4%</td><td class="text-right">5</td><td class="text-right">5</td></tr>
+       <tr><td><a href="TenantMigrationsCommand.php.html#61"><abbr title="App\Modules\Core\Commands\TenantMigrationsCommand::process">process</abbr></a></td><td class="text-right">86.7%</td><td class="text-right">5</td><td class="text-right">5</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#173"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::recordOwnership">recordOwnership</abbr></a></td><td class="text-right">81.8%</td><td class="text-right">4</td><td class="text-right">4</td></tr>
+       <tr><td><a href="RetryOutboxCommand.php.html#16"><abbr title="App\Modules\Core\Commands\RetryOutboxCommand::handle">handle</abbr></a></td><td class="text-right">88.9%</td><td class="text-right">4</td><td class="text-right">4</td></tr>
+       <tr><td><a href="MakeModuleCommand.php.html#624"><abbr title="App\Modules\Core\Commands\MakeModuleCommand::makeDashboardRoutes">makeDashboardRoutes</abbr></a></td><td class="text-right">31.6%</td><td class="text-right">2</td><td class="text-right">3</td></tr>
+       <tr><td><a href="ValidateProjectCommand.php.html#102"><abbr title="App\Modules\Core\Commands\ValidateProjectCommand::identifier">identifier</abbr></a></td><td class="text-right">66.7%</td><td class="text-right">3</td><td class="text-right">3</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#166"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::makeMigration">makeMigration</abbr></a></td><td class="text-right">75.0%</td><td class="text-right">2</td><td class="text-right">2</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#874"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::guessTableName">guessTableName</abbr></a></td><td class="text-right">66.7%</td><td class="text-right">2</td><td class="text-right">2</td></tr>
+       <tr><td><a href="ModuleMakeCommand.php.html#883"><abbr title="App\Modules\Core\Commands\ModuleMakeCommand::write">write</abbr></a></td><td class="text-right">75.0%</td><td class="text-right">2</td><td class="text-right">2</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 12.5.7</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.23</a> and <a href="https://phpunit.de/">PHPUnit 12.5.30</a> at Mon Jul 20 14:27:51 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../../../_js/billboard.pkgd.min.js?v=12.5.7" type="text/javascript"></script>
+  <script type="application/json" id="complexity_class">[[0,9,"ModuleDeleteCommand.php.html#14","App\\Modules\\Core\\Commands\\ModuleDeleteCommand","90"],[0,7,"ModuleDisableCommand.php.html#12","App\\Modules\\Core\\Commands\\ModuleDisableCommand","56"],[0,8,"ModuleEnableCommand.php.html#13","App\\Modules\\Core\\Commands\\ModuleEnableCommand","72"],[0,9,"ModuleListCommand.php.html#9","App\\Modules\\Core\\Commands\\ModuleListCommand","90"],[0,8,"PackageListCommand.php.html#8","App\\Modules\\Core\\Commands\\PackageListCommand","72"],[0,8,"ProjectInfoCommand.php.html#7","App\\Modules\\Core\\Commands\\ProjectInfoCommand","72"],[0,3,"TenantClassifyCommand.php.html#16","App\\Modules\\Core\\Commands\\TenantClassifyCommand","12"],[23.974763406940063,82,"ModuleMakeCommand.php.html#13","App\\Modules\\Core\\Commands\\ModuleMakeCommand","3036.62"],[68,8,"CheckTenantDataCommand.php.html#11","App\\Modules\\Core\\Commands\\CheckTenantDataCommand","10.10"],[73.52941176470588,25,"ModuleBoundariesCommand.php.html#10","App\\Modules\\Core\\Commands\\ModuleBoundariesCommand","36.59"],[74.07407407407408,20,"BackfillTenantDataCommand.php.html#12","App\\Modules\\Core\\Commands\\BackfillTenantDataCommand","26.97"],[75,48,"MakeModuleCommand.php.html#16","App\\Modules\\Core\\Commands\\MakeModuleCommand","84.00"],[88.88888888888889,4,"RetryOutboxCommand.php.html#8","App\\Modules\\Core\\Commands\\RetryOutboxCommand","4.02"],[89.47368421052632,28,"ValidateProjectCommand.php.html#8","App\\Modules\\Core\\Commands\\ValidateProjectCommand","28.91"],[96.7741935483871,11,"TenantMigrationsCommand.php.html#19","App\\Modules\\Core\\Commands\\TenantMigrationsCommand","11"],[97.8021978021978,9,"MakePackageCommand.php.html#11","App\\Modules\\Core\\Commands\\MakePackageCommand","9"],[98.71794871794873,12,"PublishOutboxCommand.php.html#12","App\\Modules\\Core\\Commands\\PublishOutboxCommand","12"],[100,2,"PruneMessagesCommand.php.html#9","App\\Modules\\Core\\Commands\\PruneMessagesCommand","2"]]</script>
+  <script type="application/json" id="complexity_method">[[0,1,"MakeModuleCommand.php.html#427","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeWebController","2"],[0,1,"MakeModuleCommand.php.html#586","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeWebRoutes","2"],[0,7,"ModuleDeleteCommand.php.html#22","App\\Modules\\Core\\Commands\\ModuleDeleteCommand::handle","56"],[0,2,"ModuleDeleteCommand.php.html#64","App\\Modules\\Core\\Commands\\ModuleDeleteCommand::askForModule","6"],[0,5,"ModuleDisableCommand.php.html#18","App\\Modules\\Core\\Commands\\ModuleDisableCommand::handle","30"],[0,2,"ModuleDisableCommand.php.html#50","App\\Modules\\Core\\Commands\\ModuleDisableCommand::askForModule","6"],[0,5,"ModuleEnableCommand.php.html#19","App\\Modules\\Core\\Commands\\ModuleEnableCommand::handle","30"],[0,3,"ModuleEnableCommand.php.html#51","App\\Modules\\Core\\Commands\\ModuleEnableCommand::askForModule","12"],[0,7,"ModuleListCommand.php.html#15","App\\Modules\\Core\\Commands\\ModuleListCommand::handle","56"],[0,2,"ModuleListCommand.php.html#60","App\\Modules\\Core\\Commands\\ModuleListCommand::countFiles","6"],[0,2,"ModuleMakeCommand.php.html#96","App\\Modules\\Core\\Commands\\ModuleMakeCommand::askForModule","6"],[0,2,"ModuleMakeCommand.php.html#110","App\\Modules\\Core\\Commands\\ModuleMakeCommand::askForName","6"],[0,3,"ModuleMakeCommand.php.html#121","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeModel","12"],[0,5,"ModuleMakeCommand.php.html#212","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeController","30"],[0,1,"ModuleMakeCommand.php.html#282","App\\Modules\\Core\\Commands\\ModuleMakeCommand::hintRouteFile","2"],[0,5,"ModuleMakeCommand.php.html#289","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeRequest","30"],[0,2,"ModuleMakeCommand.php.html#340","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeResource","6"],[0,3,"ModuleMakeCommand.php.html#368","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeService","12"],[0,3,"ModuleMakeCommand.php.html#399","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeRepository","12"],[0,2,"ModuleMakeCommand.php.html#429","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeSeeder","6"],[0,2,"ModuleMakeCommand.php.html#452","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeFactory","6"],[0,2,"ModuleMakeCommand.php.html#485","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeCommand","6"],[0,1,"ModuleMakeCommand.php.html#515","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeSimple","2"],[0,1,"ModuleMakeCommand.php.html#691","App\\Modules\\Core\\Commands\\ModuleMakeCommand::jobStub","2"],[0,1,"ModuleMakeCommand.php.html#718","App\\Modules\\Core\\Commands\\ModuleMakeCommand::eventStub","2"],[0,7,"ModuleMakeCommand.php.html#744","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeListener","56"],[0,1,"ModuleMakeCommand.php.html#823","App\\Modules\\Core\\Commands\\ModuleMakeCommand::middlewareStub","2"],[0,1,"ModuleMakeCommand.php.html#844","App\\Modules\\Core\\Commands\\ModuleMakeCommand::policyStub","2"],[0,1,"ModuleMakeCommand.php.html#858","App\\Modules\\Core\\Commands\\ModuleMakeCommand::observerStub","2"],[0,6,"PackageListCommand.php.html#14","App\\Modules\\Core\\Commands\\PackageListCommand::handle","42"],[0,2,"PackageListCommand.php.html#60","App\\Modules\\Core\\Commands\\PackageListCommand::rootRequirements","6"],[0,7,"ProjectInfoCommand.php.html#13","App\\Modules\\Core\\Commands\\ProjectInfoCommand::handle","56"],[0,1,"ProjectInfoCommand.php.html#53","App\\Modules\\Core\\Commands\\ProjectInfoCommand::twoColumnDetail","2"],[0,3,"TenantClassifyCommand.php.html#23","App\\Modules\\Core\\Commands\\TenantClassifyCommand::handle","12"],[31.57894736842105,2,"MakeModuleCommand.php.html#624","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeDashboardRoutes","3.28"],[38.88888888888889,22,"ModuleMakeCommand.php.html#40","App\\Modules\\Core\\Commands\\ModuleMakeCommand::handle","132.46"],[40,8,"ModuleMakeCommand.php.html#520","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeTest","21.82"],[46.15384615384615,5,"BackfillTenantDataCommand.php.html#94","App\\Modules\\Core\\Commands\\BackfillTenantDataCommand::targetTenantId","8.90"],[62.5,9,"MakeModuleCommand.php.html#778","App\\Modules\\Core\\Commands\\MakeModuleCommand::cleanContent","13.27"],[66.66666666666666,2,"ModuleMakeCommand.php.html#874","App\\Modules\\Core\\Commands\\ModuleMakeCommand::guessTableName","2.15"],[66.66666666666666,3,"ValidateProjectCommand.php.html#102","App\\Modules\\Core\\Commands\\ValidateProjectCommand::identifier","3.33"],[68,8,"CheckTenantDataCommand.php.html#17","App\\Modules\\Core\\Commands\\CheckTenantDataCommand::handle","10.10"],[71.42857142857143,5,"ModuleBoundariesCommand.php.html#113","App\\Modules\\Core\\Commands\\ModuleBoundariesCommand::cycles","5.58"],[74.07407407407408,20,"ModuleBoundariesCommand.php.html#16","App\\Modules\\Core\\Commands\\ModuleBoundariesCommand::handle","26.97"],[75,2,"ModuleMakeCommand.php.html#166","App\\Modules\\Core\\Commands\\ModuleMakeCommand::makeMigration","2.06"],[75,2,"ModuleMakeCommand.php.html#883","App\\Modules\\Core\\Commands\\ModuleMakeCommand::write","2.06"],[81.81818181818183,4,"MakeModuleCommand.php.html#173","App\\Modules\\Core\\Commands\\MakeModuleCommand::recordOwnership","4.10"],[82.92682926829268,15,"BackfillTenantDataCommand.php.html#22","App\\Modules\\Core\\Commands\\BackfillTenantDataCommand::handle","16.12"],[83.87096774193549,5,"MakeModuleCommand.php.html#51","App\\Modules\\Core\\Commands\\MakeModuleCommand::handle","5.10"],[86.66666666666667,5,"TenantMigrationsCommand.php.html#61","App\\Modules\\Core\\Commands\\TenantMigrationsCommand::process","5.06"],[88.88888888888889,4,"RetryOutboxCommand.php.html#16","App\\Modules\\Core\\Commands\\RetryOutboxCommand::handle","4.02"],[89.13043478260869,16,"ValidateProjectCommand.php.html#14","App\\Modules\\Core\\Commands\\ValidateProjectCommand::handle","16.33"],[92.3076923076923,6,"MakeModuleCommand.php.html#105","App\\Modules\\Core\\Commands\\MakeModuleCommand::gatherInteractively","6.02"],[94.11764705882352,4,"MakePackageCommand.php.html#19","App\\Modules\\Core\\Commands\\MakePackageCommand::handle","4.00"],[94.44444444444444,2,"PublishOutboxCommand.php.html#45","App\\Modules\\Core\\Commands\\PublishOutboxCommand::claim","2.00"],[100,1,"MakeModuleCommand.php.html#153","App\\Modules\\Core\\Commands\\MakeModuleCommand::prepareNames","1"],[100,5,"MakeModuleCommand.php.html#198","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeExtras","5"],[100,2,"MakeModuleCommand.php.html#215","App\\Modules\\Core\\Commands\\MakeModuleCommand::createDirectories","2"],[100,1,"MakeModuleCommand.php.html#224","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeServiceProvider","1"],[100,1,"MakeModuleCommand.php.html#250","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeModel","1"],[100,1,"MakeModuleCommand.php.html#286","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeRepository","1"],[100,1,"MakeModuleCommand.php.html#314","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeService","1"],[100,1,"MakeModuleCommand.php.html#342","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeApiController","1"],[100,1,"MakeModuleCommand.php.html#510","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeApiRoutes","1"],[100,1,"MakeModuleCommand.php.html#548","App\\Modules\\Core\\Commands\\MakeModuleCommand::makePermissionsConfig","1"],[100,1,"MakeModuleCommand.php.html#681","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeFetchRequest","1"],[100,2,"MakeModuleCommand.php.html#707","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeRequests","2"],[100,1,"MakeModuleCommand.php.html#737","App\\Modules\\Core\\Commands\\MakeModuleCommand::makeResource","1"],[100,1,"MakeModuleCommand.php.html#768","App\\Modules\\Core\\Commands\\MakeModuleCommand::write","1"],[100,1,"MakePackageCommand.php.html#69","App\\Modules\\Core\\Commands\\MakePackageCommand::writeComposerJson","1"],[100,1,"MakePackageCommand.php.html#108","App\\Modules\\Core\\Commands\\MakePackageCommand::writeServiceProvider","1"],[100,1,"MakePackageCommand.php.html#140","App\\Modules\\Core\\Commands\\MakePackageCommand::writeConfig","1"],[100,1,"MakePackageCommand.php.html#157","App\\Modules\\Core\\Commands\\MakePackageCommand::writeReadme","1"],[100,1,"MakePackageCommand.php.html#177","App\\Modules\\Core\\Commands\\MakePackageCommand::envKey","1"],[100,1,"ModuleMakeCommand.php.html#582","App\\Modules\\Core\\Commands\\ModuleMakeCommand::apiCrudTestStub","1"],[100,1,"PruneMessagesCommand.php.html#15","App\\Modules\\Core\\Commands\\PruneMessagesCommand::handle","1"],[100,1,"PruneMessagesCommand.php.html#36","App\\Modules\\Core\\Commands\\PruneMessagesCommand::retention","1"],[100,4,"PublishOutboxCommand.php.html#18","App\\Modules\\Core\\Commands\\PublishOutboxCommand::handle","4"],[100,3,"PublishOutboxCommand.php.html#71","App\\Modules\\Core\\Commands\\PublishOutboxCommand::publish","3"],[100,1,"PublishOutboxCommand.php.html#118","App\\Modules\\Core\\Commands\\PublishOutboxCommand::claimTtl","1"],[100,1,"PublishOutboxCommand.php.html#123","App\\Modules\\Core\\Commands\\PublishOutboxCommand::maxAttempts","1"],[100,1,"PublishOutboxCommand.php.html#128","App\\Modules\\Core\\Commands\\PublishOutboxCommand::nextAttemptAt","1"],[100,5,"TenantMigrationsCommand.php.html#26","App\\Modules\\Core\\Commands\\TenantMigrationsCommand::handle","5"],[100,1,"TenantMigrationsCommand.php.html#91","App\\Modules\\Core\\Commands\\TenantMigrationsCommand::writeMigration","1"],[100,2,"ValidateProjectCommand.php.html#84","App\\Modules\\Core\\Commands\\ValidateProjectCommand::enum","2"],[100,4,"ValidateProjectCommand.php.html#92","App\\Modules\\Core\\Commands\\ValidateProjectCommand::integer","4"],[100,3,"ValidateProjectCommand.php.html#112","App\\Modules\\Core\\Commands\\ValidateProjectCommand::pathSegment","3"]]</script>
+  <script type="text/javascript" defer>
+  const barLabels = [
+    '0%',
+    '0-10%',
+    '10-20%',
+    '20-30%',
+    '30-40%',
+    '40-50%',
+    '50-60%',
+    '60-70%',
+    '70-80%',
+    '80-90%',
+    '90-100%',
+    '100%'
+  ];
+  const barConfig = (name, fullName, values) => ({
+    axis: {
+      x: {
+        type: "category",
+        categories: barLabels,
+      },
+      y: {
+        label: {
+          text: `#${name}`,
+          position: 'outer-top',
+        },
+      },
+    },
+    bindto: `#${name}CoverageDistribution`,
+    data: {
+      columns: [
+        [fullName].concat(values),
+      ],
+      colors: {
+        [fullName]: "rgba(69, 114, 167, 0.75)",
+      },
+      type: "bar",
+    },
+    bar: {
+      width: {
+        ratio: 0.9,
+      },
+    },
+    grid: {
+      focus: {
+        show: false,
+      },
+      x: {
+        show: true,
+      },
+      y: {
+        show: true,
+      },
+    },
+    legend: {
+      show: false,
+    },
+    tooltip: {
+      contents: function (data) {
+        return `<table class="bb-tooltip"><tbody>
+            <tr><th colspan="2">Coverage ${barLabels[data[0].x]}</th></tr>
+            <tr><td class="value">${data[0].value} ${name}</td></tr>
+          </tbody></table>`;
+      },
+      grouped: false,
+    },
+  });
+  bb.generate(
+    barConfig('classes', "Class Coverage", [7,0,0,1,0,0,0,1,3,2,3,1])
+  );
+  bb.generate(
+    barConfig('methods', "Method Coverage", [34,0,0,0,2,2,0,4,4,6,3,32])
+  );
+
+  const scatterConfig = (name, complexityData) => ({
+    axis: {
+      x: {
+        label: {
+          text: 'Code Coverage (in percent)',
+          position: 'outer-right',
+        },
+        tick: {
+          values: [0, 20, 40, 60, 80, 100],
+        },
+      },
+      y: {
+        label: {
+          text: 'Cyclomatic Complexity',
+          position: 'outer-top',
+        },
+        min: 0,
+        padding: {
+          bottom: 0,
+          top: 5,
+        },
+      },
+    },
+    bindto: `#${name}Complexity`,
+    data: {
+      columns: [
+        ["complexity_x"].concat(complexityData.map(d => d[0])),
+        ["complexity"].concat(complexityData.map(d => d[1])),
+      ],
+      onclick: function(data, element) {
+        window.location = complexityData[data.index][2];
+      },
+      type: "scatter",
+      xs: {
+        "complexity": "complexity_x",
+      },
+    },
+    grid: {
+      focus: {
+        show: true,
+        y: true,
+      },
+      x: {
+        show: true,
+      },
+      y: {
+        show: true,
+      },
+    },
+    legend: {
+      show: false,
+    },
+    tooltip: {
+      contents: function (data) {
+        const coverage = Math.round(data[0].x);
+        const complexity = data[0].value;
+        const targetName = complexityData[data[0].index][3];
+        const crap = complexityData[data[0].index][4];
+        return `<table class="bb-tooltip"><tbody>
+            <tr><th colspan="2">${targetName}</th></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Coverage</td><td class="name">${coverage}%</td></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Complexity</td><td class="value">${complexity}</td></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Crap</td><td class="value">${crap}</td></tr>
+          </tbody></table>`;
+      },
+      grouped: false,
+    },
+  });
+  const classComplexityData = JSON.parse(document.getElementById('complexity_class').textContent);
+  bb.generate(
+    scatterConfig("class", classComplexityData)
+  );
+  const methodComplexityData = JSON.parse(document.getElementById('complexity_method').textContent);
+  bb.generate(
+    scatterConfig("method", methodComplexityData),
+  );
+  </script>
+ </body>
+</html>

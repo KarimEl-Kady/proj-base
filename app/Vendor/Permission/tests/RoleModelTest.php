@@ -68,4 +68,15 @@ class RoleModelTest extends TestCase
 
         $this->assertDatabaseMissing('role_has_permissions', ['role_id' => $roleId]);
     }
+
+    public function test_tenant_id_defaults_to_null_and_is_a_bare_seam_not_a_feature(): void
+    {
+        $role = Role::findOrCreate('unscoped');
+
+        $this->assertNull($role->tenant_id);
+
+        $role->update(['tenant_id' => 42]);
+
+        $this->assertSame(42, $role->fresh()->tenant_id);
+    }
 }

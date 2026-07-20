@@ -18,10 +18,17 @@ abstract class Model extends Eloquent
 
     protected $guarded = ['id', 'uuid', 'tenant_id'];
 
+    /**
+     * `id` and `uuid` are server-generated identifiers and must never be
+     * mass-assignable, even if a subclass redeclares $guarded without them
+     * (a redeclared property replaces this class's default outright).
+     */
     public function getGuarded(): array
     {
         return array_values(array_unique([
             ...parent::getGuarded(),
+            'id',
+            'uuid',
             (string) config('project.tenancy.tenant_column', 'tenant_id'),
         ]));
     }

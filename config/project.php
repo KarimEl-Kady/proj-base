@@ -1,5 +1,8 @@
 <?php
 
+use App\Modules\Geo\Models\City;
+use App\Modules\Geo\Models\Country;
+
 return [
 
     /*
@@ -97,6 +100,22 @@ return [
             'enabled' => env('PROJECT_TENANCY_CACHE_ENABLED', true),
             'ttl_seconds' => env('PROJECT_TENANCY_CACHE_TTL', 3600),
         ],
+
+        // Every concrete model in an active, non-Core module must either use
+        // HasTenantScope or be listed here — `php artisan tenant:classify`
+        // (run in CI) fails otherwise. This is deliberately independent of
+        // HasTenantScope itself: tenant:migrations/tenant:check discover
+        // their targets *by* the trait, so a model that simply forgot to add
+        // it is invisible to both. This list is the other half — it forces
+        // every model to be classified one way or the other, so "nobody
+        // decided" is never a silent third option. Add a model here only
+        // when it's genuinely shared, unscoped reference data across every
+        // tenant (see Geo's Country/City — global geography data, not
+        // per-tenant).
+        'global_models' => [
+            Country::class,
+            City::class,
+        ],
     ],
 
     /*
@@ -123,6 +142,26 @@ return [
         'version' => env('PROJECT_API_VERSION', 'v1'),
         'rate_limit' => env('PROJECT_API_RATE_LIMIT', 60),
         'middleware' => ['api'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Headers
+    |--------------------------------------------------------------------------
+    |
+    | Applied to the "web" group (and therefore the dashboard) by
+    | App\Modules\Core\Middleware\SecurityHeadersMiddleware — the API group
+    | serves JSON to non-browser clients and doesn't need clickjacking/MIME
+    | -sniffing protection the same way. `csp` is left null by default: the
+    | shipped modules have no real dashboard UI yet (see AGENTS.md), so a
+    | one-size-fits-all Content-Security-Policy here would only ever be a
+    | guess. Set PROJECT_SECURITY_CSP once your project has a real frontend
+    | to write a policy against.
+    |
+    */
+
+    'security' => [
+        'csp' => env('PROJECT_SECURITY_CSP'),
     ],
 
     /*
@@ -244,17 +283,17 @@ return [
 
     'boundaries' => [
         // Cycles are rejected unless their complete module set is listed
-        // here. Country/City is intentional because both own a real relation.
-        'allow_cycles' => [
-            ['City', 'Country'],
-        ],
+        // here. Country and City used to be separate modules with a
+        // declared cycle between them (City::belongsTo(Country) +
+        // Country::hasMany(City)); they were merged into one Geo module
+        // instead, since neither could be enabled/extracted independently
+        // of the other — see docs/architecture.md's "Module Or Package"
+        // section. Prefer a merge like that over adding a new entry here;
+        // allow_cycles exists for cases where the coupling is real but the
+        // modules still have independent reasons to change.
+        'allow_cycles' => [],
         'allow' => [
             'Auth' => ['User'],
-            // Country <-> City is a genuinely bidirectional domain coupling:
-            // City::belongsTo(Country) + Country::hasMany(City), and the
-            // geo:seed command (in Country) orchestrates City's seeder too.
-            'Country' => ['City'],
-            'City' => ['Country'],
         ],
     ],
 
@@ -270,9 +309,24 @@ return [
     */
 
     'events' => [
-        'queue' => env('PROJECT_EVENTS_QUEUE'),
         'tries' => (int) env('PROJECT_EVENTS_TRIES', 3),
         'backoff' => [10, 60, 300],
+
+        // Named lanes so one workload can't starve another sharing the same
+        // worker pool — e.g. a bulk import job delaying a password-reset
+        // email queued right behind it. QueuedListener::$lane picks one of
+        // these (default: "default"); every lane is null (the connection's
+        // default queue) out of the box, so this changes nothing until a
+        // project actually needs isolation. The shipped workers
+        // (docker-compose `queue` service, `composer dev`) already listen
+        // on all three names — set a lane's env var to a distinct queue
+        // name and jobs on it start draining separately with no worker
+        // redeploy needed.
+        'lanes' => [
+            'default' => env('PROJECT_EVENTS_QUEUE_DEFAULT'),
+            'bulk' => env('PROJECT_EVENTS_QUEUE_BULK'),
+            'notifications' => env('PROJECT_EVENTS_QUEUE_NOTIFICATIONS'),
+        ],
     ],
 
     /*

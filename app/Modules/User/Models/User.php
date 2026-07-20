@@ -3,6 +3,7 @@
 namespace App\Modules\User\Models;
 
 use App\Modules\Core\Models\Model;
+use App\Modules\Core\Traits\Auditable;
 use App\Modules\Core\Traits\HasTenantScope;
 use App\Modules\User\Events\UserCreated;
 use Illuminate\Auth\Authenticatable;
@@ -40,11 +41,14 @@ use Local\Permission\Traits\HasRolesAndPermissions;
  * @property ?string $two_factor_secret
  * @property ?Carbon $two_factor_confirmed_at
  * @property ?Carbon $email_verified_at
+ * @property ?Carbon $created_at
+ * @property ?Carbon $updated_at
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token', 'two_factor_secret'])]
 class User extends Model implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract, MustVerifyEmailContract
 {
+    use Auditable;
     use Authenticatable, Authorizable, CanResetPassword, MustVerifyEmail;
     use HasApiTokens, Notifiable;
     use HasRolesAndPermissions;

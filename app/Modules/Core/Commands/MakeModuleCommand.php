@@ -46,6 +46,8 @@ class MakeModuleCommand extends Command
 
     protected bool $enable = true;
 
+    protected ?string $owner = null;
+
     public function handle(): int
     {
         $this->gatherInteractively();
@@ -82,6 +84,8 @@ class MakeModuleCommand extends Command
         $this->makeRequests();
         $this->makeExtras();
 
+        $this->recordOwnership();
+
         $this->newLine();
         $this->info("Module [{$this->moduleName}] scaffolded successfully.");
 
@@ -108,6 +112,12 @@ class MakeModuleCommand extends Command
                 ? 'A module with this name already exists.'
                 : null,
         ));
+
+        $owner = text(
+            label: 'Owning team (GitHub handle, e.g. @org/blog-team) — optional',
+            required: false,
+        );
+        $this->owner = trim($owner) !== '' ? trim($owner) : null;
 
         $platform = select(
             label: 'Which controllers does the module need?',
@@ -150,6 +160,37 @@ class MakeModuleCommand extends Command
         $this->tableName = $this->pluralSnake;
         $this->modulePath = module_path($this->moduleName);
         $this->namespace = "App\\Modules\\{$this->moduleName}";
+    }
+
+    /**
+     * Appends this module to .github/CODEOWNERS if an owner was given and
+     * the module isn't already listed there — so ownership is recorded at
+     * the moment it's decided, not left to whoever remembers to edit the
+     * file later. Silently does nothing without an owner or without a
+     * CODEOWNERS file to append to (this command doesn't invent one; see
+     * the shipped .github/CODEOWNERS for the format).
+     */
+    protected function recordOwnership(): void
+    {
+        if ($this->owner === null) {
+            return;
+        }
+
+        $path = base_path('.github/CODEOWNERS');
+
+        if (! File::exists($path)) {
+            return;
+        }
+
+        $existing = File::get($path);
+        $entry = "/app/Modules/{$this->moduleName}/";
+
+        if (str_contains($existing, $entry)) {
+            return;
+        }
+
+        File::append($path, "{$entry} {$this->owner}\n");
+        $this->line("Recorded [{$this->owner}] as the owner of {$entry} in .github/CODEOWNERS.");
     }
 
     // ── Extras (delegated to module:make) ────────────────────────────

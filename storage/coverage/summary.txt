@@ -1,0 +1,260 @@
+
+
+Code Coverage Report:
+  2026-07-20 14:22:02
+
+ Summary:
+  Classes: 60.45% (81/134)
+  Methods: 71.43% (315/441)
+  Lines:   79.67% (2868/3600)
+
+App\Models\Tenant
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  5/  5)
+App\Modules\Auth\Controllers\Api\AuthController
+  Methods: 100.00% ( 6/ 6)   Lines: 100.00% ( 28/ 28)
+App\Modules\Auth\Controllers\Api\EmailVerificationController
+  Methods:  50.00% ( 1/ 2)   Lines:  91.67% ( 11/ 12)
+App\Modules\Auth\Controllers\Api\PasswordResetController
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% ( 15/ 15)
+App\Modules\Auth\Controllers\Api\TokenController
+  Methods: 100.00% ( 4/ 4)   Lines: 100.00% ( 23/ 23)
+App\Modules\Auth\Controllers\Api\TwoFactorController
+  Methods:  25.00% ( 1/ 4)   Lines:  87.88% ( 29/ 33)
+App\Modules\Auth\Events\UserRegistered
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\Auth\Listeners\AssignDefaultRole
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  4/  4)
+App\Modules\Auth\Middleware\EnsureEmailIsVerified
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\Auth\Providers\AuthServiceProvider
+  Methods:  50.00% ( 1/ 2)   Lines:  87.80% ( 36/ 41)
+App\Modules\Auth\Requests\CreateTokenRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+App\Modules\Auth\Requests\ForgotPasswordRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  3/  3)
+App\Modules\Auth\Requests\LoginRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\Auth\Requests\RegisterRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+App\Modules\Auth\Requests\ResetPasswordRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+App\Modules\Auth\Requests\TwoFactorCodeRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  3/  3)
+App\Modules\Auth\Services\AuthService
+  Methods:  20.00% ( 1/ 5)   Lines:  76.19% ( 32/ 42)
+App\Modules\Auth\Support\Totp
+  Methods:  83.33% ( 5/ 6)   Lines:  97.37% ( 37/ 38)
+App\Modules\Auth\Support\UserUuidPasswordBrokerManager
+  Methods:   0.00% ( 0/ 1)   Lines:  92.86% ( 13/ 14)
+App\Modules\Auth\Support\UserUuidTokenRepository
+  Methods:  80.00% ( 4/ 5)   Lines:  95.65% ( 22/ 23)
+App\Modules\Core\Commands\BackfillTenantDataCommand
+  Methods:   0.00% ( 0/ 2)   Lines:  74.07% ( 40/ 54)
+App\Modules\Core\Commands\CheckTenantDataCommand
+  Methods:   0.00% ( 0/ 1)   Lines:  68.00% ( 17/ 25)
+App\Modules\Core\Commands\MakeModuleCommand
+  Methods:  66.67% (14/21)   Lines:  75.00% (228/304)
+App\Modules\Core\Commands\MakePackageCommand
+  Methods:  83.33% ( 5/ 6)   Lines:  97.80% ( 89/ 91)
+App\Modules\Core\Commands\ModuleBoundariesCommand
+  Methods:   0.00% ( 0/ 2)   Lines:  73.53% ( 50/ 68)
+App\Modules\Core\Commands\ModuleMakeCommand
+  Methods:   4.00% ( 1/25)   Lines:  23.97% ( 76/317)
+App\Modules\Core\Commands\PruneMessagesCommand
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% ( 14/ 14)
+App\Modules\Core\Commands\PublishOutboxCommand
+  Methods:  83.33% ( 5/ 6)   Lines:  98.72% ( 77/ 78)
+App\Modules\Core\Commands\RetryOutboxCommand
+  Methods:   0.00% ( 0/ 1)   Lines:  88.89% ( 16/ 18)
+App\Modules\Core\Commands\TenantMigrationsCommand
+  Methods:  66.67% ( 2/ 3)   Lines:  96.77% ( 60/ 62)
+App\Modules\Core\Commands\ValidateProjectCommand
+  Methods:  60.00% ( 3/ 5)   Lines:  89.47% ( 51/ 57)
+App\Modules\Core\Controllers\Api\HealthController
+  Methods:  14.29% ( 1/ 7)   Lines:  62.34% ( 48/ 77)
+App\Modules\Core\Controllers\Api\LivenessController
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+App\Modules\Core\Events\DomainEvent
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  2/  2)
+App\Modules\Core\Events\DurableMessage
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\Core\Exceptions\Handler
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% ( 11/ 11)
+App\Modules\Core\Exceptions\MissingTenantContextException
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\Core\Exceptions\TenantContextMismatchException
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  4/  4)
+App\Modules\Core\Listeners\QueuedListener
+  Methods: 100.00% ( 3/ 3)   Lines: 100.00% (  4/  4)
+App\Modules\Core\Middleware\RequestContextMiddleware
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  9/  9)
+App\Modules\Core\Middleware\SecurityHeadersMiddleware
+  Methods:   0.00% ( 0/ 1)   Lines:  87.50% (  7/  8)
+App\Modules\Core\Middleware\TenantMiddleware
+  Methods:  50.00% ( 3/ 6)   Lines:  79.41% ( 27/ 34)
+App\Modules\Core\Models\AuditLog
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  4/  4)
+App\Modules\Core\Models\Model
+  Methods:  66.67% ( 4/ 6)   Lines:  66.67% ( 10/ 15)
+App\Modules\Core\Models\OutboxMessage
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  9/  9)
+App\Modules\Core\Providers\CoreServiceProvider
+  Methods:  71.43% (10/14)   Lines:  95.35% (123/129)
+App\Modules\Core\Repositories\BaseRepository
+  Methods:  64.71% (11/17)   Lines:  77.27% ( 34/ 44)
+App\Modules\Core\Repositories\Search\LikeSearch
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\Core\Requests\BaseRequest
+  Methods:  66.67% ( 2/ 3)   Lines:  80.00% (  4/  5)
+App\Modules\Core\Requests\FetchRequest
+  Methods: 100.00% ( 8/ 8)   Lines: 100.00% ( 20/ 20)
+App\Modules\Core\Services\BaseService
+  Methods:  66.67% ( 6/ 9)   Lines:  75.00% (  9/ 12)
+App\Modules\Core\Support\Inbox
+  Methods:  50.00% ( 1/ 2)   Lines:  57.89% ( 11/ 19)
+App\Modules\Core\Support\ModuleReferenceScanner
+  Methods: 100.00% ( 3/ 3)   Lines: 100.00% ( 17/ 17)
+App\Modules\Core\Support\ModuleRegistry
+  Methods: 100.00% ( 8/ 8)   Lines: 100.00% ( 23/ 23)
+App\Modules\Core\Support\ModuleRuntimeCache
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  3/  3)
+App\Modules\Core\Support\Outbox
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  9/  9)
+App\Modules\Core\Support\Tenancy
+  Methods:  25.00% ( 1/ 4)   Lines:  87.80% ( 36/ 41)
+App\Modules\Core\Support\TenantCache
+  Methods: 100.00% ( 4/ 4)   Lines: 100.00% ( 20/ 20)
+App\Modules\Core\Support\TenantModelClassifier
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\Core\Support\TenantModelDiscovery
+  Methods:  50.00% ( 1/ 2)   Lines:  90.91% ( 20/ 22)
+App\Modules\Core\Support\TenantUrl
+  Methods:  50.00% ( 2/ 4)   Lines:  58.62% ( 17/ 29)
+App\Modules\Core\Traits\Auditable
+  Methods: 100.00% ( 3/ 3)   Lines: 100.00% ( 32/ 32)
+App\Modules\Core\Traits\HasTenantScope
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 29/ 29)
+App\Modules\Core\Traits\HasUuid
+  Methods:  33.33% ( 1/ 3)   Lines:  66.67% (  4/  6)
+App\Modules\Geo\Commands\SeedGeoDataCommand
+  Methods: 100.00% ( 5/ 5)   Lines: 100.00% ( 35/ 35)
+App\Modules\Geo\Controllers\Api\CityController
+  Methods: 100.00% ( 6/ 6)   Lines: 100.00% ( 24/ 24)
+App\Modules\Geo\Controllers\Api\CountryController
+  Methods: 100.00% ( 6/ 6)   Lines: 100.00% ( 24/ 24)
+App\Modules\Geo\Database\Factories\CityFactory
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  8/  8)
+App\Modules\Geo\Database\Factories\CountryFactory
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 13/ 13)
+App\Modules\Geo\Database\Seeders\CitySeeder
+  Methods:   0.00% ( 0/ 1)   Lines:  84.62% ( 11/ 13)
+App\Modules\Geo\Database\Seeders\CountrySeeder
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 10/ 10)
+App\Modules\Geo\Models\City
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  6/  6)
+App\Modules\Geo\Models\Country
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  4/  4)
+App\Modules\Geo\Providers\GeoServiceProvider
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\Geo\Repositories\CityRepository
+  Methods: 100.00% ( 3/ 3)   Lines: 100.00% (  6/  6)
+App\Modules\Geo\Repositories\CountryRepository
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\Geo\Requests\CreateCityRequest
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% ( 15/ 15)
+App\Modules\Geo\Requests\CreateCountryRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 12/ 12)
+App\Modules\Geo\Requests\FetchCityRequest
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  5/  5)
+App\Modules\Geo\Requests\FetchCountryRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  3/  3)
+App\Modules\Geo\Requests\UpdateCityRequest
+  Methods:  50.00% ( 1/ 2)   Lines:  80.95% ( 17/ 21)
+App\Modules\Geo\Requests\UpdateCountryRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 18/ 18)
+App\Modules\Geo\Resources\CityResource
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 15/ 15)
+App\Modules\Geo\Resources\CountryResource
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 15/ 15)
+App\Modules\Geo\Services\CityService
+  Methods: 100.00% ( 4/ 4)   Lines: 100.00% (  6/  6)
+App\Modules\Geo\Services\CountryService
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\User\Commands\MakeAdminCommand
+  Methods:  57.14% ( 4/ 7)   Lines:  93.98% ( 78/ 83)
+App\Modules\User\Controllers\Api\UserController
+  Methods: 100.00% ( 6/ 6)   Lines: 100.00% ( 28/ 28)
+App\Modules\User\Database\Factories\UserFactory
+  Methods:  50.00% ( 1/ 2)   Lines:  70.00% (  7/ 10)
+App\Modules\User\Events\UserCreated
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\User\Listeners\RecordUserCreation
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  6/  6)
+App\Modules\User\Models\User
+  Methods:  80.00% ( 4/ 5)   Lines:  91.67% ( 11/ 12)
+App\Modules\User\Policies\UserPolicy
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  4/  4)
+App\Modules\User\Providers\UserServiceProvider
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  1/  1)
+App\Modules\User\Repositories\UserRepository
+  Methods:  50.00% ( 1/ 2)   Lines:  50.00% (  1/  2)
+App\Modules\User\Requests\CreateUserRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+App\Modules\User\Requests\FetchUserRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  3/  3)
+App\Modules\User\Requests\UpdateUserRequest
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  8/  8)
+App\Modules\User\Resources\UserResource
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  7/  7)
+App\Modules\User\Services\UserService
+  Methods: 100.00% ( 4/ 4)   Lines: 100.00% (  5/  5)
+App\Modules\User\Support\UserRules
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 11/ 11)
+App\Providers\AppServiceProvider
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  2/  2)
+Local\DataResponse\Concerns\BuildsDataResponses
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  2/  2)
+Local\DataResponse\DataResponse
+  Methods: 100.00% ( 7/ 7)   Lines: 100.00% ( 25/ 25)
+Local\DataResponse\DataResponseServiceProvider
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  4/  4)
+Local\GeoSeeder\GeoDataRepository
+  Methods: 100.00% ( 6/ 6)   Lines: 100.00% ( 16/ 16)
+Local\GeoSeeder\GeoSeederServiceProvider
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  5/  5)
+Local\Media\MediaServiceProvider
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  6/  6)
+Local\Media\Models\Media
+  Methods:  33.33% ( 2/ 6)   Lines:  50.00% ( 10/ 20)
+Local\Media\Services\MediaService
+  Methods:  33.33% ( 1/ 3)   Lines:  87.50% ( 28/ 32)
+Local\Media\Traits\HasMedia
+  Methods:  83.33% ( 5/ 6)   Lines:  83.33% (  5/  6)
+Local\Permission\Commands\PermissionListCommand
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% ( 19/ 19)
+Local\Permission\Commands\PermissionSeedCommand
+  Methods: 100.00% ( 5/ 5)   Lines: 100.00% ( 60/ 60)
+Local\Permission\Exceptions\UnauthorizedException
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% (  2/  2)
+Local\Permission\Middleware\PermissionMiddleware
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+Local\Permission\Middleware\RoleMiddleware
+  Methods: 100.00% ( 1/ 1)   Lines: 100.00% (  5/  5)
+Local\Permission\Middleware\RoleOrPermissionMiddleware
+  Methods:   0.00% ( 0/ 1)   Lines:  87.50% (  7/  8)
+Local\Permission\Models\Permission
+  Methods:  83.33% ( 5/ 6)   Lines:  95.24% ( 20/ 21)
+Local\Permission\Models\Role
+  Methods: 100.00% (11/11)   Lines: 100.00% ( 40/ 40)
+Local\Permission\PermissionServiceProvider
+  Methods:  66.67% ( 2/ 3)   Lines:  95.45% ( 21/ 22)
+Local\Permission\Support\DefinitionLoader
+  Methods:  75.00% ( 3/ 4)   Lines:  95.83% ( 23/ 24)
+Local\Permission\Support\PermissionRegistry
+  Methods: 100.00% ( 4/ 4)   Lines: 100.00% ( 21/ 21)
+Local\Permission\Traits\HasPermissions
+  Methods:  72.73% ( 8/11)   Lines:  89.74% ( 35/ 39)
+Local\Permission\Traits\HasRoles
+  Methods: 100.00% (10/10)   Lines: 100.00% ( 35/ 35)
+Local\Permission\Traits\HasRolesAndPermissions
+  Methods: 100.00% ( 2/ 2)   Lines: 100.00% ( 17/ 17)

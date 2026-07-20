@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proj-base-queue
+  labels:
+    app.kubernetes.io/name: proj-base
+    app.kubernetes.io/component: queue
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: proj-base
+      app.kubernetes.io/component: queue
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: proj-base
+        app.kubernetes.io/component: queue
+    spec:
+      # Grace period long enough for --max-time below to finish its current
+      # job and exit cleanly instead of being SIGKILLed mid-job.
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: queue
+          image: ghcr.io/ORG/proj-base:TAG
+          # Every named lane (config/project.php events.lanes) plus the
+          # connection's literal "default" queue — see QueuedListener::$lane
+          # and AGENTS.md's "Events & listeners" for why these three exist.
+          command:
+            - php
+            - artisan
+            - queue:work
+            - --queue=default,bulk,notifications
+            - --sleep=3
+            - --tries=3
+            - --timeout=90
+            - --max-jobs=1000
+            - --max-time=3600
+          envFrom:
+            - secretRef:
+                name: proj-base-env
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

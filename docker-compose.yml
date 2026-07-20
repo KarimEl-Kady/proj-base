@@ -245,7 +245,11 @@ services:
       PROJECT_OUTBOX_FAILED_RETENTION: ${PROJECT_OUTBOX_FAILED_RETENTION:-720}
       PROJECT_INBOX_PROCESSED_RETENTION: ${PROJECT_INBOX_PROCESSED_RETENTION:-720}
     entrypoint: ["entrypoint.sh"]
-    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
+    # --queue lists every named lane (config/project.php events.lanes) plus
+    # the connection's literal "default" queue name, priority-ordered —
+    # ready to drain an isolated lane the moment its env var is set to a
+    # real queue name, no worker redeploy needed. See QueuedListener::$lane.
+    command: ["php", "artisan", "queue:work", "--queue=default,bulk,notifications", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
     depends_on:
       mysql:
         condition: service_healthy

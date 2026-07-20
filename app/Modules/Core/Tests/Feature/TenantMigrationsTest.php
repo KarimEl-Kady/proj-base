@@ -94,7 +94,13 @@ class TenantMigrationsTest extends TestCase
         $this->assertSame('organizations', $foreignKeys[0]->table);
     }
 
-    public function test_macro_is_a_no_op_in_none_mode(): void
+    /**
+     * The macro no longer forks on tenancy mode (see its docblock in
+     * CoreServiceProvider): every table created with $table->tenantColumn()
+     * gets the column regardless of mode, so switching modes later is a
+     * config + backfill change, never a schema migration.
+     */
+    public function test_macro_adds_the_tenant_column_in_none_mode_too(): void
     {
         config(['project.tenancy.mode' => 'none']);
 
@@ -103,39 +109,53 @@ class TenantMigrationsTest extends TestCase
             $table->tenantColumn();
         });
 
-        $this->assertFalse(Schema::hasColumn('macro_probes', 'tenant_id'));
+        $this->assertTrue(Schema::hasColumn('macro_probes', 'tenant_id'));
     }
 
     // ── tenant:migrations command ────────────────────────────────────
 
-    public function test_command_is_a_no_op_in_none_mode(): void
+    /**
+     * The command no longer special-cases "none" mode: real tables already
+     * carry the column unconditionally (via tenantColumn()), so this is
+     * purely a retrofit tool for hand-written migrations that skipped the
+     * macro — equally useful in any mode.
+     */
+    public function test_command_reports_ok_for_the_real_users_table_in_every_mode(): void
     {
-        config(['project.tenancy.mode' => 'none']);
+        foreach (['none', 'single', 'multi'] as $mode) {
+            config(['project.tenancy.mode' => $mode]);
 
-        $this->artisan('tenant:migrations')
-            ->expectsOutputToContain('Tenancy mode is [none]')
-            ->assertSuccessful();
+            // --module=User: this test only cares about the "ok" status, so
+            // it never touches any other module's real filesystem path.
+            $this->artisan('tenant:migrations', ['--module' => ['User']])->assertSuccessful();
+
+            $this->assertSame(
+                [],
+                glob(module_path('User', 'Database/Migrations').'/*_add_tenant_id_to_users_table.php'),
+                "No catch-up migration should be generated in [{$mode}] mode for a table that already has the column."
+            );
+        }
     }
 
-    public function test_command_reports_ok_for_tables_that_already_have_the_column(): void
+    public function test_command_generates_a_catch_up_migration_in_none_mode_for_a_hand_written_table(): void
     {
-        config(['project.tenancy.mode' => 'multi']);
+        config(['project.tenancy.mode' => 'none']);
+        $this->makeProbeModule();
+        config(['project.modules' => [...config('project.modules'), 'TenantProbe']]);
 
-        // Simulate a users table created while already in multi mode:
-        // the base migration's tenantColumn() macro is a no-op in the
-        // single-mode test environment, so add the column by hand.
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->index();
+        // A hand-written migration that skipped $table->tenantColumn().
+        Schema::create('tenant_probes', function (Blueprint $table) {
+            $table->id();
+            $table->string('code')->unique();
         });
 
-        // --module=User: this test only cares about the "ok" status, so it
-        // never touches any other module's real filesystem path.
-        $this->artisan('tenant:migrations', ['--module' => ['User']])->assertSuccessful();
+        $this->artisan('tenant:migrations', ['--module' => ['TenantProbe']])
+            ->expectsOutputToContain('migration created')
+            ->assertSuccessful();
 
-        $this->assertSame(
-            [],
-            glob(module_path('User', 'Database/Migrations').'/*_add_tenant_id_to_users_table.php'),
-            'No catch-up migration should be generated for a table that already has the column.'
+        $this->assertCount(
+            1,
+            glob("{$this->probePath}/Database/Migrations/*_add_tenant_id_to_tenant_probes_table.php")
         );
     }
 

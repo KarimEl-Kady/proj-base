@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for /app/app/Modules/Geo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../../_css/bootstrap.min.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../_css/billboard.min.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../_css/style.css?v=12.5.7" rel="stylesheet" type="text/css">
+  <link href="../../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../../index.html">/app/app</a></li>
+         <li class="breadcrumb-item"><a href="../index.html">Modules</a></li>
+         <li class="breadcrumb-item"><a href="index.html">Geo</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classesCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Requests/UpdateCityRequest.php.html#10">App\Modules\Geo\Requests\UpdateCityRequest</a></td><td class="text-right">80%</td></tr>
+       <tr><td><a href="Database/Seeders/CitySeeder.php.html#15">App\Modules\Geo\Database\Seeders\CitySeeder</a></td><td class="text-right">84%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+         <th class="text-right">Complexity</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Database/Seeders/CitySeeder.php.html#15">App\Modules\Geo\Database\Seeders\CitySeeder</a></td><td class="text-right">84.6%</td><td class="text-right">5</td><td class="text-right">5</td></tr>
+       <tr><td><a href="Requests/UpdateCityRequest.php.html#10">App\Modules\Geo\Requests\UpdateCityRequest</a></td><td class="text-right">81.0%</td><td class="text-right">4</td><td class="text-right">4</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2 style="margin-top: 3rem;">Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodsCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Requests/UpdateCityRequest.php.html#19"><abbr title="App\Modules\Geo\Requests\UpdateCityRequest::prepareForValidation">prepareForValidation</abbr></a></td><td class="text-right">50%</td></tr>
+       <tr><td><a href="Database/Seeders/CitySeeder.php.html#17"><abbr title="App\Modules\Geo\Database\Seeders\CitySeeder::run">run</abbr></a></td><td class="text-right">84%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3 style="margin-top: 2rem;">Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+         <th class="text-right">Complexity</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Database/Seeders/CitySeeder.php.html#17"><abbr title="App\Modules\Geo\Database\Seeders\CitySeeder::run">run</abbr></a></td><td class="text-right">84.6%</td><td class="text-right">5</td><td class="text-right">5</td></tr>
+       <tr><td><a href="Requests/UpdateCityRequest.php.html#19"><abbr title="App\Modules\Geo\Requests\UpdateCityRequest::prepareForValidation">prepareForValidation</abbr></a></td><td class="text-right">50.0%</td><td class="text-right">3</td><td class="text-right">4</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 12.5.7</a> using <a href="https://www.php.net/" target="_top">PHP 8.4.23</a> and <a href="https://phpunit.de/">PHPUnit 12.5.30</a> at Mon Jul 20 14:27:51 UTC 2026.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../../_js/billboard.pkgd.min.js?v=12.5.7" type="text/javascript"></script>
+  <script type="application/json" id="complexity_class">[[80.95238095238095,4,"Requests\/UpdateCityRequest.php.html#10","App\\Modules\\Geo\\Requests\\UpdateCityRequest","4.11"],[84.61538461538461,5,"Database\/Seeders\/CitySeeder.php.html#15","App\\Modules\\Geo\\Database\\Seeders\\CitySeeder","5.09"],[100,8,"Commands\/SeedGeoDataCommand.php.html#18","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand","8"],[100,6,"Controllers\/Api\/CityController.php.html#13","App\\Modules\\Geo\\Controllers\\Api\\CityController","6"],[100,6,"Controllers\/Api\/CountryController.php.html#13","App\\Modules\\Geo\\Controllers\\Api\\CountryController","6"],[100,1,"Database\/Factories\/CityFactory.php.html#11","App\\Modules\\Geo\\Database\\Factories\\CityFactory","1"],[100,1,"Database\/Factories\/CountryFactory.php.html#11","App\\Modules\\Geo\\Database\\Factories\\CountryFactory","1"],[100,3,"Database\/Seeders\/CountrySeeder.php.html#14","App\\Modules\\Geo\\Database\\Seeders\\CountrySeeder","3"],[100,2,"Models\/City.php.html#25","App\\Modules\\Geo\\Models\\City","2"],[100,2,"Models\/Country.php.html#30","App\\Modules\\Geo\\Models\\Country","2"],[100,1,"Providers\/GeoServiceProvider.php.html#7","App\\Modules\\Geo\\Providers\\GeoServiceProvider","1"],[100,5,"Repositories\/CityRepository.php.html#11","App\\Modules\\Geo\\Repositories\\CityRepository","5"],[100,1,"Repositories\/CountryRepository.php.html#8","App\\Modules\\Geo\\Repositories\\CountryRepository","1"],[100,3,"Requests\/CreateCityRequest.php.html#9","App\\Modules\\Geo\\Requests\\CreateCityRequest","3"],[100,1,"Requests\/CreateCountryRequest.php.html#7","App\\Modules\\Geo\\Requests\\CreateCountryRequest","1"],[100,3,"Requests\/FetchCityRequest.php.html#7","App\\Modules\\Geo\\Requests\\FetchCityRequest","3"],[100,1,"Requests\/FetchCountryRequest.php.html#7","App\\Modules\\Geo\\Requests\\FetchCountryRequest","1"],[100,1,"Requests\/UpdateCountryRequest.php.html#8","App\\Modules\\Geo\\Requests\\UpdateCountryRequest","1"],[100,1,"Resources\/CityResource.php.html#12","App\\Modules\\Geo\\Resources\\CityResource","1"],[100,1,"Resources\/CountryResource.php.html#12","App\\Modules\\Geo\\Resources\\CountryResource","1"],[100,5,"Services\/CityService.php.html#10","App\\Modules\\Geo\\Services\\CityService","5"],[100,1,"Services\/CountryService.php.html#8","App\\Modules\\Geo\\Services\\CountryService","1"]]</script>
+  <script type="application/json" id="complexity_method">[[50,3,"Requests\/UpdateCityRequest.php.html#19","App\\Modules\\Geo\\Requests\\UpdateCityRequest::prepareForValidation","4.12"],[84.61538461538461,5,"Database\/Seeders\/CitySeeder.php.html#17","App\\Modules\\Geo\\Database\\Seeders\\CitySeeder::run","5.09"],[100,3,"Commands\/SeedGeoDataCommand.php.html#26","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand::handle","3"],[100,1,"Commands\/SeedGeoDataCommand.php.html#57","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand::resolveCodes","1"],[100,2,"Commands\/SeedGeoDataCommand.php.html#72","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand::reportPlan","2"],[100,1,"Commands\/SeedGeoDataCommand.php.html#91","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand::wipe","1"],[100,1,"Commands\/SeedGeoDataCommand.php.html#104","App\\Modules\\Geo\\Commands\\SeedGeoDataCommand::reportResult","1"],[100,1,"Controllers\/Api\/CityController.php.html#15","App\\Modules\\Geo\\Controllers\\Api\\CityController::__construct","1"],[100,1,"Controllers\/Api\/CityController.php.html#19","App\\Modules\\Geo\\Controllers\\Api\\CityController::index","1"],[100,1,"Controllers\/Api\/CityController.php.html#29","App\\Modules\\Geo\\Controllers\\Api\\CityController::store","1"],[100,1,"Controllers\/Api\/CityController.php.html#40","App\\Modules\\Geo\\Controllers\\Api\\CityController::show","1"],[100,1,"Controllers\/Api\/CityController.php.html#50","App\\Modules\\Geo\\Controllers\\Api\\CityController::update","1"],[100,1,"Controllers\/Api\/CityController.php.html#60","App\\Modules\\Geo\\Controllers\\Api\\CityController::destroy","1"],[100,1,"Controllers\/Api\/CountryController.php.html#15","App\\Modules\\Geo\\Controllers\\Api\\CountryController::__construct","1"],[100,1,"Controllers\/Api\/CountryController.php.html#19","App\\Modules\\Geo\\Controllers\\Api\\CountryController::index","1"],[100,1,"Controllers\/Api\/CountryController.php.html#29","App\\Modules\\Geo\\Controllers\\Api\\CountryController::store","1"],[100,1,"Controllers\/Api\/CountryController.php.html#40","App\\Modules\\Geo\\Controllers\\Api\\CountryController::show","1"],[100,1,"Controllers\/Api\/CountryController.php.html#50","App\\Modules\\Geo\\Controllers\\Api\\CountryController::update","1"],[100,1,"Controllers\/Api\/CountryController.php.html#60","App\\Modules\\Geo\\Controllers\\Api\\CountryController::destroy","1"],[100,1,"Database\/Factories\/CityFactory.php.html#15","App\\Modules\\Geo\\Database\\Factories\\CityFactory::definition","1"],[100,1,"Database\/Factories\/CountryFactory.php.html#15","App\\Modules\\Geo\\Database\\Factories\\CountryFactory::definition","1"],[100,3,"Database\/Seeders\/CountrySeeder.php.html#16","App\\Modules\\Geo\\Database\\Seeders\\CountrySeeder::run","3"],[100,1,"Models\/City.php.html#35","App\\Modules\\Geo\\Models\\City::casts","1"],[100,1,"Models\/City.php.html#44","App\\Modules\\Geo\\Models\\City::country","1"],[100,1,"Models\/Country.php.html#40","App\\Modules\\Geo\\Models\\Country::casts","1"],[100,1,"Models\/Country.php.html#47","App\\Modules\\Geo\\Models\\Country::cities","1"],[100,1,"Providers\/GeoServiceProvider.php.html#9","App\\Modules\\Geo\\Providers\\GeoServiceProvider::boot","1"],[100,1,"Repositories\/CityRepository.php.html#13","App\\Modules\\Geo\\Repositories\\CityRepository::__construct","1"],[100,1,"Repositories\/CityRepository.php.html#18","App\\Modules\\Geo\\Repositories\\CityRepository::query","1"],[100,3,"Repositories\/CityRepository.php.html#23","App\\Modules\\Geo\\Repositories\\CityRepository::baseQuery","3"],[100,1,"Repositories\/CountryRepository.php.html#10","App\\Modules\\Geo\\Repositories\\CountryRepository::__construct","1"],[100,2,"Requests\/CreateCityRequest.php.html#17","App\\Modules\\Geo\\Requests\\CreateCityRequest::prepareForValidation","2"],[100,1,"Requests\/CreateCityRequest.php.html#26","App\\Modules\\Geo\\Requests\\CreateCityRequest::rules","1"],[100,1,"Requests\/CreateCountryRequest.php.html#9","App\\Modules\\Geo\\Requests\\CreateCountryRequest::rules","1"],[100,1,"Requests\/FetchCityRequest.php.html#9","App\\Modules\\Geo\\Requests\\FetchCityRequest::rules","1"],[100,2,"Requests\/FetchCityRequest.php.html#17","App\\Modules\\Geo\\Requests\\FetchCityRequest::countryCode","2"],[100,1,"Requests\/FetchCountryRequest.php.html#9","App\\Modules\\Geo\\Requests\\FetchCountryRequest::rules","1"],[100,1,"Requests\/UpdateCityRequest.php.html#36","App\\Modules\\Geo\\Requests\\UpdateCityRequest::rules","1"],[100,1,"Requests\/UpdateCountryRequest.php.html#10","App\\Modules\\Geo\\Requests\\UpdateCountryRequest::rules","1"],[100,1,"Resources\/CityResource.php.html#14","App\\Modules\\Geo\\Resources\\CityResource::toArray","1"],[100,1,"Resources\/CountryResource.php.html#14","App\\Modules\\Geo\\Resources\\CountryResource::toArray","1"],[100,1,"Services\/CityService.php.html#12","App\\Modules\\Geo\\Services\\CityService::__construct","1"],[100,1,"Services\/CityService.php.html#17","App\\Modules\\Geo\\Services\\CityService::create","1"],[100,1,"Services\/CityService.php.html#22","App\\Modules\\Geo\\Services\\CityService::update","1"],[100,2,"Services\/CityService.php.html#32","App\\Modules\\Geo\\Services\\CityService::resolveCountryId","2"],[100,1,"Services\/CountryService.php.html#10","App\\Modules\\Geo\\Services\\CountryService::__construct","1"]]</script>
+  <script type="text/javascript" defer>
+  const barLabels = [
+    '0%',
+    '0-10%',
+    '10-20%',
+    '20-30%',
+    '30-40%',
+    '40-50%',
+    '50-60%',
+    '60-70%',
+    '70-80%',
+    '80-90%',
+    '90-100%',
+    '100%'
+  ];
+  const barConfig = (name, fullName, values) => ({
+    axis: {
+      x: {
+        type: "category",
+        categories: barLabels,
+      },
+      y: {
+        label: {
+          text: `#${name}`,
+          position: 'outer-top',
+        },
+      },
+    },
+    bindto: `#${name}CoverageDistribution`,
+    data: {
+      columns: [
+        [fullName].concat(values),
+      ],
+      colors: {
+        [fullName]: "rgba(69, 114, 167, 0.75)",
+      },
+      type: "bar",
+    },
+    bar: {
+      width: {
+        ratio: 0.9,
+      },
+    },
+    grid: {
+      focus: {
+        show: false,
+      },
+      x: {
+        show: true,
+      },
+      y: {
+        show: true,
+      },
+    },
+    legend: {
+      show: false,
+    },
+    tooltip: {
+      contents: function (data) {
+        return `<table class="bb-tooltip"><tbody>
+            <tr><th colspan="2">Coverage ${barLabels[data[0].x]}</th></tr>
+            <tr><td class="value">${data[0].value} ${name}</td></tr>
+          </tbody></table>`;
+      },
+      grouped: false,
+    },
+  });
+  bb.generate(
+    barConfig('classes', "Class Coverage", [0,0,0,0,0,0,0,0,0,2,0,20])
+  );
+  bb.generate(
+    barConfig('methods', "Method Coverage", [0,0,0,0,0,0,1,0,0,1,0,44])
+  );
+
+  const scatterConfig = (name, complexityData) => ({
+    axis: {
+      x: {
+        label: {
+          text: 'Code Coverage (in percent)',
+          position: 'outer-right',
+        },
+        tick: {
+          values: [0, 20, 40, 60, 80, 100],
+        },
+      },
+      y: {
+        label: {
+          text: 'Cyclomatic Complexity',
+          position: 'outer-top',
+        },
+        min: 0,
+        padding: {
+          bottom: 0,
+          top: 5,
+        },
+      },
+    },
+    bindto: `#${name}Complexity`,
+    data: {
+      columns: [
+        ["complexity_x"].concat(complexityData.map(d => d[0])),
+        ["complexity"].concat(complexityData.map(d => d[1])),
+      ],
+      onclick: function(data, element) {
+        window.location = complexityData[data.index][2];
+      },
+      type: "scatter",
+      xs: {
+        "complexity": "complexity_x",
+      },
+    },
+    grid: {
+      focus: {
+        show: true,
+        y: true,
+      },
+      x: {
+        show: true,
+      },
+      y: {
+        show: true,
+      },
+    },
+    legend: {
+      show: false,
+    },
+    tooltip: {
+      contents: function (data) {
+        const coverage = Math.round(data[0].x);
+        const complexity = data[0].value;
+        const targetName = complexityData[data[0].index][3];
+        const crap = complexityData[data[0].index][4];
+        return `<table class="bb-tooltip"><tbody>
+            <tr><th colspan="2">${targetName}</th></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Coverage</td><td class="name">${coverage}%</td></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Complexity</td><td class="value">${complexity}</td></tr>
+            <tr class="bb-tooltip-name-complexity"><td>Crap</td><td class="value">${crap}</td></tr>
+          </tbody></table>`;
+      },
+      grouped: false,
+    },
+  });
+  const classComplexityData = JSON.parse(document.getElementById('complexity_class').textContent);
+  bb.generate(
+    scatterConfig("class", classComplexityData)
+  );
+  const methodComplexityData = JSON.parse(document.getElementById('complexity_method').textContent);
+  bb.generate(
+    scatterConfig("method", methodComplexityData),
+  );
+  </script>
+ </body>
+</html>

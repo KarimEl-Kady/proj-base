@@ -102,7 +102,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo_mysql, pdo_pgsql, redis, bcmath, gd, intl, zip, opcache, pcntl, mbstring
-          coverage: none
+          coverage: pcov
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -140,7 +140,32 @@ jobs:
           php artisan route:list > /dev/null
           php artisan route:cache && php artisan route:clear   # guard: routes must stay cacheable
           php artisan module:boundaries                        # guard: no undeclared cross-module deps
+          php artisan tenant:classify                          # guard: every model is tenant-scoped or declared global
           php artisan about
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+
+      # The steps above boot under the default tenancy mode (none) only.
+      # Route registration/prefixing genuinely forks on mode (path-tenancy
+      # prefixes every module API/web/dashboard route with {tenant}/ — see
+      # CoreServiceProvider::loadModuleRouteFiles), so route:cache/:list
+      # under "none" alone can't catch a routing regression that only shows
+      # up once tenancy is active. Cheap (no migrate, no factories), so it
+      # runs independently of whatever the module test suite's tenancy
+      # assumptions are — see docs/architecture.md's "Testing Under
+      # Tenancy" note for the fuller picture and its current gaps.
+      - name: Boot smoke check under active tenancy modes (single, multi x subdomain/header/path)
+        run: |
+          for mode in single multi; do
+            PROJECT_TENANCY_MODE=$mode php artisan config:clear --ansi
+            PROJECT_TENANCY_MODE=$mode php artisan route:list > /dev/null
+            PROJECT_TENANCY_MODE=$mode php artisan route:cache
+            PROJECT_TENANCY_MODE=$mode php artisan route:clear
+          done
+          PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:list > /dev/null
+          PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:cache
+          PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:clear
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
@@ -171,8 +196,15 @@ jobs:
           DB_USERNAME: proj_base
           DB_PASSWORD: secret
 
+      # Measured line coverage at the point this floor was introduced was
+      # 79.7% (php artisan test --coverage-text). 75% leaves a few points of
+      # headroom for normal fluctuation while still catching the real
+      # failure mode this exists for — a PR that adds a whole module with
+      # no tests. Ratchet this up as coverage actually improves; the report
+      # (uploaded as a build artifact below) shows exactly which classes
+      # are dragging it down.
       - name: Run tests
-        run: php artisan test
+        run: php artisan test --coverage --min=75 --coverage-clover=storage/coverage/clover.xml --coverage-html=storage/coverage/html
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
@@ -180,6 +212,14 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
+
+      - name: Upload coverage report
+        if: always() && matrix.php == '8.3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: storage/coverage
+          retention-days: 14
 
       - name: Redis queue and cache integration
         run: php artisan test --filter=RedisQueueIntegrationTest

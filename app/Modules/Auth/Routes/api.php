@@ -51,8 +51,14 @@ Route::prefix('auth/email')->group(function () {
 
 Route::prefix('auth/2fa')->middleware('auth:sanctum')->group(function () {
     Route::post('/enable', [TwoFactorController::class, 'enable'])->name('api.auth.2fa.enable');
-    Route::post('/confirm', [TwoFactorController::class, 'confirm'])->name('api.auth.2fa.confirm');
-    Route::post('/disable', [TwoFactorController::class, 'disable'])->name('api.auth.2fa.disable');
+
+    Route::post('/confirm', [TwoFactorController::class, 'confirm'])
+        ->middleware('throttle:6,1')
+        ->name('api.auth.2fa.confirm');
+
+    Route::post('/disable', [TwoFactorController::class, 'disable'])
+        ->middleware('throttle:6,1')
+        ->name('api.auth.2fa.disable');
 });
 
 Route::prefix('auth/tokens')->middleware('auth:sanctum')->group(function () {

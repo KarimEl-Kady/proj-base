@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
- * Catch-up path for projects that started with tenancy mode "none" and
- * switched to "single" or "multi": finds every tenant-scoped model
- * (HasTenantScope) whose table is missing the tenant column and generates
- * the add-column migration into the owning module. New tables don't need
- * this — their create migrations use $table->tenantColumn(), which adds
- * the column automatically whenever tenancy is active.
+ * Retrofit path for tenant-scoped tables (HasTenantScope) whose migration
+ * predates this project's tenancy setup, or was hand-written without
+ * `$table->tenantColumn()`: finds every such model whose table is missing
+ * the tenant column and generates the add-column migration into the owning
+ * module. Tables created with $table->tenantColumn() already get the
+ * column unconditionally, in every tenancy mode, and never need this.
  */
 class TenantMigrationsCommand extends Command
 {
@@ -25,13 +25,6 @@ class TenantMigrationsCommand extends Command
 
     public function handle(): int
     {
-        if (! has_tenancy()) {
-            $this->info('Tenancy mode is [none] — tables don\'t need a tenant column.');
-            $this->line('Set PROJECT_TENANCY_MODE=single or multi and re-run to generate catch-up migrations.');
-
-            return self::SUCCESS;
-        }
-
         $column = config('project.tenancy.tenant_column', 'tenant_id');
         $models = TenantModelDiscovery::discover($this->option('module'));
 

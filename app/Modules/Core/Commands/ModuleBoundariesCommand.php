@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Commands;
 
+use App\Modules\Core\Support\ModuleReferenceScanner;
 use App\Modules\Core\Support\ModuleRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
@@ -60,9 +61,7 @@ class ModuleBoundariesCommand extends Command
                     continue;
                 }
 
-                preg_match_all('/App\\\\Modules\\\\([A-Za-z0-9]+)\\\\/', $file->getContents(), $matches);
-
-                foreach (array_unique($matches[1]) as $target) {
+                foreach (ModuleReferenceScanner::referencedModules($file->getContents()) as $target) {
                     if (! in_array($target, $moduleAllowed)) {
                         $violations[] = [
                             $module,
@@ -83,7 +82,7 @@ class ModuleBoundariesCommand extends Command
                         continue;
                     }
 
-                    if (preg_match('/\bApp\\\\/', $file->getContents()) === 1) {
+                    if (ModuleReferenceScanner::referencesAppNamespace($file->getContents())) {
                         $violations[] = [
                             'package:'.basename($packageDir),
                             'application-coupling',

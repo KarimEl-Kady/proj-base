@@ -74,8 +74,23 @@ php-test:
     - php artisan route:list > /dev/null   # boot smoke check
     - php artisan route:cache && php artisan route:clear
     - php artisan module:boundaries
-    - php artisan test
+    - php artisan tenant:classify
+    # Route registration/prefixing forks on tenancy mode (path-tenancy
+    # prefixes every module route with {tenant}/ — see
+    # CoreServiceProvider::loadModuleRouteFiles), so the smoke check above
+    # (mode "none") can't catch a routing regression that only shows up
+    # once tenancy is active. Cheap — no migrate, no factories.
+    - for mode in single multi; do PROJECT_TENANCY_MODE=$mode php artisan route:list > /dev/null && PROJECT_TENANCY_MODE=$mode php artisan route:cache && PROJECT_TENANCY_MODE=$mode php artisan route:clear; done
+    - PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:list > /dev/null
+    - PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:cache
+    - PROJECT_TENANCY_MODE=multi PROJECT_TENANT_IDENTIFICATION=path php artisan route:clear
     - apt-get install -qq -y autoconf g++ make > /dev/null
+    - pecl install pcov > /dev/null && docker-php-ext-enable pcov
+    # Measured line coverage at the point this floor was introduced was
+    # 79.7% (php artisan test --coverage-text) — 75% leaves headroom for
+    # normal fluctuation while still catching a PR that adds a whole module
+    # with no tests. Ratchet up as coverage actually improves.
+    - php artisan test --coverage --min=75 --coverage-clover=storage/coverage/clover.xml --coverage-html=storage/coverage/html
     - pecl install redis > /dev/null && docker-php-ext-enable redis
     - RUN_REDIS_INTEGRATION=true CACHE_STORE=redis QUEUE_CONNECTION=redis REDIS_HOST=redis php artisan test --filter=RedisQueueIntegrationTest
   variables:
@@ -85,6 +100,11 @@ php-test:
     SESSION_DRIVER: array
     QUEUE_CONNECTION: sync
     MAIL_MAILER: array
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - storage/coverage
 
 # Tests run on SQLite; this guards schema portability on the real driver
 # (FK ordering, column types) in every tenancy mode.

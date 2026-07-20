@@ -5,7 +5,9 @@ namespace App\Modules\User\Commands;
 use App\Modules\Core\Support\Tenancy;
 use App\Modules\User\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Local\Permission\Models\Role;
 
 use function Laravel\Prompts\confirm;
@@ -176,10 +178,14 @@ class MakeAdminCommand extends Command
         $password = $this->option('password') ?? password(
             label: 'Password',
             required: true,
-            validate: fn (string $value) => strlen($value) >= 8
-                ? null
-                : 'The password must be at least 8 characters.',
+            validate: fn (string $value) => $this->passwordError($value),
         );
+
+        if (($error = $this->passwordError((string) $password)) !== null) {
+            $this->error($error);
+
+            return null;
+        }
 
         $user = User::query()->create([
             'name' => $name,
@@ -190,5 +196,22 @@ class MakeAdminCommand extends Command
         $this->info("Created user [{$email}].");
 
         return $user;
+    }
+
+    /**
+     * Same policy as registration and CreateUserRequest (Password::defaults())
+     * — the bootstrap admin account, of all accounts, should not get a
+     * weaker bar than a public signup form. Checked here too (not just in
+     * the prompt's validate: callback) so a scripted --password= can't
+     * skip it.
+     */
+    protected function passwordError(string $value): ?string
+    {
+        $validator = Validator::make(
+            ['password' => $value],
+            ['password' => ['required', 'string', Password::defaults()]],
+        );
+
+        return $validator->fails() ? $validator->errors()->first('password') : null;
     }
 }

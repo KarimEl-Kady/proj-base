@@ -5,7 +5,6 @@ namespace App\Modules\User\Services;
 use App\Modules\Core\Services\BaseService;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\UserRepository;
-use Illuminate\Support\Facades\Hash;
 
 class UserService extends BaseService
 {
@@ -14,22 +13,20 @@ class UserService extends BaseService
         parent::__construct($repository);
     }
 
+    /**
+     * Password hashing is not done here: User::casts()['password'] is
+     * 'hashed', so every write path (this service, AuthService::register,
+     * MakeAdminCommand, factories) hashes through the same single mechanism
+     * — the model — instead of each caller owning its own Hash::make() call.
+     */
     public function create(array $data): User
     {
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
-
         /** @var User */
         return parent::create($data);
     }
 
     public function update(int|string $id, array $data): User
     {
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
-
         /** @var User */
         return parent::update($id, $data);
     }

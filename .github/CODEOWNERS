@@ -1,0 +1,19 @@
+# Module ownership. Replace every @org/... placeholder with a real GitHub
+# team or username before this matters for review routing — GitHub ignores
+# entries that don't resolve to an actual team/user, so an unedited
+# placeholder is a silent no-op, not an error.
+#
+# `php artisan make:module` appends a line here automatically when the
+# wizard's "owning team" prompt isn't left blank, so this file grows with
+# the module registry instead of drifting from it. Edit by hand for
+# anything the wizard didn't cover (Core, existing modules below).
+
+# Platform layer — not a module, owned by whoever maintains the base itself.
+/app/Modules/Core/ @org/platform-team
+/config/project.php @org/platform-team
+/app/Vendor/ @org/platform-team
+
+# Modules present as of this review pass.
+/app/Modules/Auth/ @org/platform-team
+/app/Modules/User/ @org/platform-team
+/app/Modules/Geo/ @org/platform-team

@@ -10,6 +10,10 @@ use Local\Permission\Support\PermissionRegistry;
 
 /**
  * @property int $id
+ * @property int|string|null $tenant_id Null = global role (the only value
+ *                                      anything sets today). A host app may use this to scope a role
+ *                                      to one tenant once it needs custom per-tenant roles — this
+ *                                      package makes no assumption about tenancy being enabled at all.
  * @property string $name
  * @property string $guard_name
  * @property ?string $description

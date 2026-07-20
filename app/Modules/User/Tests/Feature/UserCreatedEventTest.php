@@ -51,7 +51,7 @@ class UserCreatedEventTest extends TestCase
     {
         Queue::fake();
 
-        User::factory()->create();
+        $this->withTestTenant(null, fn () => User::factory()->create());
 
         Queue::assertPushed(
             CallQueuedListener::class,
@@ -70,6 +70,6 @@ class UserCreatedEventTest extends TestCase
             });
 
         // Sync queue in tests — the queued listener runs inline.
-        User::factory()->create(['email' => 'carol@example.com']);
+        $this->withTestTenant(null, fn () => User::factory()->create(['email' => 'carol@example.com']));
     }
 }

@@ -4,7 +4,7 @@ Country + city reference data for seeding, installed as a **local path package**
 
 Ships data for **Egypt (EG)**, **Kuwait (KW)**, **UAE (AE)**, and **KSA (SA)** — name (English + Arabic), ISO2/ISO3 codes, phone code, currency, flag emoji, timezone, and a list of major cities with coordinates.
 
-This package holds **only data + read access to it** — no Eloquent models, no migrations, no artisan commands. The `Country` and `City` modules own the actual database tables and seeders; this package is what they seed *from*, so the reference data can grow (more countries, more cities) without touching module code.
+This package holds **only data + read access to it** — no Eloquent models, no migrations, no artisan commands. The `Geo` module owns the actual database tables and seeders; this package is what it seeds *from*, so the reference data can grow (more countries, more cities) without touching module code.
 
 ## Install
 
@@ -29,7 +29,7 @@ $geo->country('FR');    // throws InvalidArgumentException — not shipped
 
 ## Which countries get seeded
 
-`config/geo_seeder.php` → `countries` is the single source of truth, read by `App\Modules\Country\Database\Seeders\CountrySeeder`, `App\Modules\City\Database\Seeders\CitySeeder`, and the `php artisan geo:seed` command:
+`config/geo_seeder.php` → `countries` is the single source of truth, read by `App\Modules\Geo\Database\Seeders\CountrySeeder`, `App\Modules\Geo\Database\Seeders\CitySeeder`, and the `php artisan geo:seed` command:
 
 ```bash
 GEO_SEED_COUNTRIES=EG,KW,AE,SA   # .env, comma-separated ISO2 codes

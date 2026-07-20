@@ -23,11 +23,11 @@ class UserApiTest extends TestCase
 
     protected function makeUser(string $name = 'Alice', string $email = 'alice@example.com'): User
     {
-        return User::query()->create([
+        return $this->withTestTenant(null, fn () => User::query()->create([
             'name' => $name,
             'email' => $email,
             'password' => 'secret123',
-        ]);
+        ]));
     }
 
     /**
@@ -74,8 +74,50 @@ class UserApiTest extends TestCase
         $this->getJson('/api/v1/users')->assertForbidden();
         $this->postJson('/api/v1/users', [])->assertForbidden();
         $this->getJson("/api/v1/users/{$uuid}")->assertForbidden();
-        $this->putJson("/api/v1/users/{$uuid}", [])->assertForbidden();
         $this->deleteJson("/api/v1/users/{$uuid}")->assertForbidden();
+    }
+
+    // ── Record-level authorization (UserPolicy) ───────────────────────
+
+    /**
+     * update carries no route-level permission middleware — see
+     * Routes/api.php — because UserPolicy::update() allows either
+     * users.update or the actor editing their own record. Someone else's
+     * record without the permission is still forbidden.
+     */
+    public function test_update_is_forbidden_for_another_users_record_without_permission(): void
+    {
+        $target = $this->makeUser();
+        $this->authenticate(permissions: []);
+
+        $this->putJson("/api/v1/users/{$target->uuid}", ['name' => 'Nope'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'name' => 'Alice']);
+    }
+
+    public function test_update_allows_a_user_to_update_their_own_profile_without_any_permission(): void
+    {
+        $user = $this->authenticate(permissions: []);
+
+        $this->putJson("/api/v1/users/{$user->uuid}", ['name' => 'Self Updated'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'name' => 'Self Updated']);
+    }
+
+    /**
+     * UserPolicy::delete() denies self-deletion outright, even for an
+     * admin holding users.delete — the route-level permission gate is a
+     * necessary but not sufficient condition here.
+     */
+    public function test_destroy_denies_self_deletion_even_with_permission(): void
+    {
+        $user = $this->authenticate(permissions: 'users.delete');
+
+        $this->deleteJson("/api/v1/users/{$user->uuid}")->assertForbidden();
+
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
     }
 
     public function test_permissions_are_checked_per_action_not_as_a_bundle(): void

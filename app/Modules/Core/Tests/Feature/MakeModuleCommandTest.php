@@ -22,6 +22,10 @@ class MakeModuleCommandTest extends TestCase
 
     protected string $registryBackup;
 
+    protected string $codeownersPath;
+
+    protected string $codeownersBackup;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -29,6 +33,8 @@ class MakeModuleCommandTest extends TestCase
         $this->modulePath = module_path('Widget');
         $this->registryPath = config_path('project_modules.php');
         $this->registryBackup = File::get($this->registryPath);
+        $this->codeownersPath = base_path('.github/CODEOWNERS');
+        $this->codeownersBackup = File::get($this->codeownersPath);
 
         File::deleteDirectory($this->modulePath);
     }
@@ -39,14 +45,16 @@ class MakeModuleCommandTest extends TestCase
         // put both back exactly as they were.
         File::deleteDirectory($this->modulePath);
         File::put($this->registryPath, $this->registryBackup);
+        File::put($this->codeownersPath, $this->codeownersBackup);
 
         parent::tearDown();
     }
 
-    protected function generateWidgetModule(): void
+    protected function generateWidgetModule(string $owner = ''): void
     {
         $this->artisan('make:module')
             ->expectsQuestion('Module name', 'Widget')
+            ->expectsQuestion('Owning team (GitHub handle, e.g. @org/blog-team) — optional', $owner)
             ->expectsQuestion('Which controllers does the module need?', 'api')
             // The multiselect is keyed value => label; Laravel asserts against
             // both halves, so both are listed here.
@@ -99,6 +107,23 @@ class MakeModuleCommandTest extends TestCase
 
         $this->assertContains('widgets.view', $loaded);
         $this->assertContains('widgets.delete', $loaded);
+    }
+
+    public function test_an_owner_answer_is_recorded_in_codeowners(): void
+    {
+        $this->generateWidgetModule('@org/widget-team');
+
+        $this->assertStringContainsString(
+            '/app/Modules/Widget/ @org/widget-team',
+            File::get($this->codeownersPath),
+        );
+    }
+
+    public function test_leaving_the_owner_prompt_blank_does_not_touch_codeowners(): void
+    {
+        $this->generateWidgetModule('');
+
+        $this->assertSame($this->codeownersBackup, File::get($this->codeownersPath));
     }
 
     public function test_generated_files_are_valid_php(): void

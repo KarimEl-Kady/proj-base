@@ -18,9 +18,11 @@ use App\Modules\Core\Commands\ProjectInfoCommand;
 use App\Modules\Core\Commands\PruneMessagesCommand;
 use App\Modules\Core\Commands\PublishOutboxCommand;
 use App\Modules\Core\Commands\RetryOutboxCommand;
+use App\Modules\Core\Commands\TenantClassifyCommand;
 use App\Modules\Core\Commands\TenantMigrationsCommand;
 use App\Modules\Core\Commands\ValidateProjectCommand;
 use App\Modules\Core\Middleware\RequestContextMiddleware;
+use App\Modules\Core\Middleware\SecurityHeadersMiddleware;
 use App\Modules\Core\Middleware\TenantMiddleware;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Command;
@@ -67,6 +69,7 @@ class CoreServiceProvider extends ServiceProvider
                 PublishOutboxCommand::class,
                 ProjectInfoCommand::class,
                 RetryOutboxCommand::class,
+                TenantClassifyCommand::class,
                 TenantMigrationsCommand::class,
                 ValidateProjectCommand::class,
             ]);
@@ -79,6 +82,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->loadModuleRouteFiles();
         $this->registerTenantMiddleware();
         $this->registerRequestContextMiddleware();
+        $this->registerSecurityHeadersMiddleware();
         $this->registerRateLimiting();
         $this->registerQueueHeartbeat();
     }
@@ -114,32 +118,39 @@ class CoreServiceProvider extends ServiceProvider
     }
 
     /**
-     * Schema macros that make migrations tenancy-mode aware. Use as a bare
-     * statement in create-table migrations:
+     * Schema macro used as a bare statement in create-table migrations:
      *
      *     $table->tenantColumn();
      *
-     * Whenever tenancy is active (single or multi mode) it adds the
-     * configured tenant column (nullable, indexed) referencing the configured
-     * tenant model's table; in "none" mode it's a no-op. For tables created
-     * while the project was still in "none" mode, `php artisan
-     * tenant:migrations` generates the catch-up add-column migrations.
+     * Unconditionally adds the configured tenant column (nullable, indexed,
+     * FK to the configured tenant model's table) regardless of the current
+     * tenancy mode — mirroring the `tenants` table itself, which is also
+     * created in every mode (see its migration's docblock). A schema that
+     * doesn't fork on `project.tenancy.mode` means switching modes is a
+     * config + backfill change, never a "did every table get the column"
+     * archaeology exercise, and every environment ends up with the same
+     * schema no matter which mode it was first migrated under.
+     *
+     * In "none" mode the column simply stays null on every row — no code
+     * path stamps or scopes on it, since HasTenantScope and the creating()
+     * hook both no-op when `has_tenancy()` is false. `php artisan
+     * tenant:migrations` remains available to retrofit hand-written
+     * migrations (ones that didn't use this macro) that are missing the
+     * column.
      */
     protected function registerTenancyMacros(): void
     {
         Blueprint::macro('tenantColumn', function (): Blueprint {
             /** @var Blueprint $this */
-            if (has_tenancy()) {
-                $column = config('project.tenancy.tenant_column', 'tenant_id');
-                /** @var class-string<Model> $tenantModel */
-                $tenantModel = config('project.tenancy.tenant_model', Tenant::class);
-                $tenantTable = (new $tenantModel)->getTable();
-                $this->foreignId($column)
-                    ->nullable()
-                    ->index()
-                    ->constrained($tenantTable)
-                    ->restrictOnDelete();
-            }
+            $column = config('project.tenancy.tenant_column', 'tenant_id');
+            /** @var class-string<Model> $tenantModel */
+            $tenantModel = config('project.tenancy.tenant_model', Tenant::class);
+            $tenantTable = (new $tenantModel)->getTable();
+            $this->foreignId($column)
+                ->nullable()
+                ->index()
+                ->constrained($tenantTable)
+                ->restrictOnDelete();
 
             return $this;
         });
@@ -228,6 +239,16 @@ class CoreServiceProvider extends ServiceProvider
     }
 
     /**
+     * "web" only — the dashboard rides on the "web" group (see
+     * project.routes.dashboard), and "api" serves JSON to non-browser
+     * clients that don't need clickjacking/MIME-sniffing protection.
+     */
+    protected function registerSecurityHeadersMiddleware(): void
+    {
+        $this->app['router']->pushMiddlewareToGroup('web', SecurityHeadersMiddleware::class);
+    }
+
+    /**
      * Module route files. Loaded for every active module (plus Core); each
      * file is optional, only existing ones are registered.
      *
@@ -242,6 +263,17 @@ class CoreServiceProvider extends ServiceProvider
      */
     protected function loadModuleRouteFiles(): void
     {
+        // route:cache already compiled and stored the route table; re-running
+        // this filesystem scan + Route::group() registration on every boot
+        // would just repeat work the cache exists to skip. Laravel replaces
+        // the router's route collection with the cached one after boot()
+        // regardless (see bootstrap/app.php withRouting()), so this guard
+        // only removes redundant work — it doesn't change what routes end
+        // up registered.
+        if ($this->app->routesAreCached()) {
+            return;
+        }
+
         $modules = array_unique(array_merge(['Core'], config('project.modules', [])));
         $pathTenancy = is_multi_tenant()
             && config('project.tenancy.tenant_identification') === 'path';

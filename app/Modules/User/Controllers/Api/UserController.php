@@ -49,6 +49,9 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, string $id): JsonResponse
     {
+        $target = $this->userService->findOrFail($id);
+        $this->authorize('update', $target);
+
         $user = $this->userService->update($id, $request->validated());
 
         return $this->successResponse(
@@ -59,6 +62,9 @@ class UserController extends Controller
 
     public function destroy(string $id): JsonResponse
     {
+        $target = $this->userService->findOrFail($id);
+        $this->authorize('delete', $target);
+
         $this->userService->delete($id);
 
         return $this->successResponse(null, 'User deleted successfully.');

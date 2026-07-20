@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: proj-base-scheduler
+  labels:
+    app.kubernetes.io/name: proj-base
+    app.kubernetes.io/component: scheduler
+spec:
+  # Laravel's own scheduler decides what actually runs each minute (see
+  # routes/console.php / Console\Kernel) — this just has to fire that often.
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 50
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: scheduler
+              image: ghcr.io/ORG/proj-base:TAG
+              command: ["php", "artisan", "schedule:run"]
+              envFrom:
+                - secretRef:
+                    name: proj-base-env
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 250m
+                  memory: 256Mi

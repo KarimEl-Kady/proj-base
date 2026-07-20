@@ -789,6 +789,12 @@ class ModuleMakeCommand extends Command
 
             class {$name} extends QueuedListener
             {
+                // 'default', 'bulk', or 'notifications' — see
+                // config('project.events.lanes'). Change this if this
+                // listener does lower-priority work that shouldn't share a
+                // worker pool with latency-sensitive listeners.
+                protected string \$lane = 'default';
+
                 public function handle({$eventShort} \$event): void
                 {
                     //

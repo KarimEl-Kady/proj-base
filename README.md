@@ -82,7 +82,7 @@ app/Modules/{Module}/
 | **Module boundaries** | `php artisan module:boundaries` (runs in CI) fails on undeclared cross-module dependencies — declared in `config/project.php` |
 | **Secure-by-default generators** | `make:module` emits routes behind `auth` **and** per-action `permission:` middleware, plus the matching `Config/permissions.php` — a new module can't accidentally ship CRUD open to every logged-in user |
 | **Static analysis** | PHPStan/Larastan level 5 at zero errors, enforced in CI (`composer analyse`) alongside Pint and the boundary check |
-| **Country/City reference data** | `Country` and `City` modules (full CRUD API) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
+| **Country/City reference data** | `Geo` module (full CRUD API for both) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
 | **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or `/{tenant}/...` path resolution, cached and fail-closed. Active request context is authoritative on writes; deliberate cross-tenant work uses explicit helpers |
 | **Operations** | Separate liveness/readiness probes, request IDs propagated through Context, JSON stderr logging, queue heartbeat/backlog visibility, scheduled pruning, and fail-fast deployment validation |
 | **Feature flags** | Registration, email verification, 2FA, personal access tokens — togglable via env and actually implemented by the Auth module |
@@ -283,7 +283,7 @@ $post->getFirstMediaUrl('covers');
 $post->clearMedia('covers');
 ```
 
-**`local/geo-seeder`** — country/city reference data (name, ISO2/ISO3, phone code, currency, flag, timezone; cities with coordinates) for **Egypt, Kuwait, UAE, and KSA**. Pure data + a read-only repository — no models, no migrations of its own; the `Country`/`City` modules own the tables and seed *from* this package:
+**`local/geo-seeder`** — country/city reference data (name, ISO2/ISO3, phone code, currency, flag, timezone; cities with coordinates) for **Egypt, Kuwait, UAE, and KSA**. Pure data + a read-only repository — no models, no migrations of its own; the `Geo` module owns the tables and seeds *from* this package:
 
 ```php
 use Local\GeoSeeder\GeoDataRepository;
@@ -375,7 +375,8 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_API_PREFIX` / `PROJECT_API_VERSION` | `api` / `v1` | Central prefix applied to every module API |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
-| `PROJECT_EVENTS_QUEUE` / `PROJECT_EVENTS_TRIES` | *(default queue)* / `3` | Queue + retries for listeners extending `QueuedListener` |
+| `PROJECT_EVENTS_QUEUE_DEFAULT` / `_BULK` / `_NOTIFICATIONS` | *(default queue, all three)* | Named lanes for listeners extending `QueuedListener` — see `QueuedListener::$lane` |
+| `PROJECT_EVENTS_TRIES` | `3` | Retries for listeners extending `QueuedListener` |
 | `DB_CONNECTION` | `sqlite` locally / `mysql` in Docker | Single driver authority: `mysql`, `pgsql`, or `sqlite` |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
 | `PROJECT_PAGINATION_MAX_PER_PAGE` | `100` | Hard cap for `?per_page=` |

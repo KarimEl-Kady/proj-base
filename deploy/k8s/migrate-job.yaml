@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Kubernetes Job names must be unique — append a tag/sha when you
+  # generate this from CI (e.g. proj-base-migrate-${GIT_SHA}), or delete
+  # the previous run first: `kubectl delete job proj-base-migrate --ignore-not-found`.
+  name: proj-base-migrate
+  labels:
+    app.kubernetes.io/name: proj-base
+    app.kubernetes.io/component: migrate
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/ORG/proj-base:TAG
+          command: ["php", "artisan", "migrate", "--force"]
+          envFrom:
+            - secretRef:
+                name: proj-base-env
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+# Run this to completion before rolling deployment.yaml to the same image
+# tag:
+#   kubectl apply -f migrate-job.yaml
+#   kubectl wait --for=condition=complete --timeout=120s job/proj-base-migrate

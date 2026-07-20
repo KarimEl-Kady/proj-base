@@ -4,10 +4,8 @@ namespace App\Modules\User\Tests\Feature;
 
 use App\Models\Tenant;
 use App\Modules\User\Models\User;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class MakeAdminCommandTest extends TestCase
@@ -90,7 +88,6 @@ class MakeAdminCommandTest extends TestCase
     public function test_single_mode_stamps_the_admin_with_the_default_tenant(): void
     {
         config(['project.tenancy.mode' => 'single']);
-        $this->addTenantColumnToUsers();
 
         $this->artisan('user:make-admin', [
             'email' => 'boss@example.com',
@@ -120,7 +117,6 @@ class MakeAdminCommandTest extends TestCase
     public function test_multi_mode_creates_the_admin_under_the_given_tenant(): void
     {
         config(['project.tenancy.mode' => 'multi']);
-        $this->addTenantColumnToUsers();
 
         $tenant = Tenant::create(['name' => 'Acme', 'slug' => 'acme']);
 
@@ -149,16 +145,5 @@ class MakeAdminCommandTest extends TestCase
         ])
             ->expectsOutputToContain('No active tenant matches [ghost-corp]')
             ->assertFailed();
-    }
-
-    /**
-     * The test database migrates under the suite's default "none" mode,
-     * where tenantColumn() is a no-op — add the column by hand.
-     */
-    protected function addTenantColumnToUsers(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->index();
-        });
     }
 }
