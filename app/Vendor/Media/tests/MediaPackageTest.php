@@ -2,6 +2,7 @@
 
 namespace Local\Media\Tests;
 
+use App\Models\Tenant;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -9,8 +10,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Local\Media\Contracts\Mediable;
+use Local\Media\Models\Media;
 use Local\Media\Services\MediaService;
 use Local\Media\Traits\HasMedia;
+use RuntimeException;
 use Tests\TestCase;
 
 class MediaTestModel extends User implements Mediable
@@ -90,5 +93,35 @@ class MediaPackageTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $model->addMedia(UploadedFile::fake()->create('big.pdf', 10, 'application/pdf'));
+    }
+
+    public function test_media_records_and_paths_are_isolated_by_tenant(): void
+    {
+        config(['project.tenancy.mode' => 'multi']);
+        $tenantA = Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);
+        $tenantB = Tenant::query()->create(['name' => 'Globex', 'slug' => 'globex']);
+
+        $media = with_tenant($tenantA->id, function (): Media {
+            $model = $this->makeModel();
+
+            return $model->addMedia(UploadedFile::fake()->create('report.pdf', 10, 'application/pdf'));
+        });
+
+        $this->assertStringContainsString("media/tenants/{$tenantA->id}/", $media->path);
+        $this->assertNull(with_tenant($tenantB->id, fn () => Media::query()->find($media->id)));
+        $this->assertNotNull(with_tenant($tenantA->id, fn () => Media::query()->find($media->id)));
+
+        $this->expectException(RuntimeException::class);
+        with_tenant($tenantB->id, fn () => $media->contents());
+    }
+
+    public function test_collection_cannot_escape_its_storage_directory(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->makeModel()->addMedia(
+            UploadedFile::fake()->create('report.pdf', 10, 'application/pdf'),
+            '../private',
+        );
     }
 }

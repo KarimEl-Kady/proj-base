@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 // authenticated user can always update their own profile through this
 // endpoint. destroy keeps the users.delete gate at the route level *and*
 // UserPolicy::delete() denies self-deletion outright, even for an admin.
-Route::prefix('users')->middleware('auth:sanctum')->group(function () {
+Route::prefix('users')->middleware(['auth:sanctum', 'abilities:api'])->group(function () {
     Route::get('/', [UserController::class, 'index'])->middleware('permission:users.view')->name('api.users.index');
     Route::post('/', [UserController::class, 'store'])->middleware('permission:users.create')->name('api.users.store');
     Route::get('/{user}', [UserController::class, 'show'])->middleware('permission:users.view')->name('api.users.show');

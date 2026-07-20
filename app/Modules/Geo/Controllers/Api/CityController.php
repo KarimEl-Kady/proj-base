@@ -20,8 +20,9 @@ class CityController extends Controller
     {
         $records = $this->cityService->fetch($request);
 
-        return $this->successResponse(
-            CityResource::collection($records)->response()->getData(true),
+        return $this->successCollectionResponse(
+            CityResource::collection($records),
+            $request,
             'Cities retrieved successfully.'
         );
     }

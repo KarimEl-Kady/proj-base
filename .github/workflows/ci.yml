@@ -276,6 +276,18 @@ jobs:
       - name: Smoke-test production image
         run: docker run --rm --entrypoint php proj-base:ci artisan about --only=environment
 
+      - name: Assert production PHP hardening
+        run: |
+          docker run --rm --entrypoint php proj-base:ci -r '
+            $expected = ["display_errors" => "0", "display_startup_errors" => "0", "expose_php" => "0", "opcache.validate_timestamps" => "0"];
+            foreach ($expected as $key => $value) {
+                if ((string) ini_get($key) !== $value) {
+                    fwrite(STDERR, "$key is not production-safe\n");
+                    exit(1);
+                }
+            }
+          '
+
   # ---------------------------------------------------------------------------
   # Security — Composer audit
   # ---------------------------------------------------------------------------

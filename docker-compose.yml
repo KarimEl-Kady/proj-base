@@ -32,7 +32,7 @@ services:
     volumes:
       - .:/var/www/html:delegated
       - vendor:/var/www/html/vendor
-      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./docker/php/php-dev.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/php/www.conf:/usr/local/etc/php-fpm.d/zz-www.conf:ro
       - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
     environment:
@@ -206,9 +206,9 @@ services:
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
 
   # ---------------------------------------------------------------------------
-  # Queue Worker
+  # Default Queue Worker — latency-sensitive application work
   # ---------------------------------------------------------------------------
-  queue:
+  queue-default: &queue-service
     build:
       context: .
       dockerfile: Dockerfile
@@ -216,12 +216,12 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
-    container_name: proj-base-queue
+    container_name: proj-base-queue-default
     restart: unless-stopped
     volumes:
       - .:/var/www/html:delegated
       - vendor:/var/www/html/vendor
-      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./docker/php/php-dev.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
     environment:
       APP_NAME: ${APP_NAME:-BaseProject}
@@ -245,11 +245,7 @@ services:
       PROJECT_OUTBOX_FAILED_RETENTION: ${PROJECT_OUTBOX_FAILED_RETENTION:-720}
       PROJECT_INBOX_PROCESSED_RETENTION: ${PROJECT_INBOX_PROCESSED_RETENTION:-720}
     entrypoint: ["entrypoint.sh"]
-    # --queue lists every named lane (config/project.php events.lanes) plus
-    # the connection's literal "default" queue name, priority-ordered —
-    # ready to drain an isolated lane the moment its env var is set to a
-    # real queue name, no worker redeploy needed. See QueuedListener::$lane.
-    command: ["php", "artisan", "queue:work", "--queue=default,bulk,notifications", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
+    command: ["php", "artisan", "queue:work", "--queue=default", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -257,6 +253,23 @@ services:
         condition: service_healthy
     networks:
       - proj-base
+
+  # Separate processes make lane isolation real: bulk work cannot consume
+  # the capacity reserved for notifications or latency-sensitive jobs.
+  queue-bulk:
+    <<: *queue-service
+    container_name: proj-base-queue-bulk
+    command: ["php", "artisan", "queue:work", "--queue=bulk", "--sleep=3", "--tries=3", "--timeout=300", "--max-jobs=500", "--max-time=3600"]
+
+  queue-notifications:
+    <<: *queue-service
+    container_name: proj-base-queue-notifications
+    command: ["php", "artisan", "queue:work", "--queue=notifications", "--sleep=3", "--tries=3", "--timeout=90", "--max-jobs=1000", "--max-time=3600"]
+
+  outbox:
+    <<: *queue-service
+    container_name: proj-base-outbox
+    command: ["php", "artisan", "outbox:publish", "--loop", "--limit=500", "--sleep=1"]
 
   # ---------------------------------------------------------------------------
   # Scheduler (cron)
@@ -274,7 +287,7 @@ services:
     volumes:
       - .:/var/www/html:delegated
       - vendor:/var/www/html/vendor
-      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./docker/php/php-dev.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
     environment:
       APP_NAME: ${APP_NAME:-BaseProject}

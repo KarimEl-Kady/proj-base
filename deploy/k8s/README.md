@@ -20,7 +20,8 @@ below runs the immutable built image and is written to support N replicas.
 | `configmap-nginx.yaml` | ConfigMap | `docker/nginx/default.conf`, adapted for the sidecar (`fastcgi_pass 127.0.0.1:9000` instead of `app:9000`; the Vite HMR block is dropped — that's dev-only). |
 | `service.yaml` | Service | ClusterIP :80 → the nginx container. Put your cluster's Ingress (TLS termination, hostnames) in front of this — deliberately out of scope here, since it's the most cluster/provider-specific part. |
 | `hpa.yaml` | HorizontalPodAutoscaler | CPU-based, 2–10 replicas. A starting point, not a tuned value — watch real load before trusting these numbers. |
-| `queue-deployment.yaml` | Deployment | The queue worker, split from the web app on purpose (see `AGENTS.md`'s "Events vs. jobs" and the named-lane note in `config/project.php` → `events.lanes`) — `--queue=default,bulk,notifications`, single container, no nginx sidecar needed. |
+| `queue-deployment.yaml` | Deployments | Independent default, bulk, and notification workers. Separate processes/replicas prevent one lane from consuming another lane's capacity. |
+| `outbox-deployment.yaml` | Deployment | Two continuously polling transactional-outbox publishers; row claims make concurrent publishers safe. The minute scheduler remains as a recovery fallback. |
 | `scheduler-cronjob.yaml` | CronJob | `php artisan schedule:run`, every minute — replaces `docker-compose.yml`'s always-running `scheduler` service with a real cron primitive instead of a sleep loop. |
 | `migrate-job.yaml` | Job | `php artisan migrate --force`. Run this — `kubectl apply -f migrate-job.yaml && kubectl wait --for=condition=complete job/proj-base-migrate` — before rolling `deployment.yaml` to a new image tag. If you templatize this with Helm/Kustomize later, this is what becomes a pre-upgrade hook. |
 

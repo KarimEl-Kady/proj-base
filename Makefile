@@ -24,7 +24,7 @@ NC     := \033[0m # No Color
 DC        := docker compose
 EXEC      := $(DC) exec app
 EXEC_IT   := $(DC) exec -it app
-QUEUE     := $(DC) exec queue
+QUEUE     := $(DC) exec queue-default
 
 # ---------------------------------------------------------------------------
 # Help
@@ -146,8 +146,8 @@ module: ## Create a new module (interactive wizard)
 # ---------------------------------------------------------------------------
 # Queue
 # ---------------------------------------------------------------------------
-queue-restart: ## Restart the queue worker
-	$(DC) restart queue
+queue-restart: ## Restart all isolated queue workers
+	$(DC) restart queue-default queue-bulk queue-notifications
 
 queue-failed: ## List failed jobs
 	$(EXEC) php artisan queue:failed

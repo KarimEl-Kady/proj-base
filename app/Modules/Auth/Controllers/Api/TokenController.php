@@ -3,6 +3,7 @@
 namespace App\Modules\Auth\Controllers\Api;
 
 use App\Modules\Auth\Requests\CreateTokenRequest;
+use App\Modules\Auth\Services\AuthService;
 use App\Modules\Core\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ use Illuminate\Http\Request;
  */
 class TokenController extends Controller
 {
+    public function __construct(protected AuthService $authService) {}
+
     public function index(Request $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
@@ -29,13 +32,19 @@ class TokenController extends Controller
     {
         $this->ensureFeatureEnabled();
 
+        $this->authService->confirmSensitiveAction(
+            $request->user(),
+            $request->validated('current_password'),
+            $request->validated('code'),
+        );
+
         $expiration = max(1, min(
             (int) config('project.auth.personal_token_expiration', 43200),
             525600,
         ));
         $token = $request->user()->createToken(
             $request->validated('name'),
-            $request->validated('abilities', ['*']),
+            $request->validated('abilities', config('project.auth.personal_token_default_abilities', ['api'])),
             now()->addMinutes($expiration),
         );
 

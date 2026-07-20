@@ -4,6 +4,7 @@ namespace App\Modules\User\Listeners;
 
 use App\Modules\Core\Listeners\QueuedListener;
 use App\Modules\User\Events\UserCreated;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -19,7 +20,8 @@ class RecordUserCreation extends QueuedListener
             'event_id' => $event->eventId,
             'occurred_at' => $event->occurredAt->toIso8601String(),
             'user_uuid' => $event->user->uuid,
-            'email' => $event->user->email,
+            'tenant_id' => Context::get('tenant_id'),
+            'request_id' => Context::get('request_id'),
         ]);
     }
 }

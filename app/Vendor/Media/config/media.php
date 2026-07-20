@@ -12,8 +12,10 @@ return [
     |
     */
 
-    'disk' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'public')),
+    'disk' => env('MEDIA_DISK', env('FILESYSTEM_DISK', 'local')),
     'directory' => env('MEDIA_DIRECTORY', 'media'),
+    'temporary_urls' => env('MEDIA_TEMPORARY_URLS', true),
+    'temporary_url_ttl' => (int) env('MEDIA_TEMPORARY_URL_TTL', 5),
 
     /*
     |--------------------------------------------------------------------------

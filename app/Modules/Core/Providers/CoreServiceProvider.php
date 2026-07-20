@@ -5,6 +5,7 @@ namespace App\Modules\Core\Providers;
 use App\Models\Tenant;
 use App\Modules\Core\Commands\BackfillTenantDataCommand;
 use App\Modules\Core\Commands\CheckTenantDataCommand;
+use App\Modules\Core\Commands\CreateTenantCommand;
 use App\Modules\Core\Commands\MakeModuleCommand;
 use App\Modules\Core\Commands\MakePackageCommand;
 use App\Modules\Core\Commands\ModuleBoundariesCommand;
@@ -21,18 +22,11 @@ use App\Modules\Core\Commands\RetryOutboxCommand;
 use App\Modules\Core\Commands\TenantClassifyCommand;
 use App\Modules\Core\Commands\TenantMigrationsCommand;
 use App\Modules\Core\Commands\ValidateProjectCommand;
-use App\Modules\Core\Middleware\RequestContextMiddleware;
-use App\Modules\Core\Middleware\SecurityHeadersMiddleware;
-use App\Modules\Core\Middleware\TenantMiddleware;
-use Illuminate\Cache\RateLimiting\Limit;
+use App\Modules\Core\Support\RuntimeRegistrar;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -58,6 +52,7 @@ class CoreServiceProvider extends ServiceProvider
                 MakePackageCommand::class,
                 BackfillTenantDataCommand::class,
                 CheckTenantDataCommand::class,
+                CreateTenantCommand::class,
                 ModuleBoundariesCommand::class,
                 ModuleDeleteCommand::class,
                 ModuleDisableCommand::class,
@@ -80,36 +75,7 @@ class CoreServiceProvider extends ServiceProvider
         $this->registerTenancyMacros();
         $this->loadModuleResources();
         $this->loadModuleRouteFiles();
-        $this->registerTenantMiddleware();
-        $this->registerRequestContextMiddleware();
-        $this->registerSecurityHeadersMiddleware();
-        $this->registerRateLimiting();
-        $this->registerQueueHeartbeat();
-    }
-
-    protected function registerQueueHeartbeat(): void
-    {
-        Queue::looping(function (): void {
-            $ttl = max(30, (int) config('project.health.queue_heartbeat_ttl', 120));
-            Cache::put('project.queue_worker_heartbeat', now()->timestamp, $ttl);
-        });
-    }
-
-    /**
-     * Project-wide API rate limit (project.api.rate_limit requests/min,
-     * keyed per user or IP). Routes with their own throttle middleware
-     * (e.g. the Auth module's login/register) are limited by both.
-     */
-    protected function registerRateLimiting(): void
-    {
-        RateLimiter::for('api', function (Request $request) {
-            $limit = max(1, min((int) config('project.api.rate_limit', 60), 10000));
-
-            return Limit::perMinute($limit)
-                ->by($request->user()?->getAuthIdentifier() ?? $request->ip());
-        });
-
-        $this->app['router']->prependMiddlewareToGroup('api', 'throttle:api');
+        $this->app->make(RuntimeRegistrar::class)->register();
     }
 
     protected function loadHelpers(): void
@@ -218,34 +184,6 @@ class CoreServiceProvider extends ServiceProvider
                 }
             }
         }
-    }
-
-    /**
-     * Always registered on both route groups; the middleware itself is a
-     * pass-through when tenancy.mode is "none", so the mode is honored at
-     * request time (not frozen at boot) and flipping it never requires
-     * re-wiring.
-     */
-    protected function registerTenantMiddleware(): void
-    {
-        $this->app['router']->pushMiddlewareToGroup('api', TenantMiddleware::class);
-        $this->app['router']->pushMiddlewareToGroup('web', TenantMiddleware::class);
-    }
-
-    protected function registerRequestContextMiddleware(): void
-    {
-        $this->app['router']->pushMiddlewareToGroup('api', RequestContextMiddleware::class);
-        $this->app['router']->pushMiddlewareToGroup('web', RequestContextMiddleware::class);
-    }
-
-    /**
-     * "web" only — the dashboard rides on the "web" group (see
-     * project.routes.dashboard), and "api" serves JSON to non-browser
-     * clients that don't need clickjacking/MIME-sniffing protection.
-     */
-    protected function registerSecurityHeadersMiddleware(): void
-    {
-        $this->app['router']->pushMiddlewareToGroup('web', SecurityHeadersMiddleware::class);
     }
 
     /**

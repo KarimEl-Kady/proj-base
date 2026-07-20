@@ -14,8 +14,6 @@ use Illuminate\Support\Facades\DB;
  */
 class PermissionRegistry
 {
-    protected ?Collection $rolePermissionNames = null;
-
     /**
      * @return Collection<int, string> permission names for one role id
      */
@@ -29,10 +27,6 @@ class PermissionRegistry
      */
     protected function map(): Collection
     {
-        if ($this->rolePermissionNames !== null) {
-            return $this->rolePermissionNames;
-        }
-
         $plain = config('permission.cache.enabled', true)
             ? Cache::remember(
                 config('permission.cache.key', 'local.permission.role_permission_map'),
@@ -41,7 +35,7 @@ class PermissionRegistry
             )
             : $this->loadFromDatabase();
 
-        return $this->rolePermissionNames = collect($plain)
+        return collect($plain)
             ->map(fn (array $names) => collect($names));
     }
 
@@ -69,6 +63,5 @@ class PermissionRegistry
     public function forgetCache(): void
     {
         Cache::forget(config('permission.cache.key', 'local.permission.role_permission_map'));
-        $this->rolePermissionNames = null;
     }
 }

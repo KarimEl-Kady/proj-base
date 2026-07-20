@@ -20,8 +20,9 @@ class UserController extends Controller
     {
         $users = $this->userService->fetch($request);
 
-        return $this->successResponse(
-            UserResource::collection($users)->response()->getData(true),
+        return $this->successCollectionResponse(
+            UserResource::collection($users),
+            $request,
             'Users retrieved successfully.'
         );
     }
@@ -52,7 +53,7 @@ class UserController extends Controller
         $target = $this->userService->findOrFail($id);
         $this->authorize('update', $target);
 
-        $user = $this->userService->update($id, $request->validated());
+        $user = $this->userService->updateModel($target, $request->validated());
 
         return $this->successResponse(
             new UserResource($user),
@@ -65,7 +66,7 @@ class UserController extends Controller
         $target = $this->userService->findOrFail($id);
         $this->authorize('delete', $target);
 
-        $this->userService->delete($id);
+        $this->userService->deleteModel($target);
 
         return $this->successResponse(null, 'User deleted successfully.');
     }

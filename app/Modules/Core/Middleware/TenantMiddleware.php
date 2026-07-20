@@ -6,6 +6,7 @@ use App\Modules\Core\Support\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -41,6 +42,7 @@ class TenantMiddleware
         }
 
         Context::add('tenant_id', $tenantId);
+        Log::withContext(['tenant_id' => $tenantId]);
 
         if (config('project.tenancy.tenant_identification') === 'path') {
             $request->route()?->forgetParameter('tenant');

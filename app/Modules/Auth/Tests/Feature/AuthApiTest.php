@@ -4,6 +4,7 @@ namespace App\Modules\Auth\Tests\Feature;
 
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -126,22 +127,86 @@ class AuthApiTest extends TestCase
 
     public function test_named_personal_access_tokens_are_flag_gated(): void
     {
+        config(['project.features.personal_access_tokens' => false]);
         $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
 
-        $this->withToken($token)->postJson('/api/v1/auth/tokens', ['name' => 'ci'])->assertForbidden();
+        $tokenPayload = ['name' => 'ci', 'current_password' => 'secret-password'];
+
+        $this->withToken($token)->postJson('/api/v1/auth/tokens', $tokenPayload)->assertForbidden();
 
         config(['project.features.personal_access_tokens' => true]);
 
-        $created = $this->withToken($token)->postJson('/api/v1/auth/tokens', ['name' => 'ci']);
+        $created = $this->withToken($token)->postJson('/api/v1/auth/tokens', $tokenPayload);
         $created->assertCreated();
-        $this->assertNotEmpty($created->json('data.token'));
+        $namedToken = $created->json('data.token');
+        $this->assertNotEmpty($namedToken);
 
+        // The server-side default is API-only; a named integration token
+        // cannot manage credentials/tokens unless account:manage was
+        // explicitly requested during its password-confirmed creation.
+        Auth::forgetGuards();
+        $this->withToken($namedToken)->getJson('/api/v1/auth/tokens')->assertForbidden();
+
+        Auth::forgetGuards();
         $this->withToken($token)->getJson('/api/v1/auth/tokens')->assertOk();
 
         $user = User::query()->where('email', 'alice@example.com')->first();
         $namedTokenId = $user->tokens()->where('name', 'ci')->value('id');
 
+        Auth::forgetGuards();
         $this->withToken($token)->deleteJson("/api/v1/auth/tokens/{$namedTokenId}")->assertOk();
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $namedTokenId]);
+    }
+
+    public function test_named_token_abilities_are_allowlisted(): void
+    {
+        config(['project.features.personal_access_tokens' => true]);
+        $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
+
+        $this->withToken($token)->postJson('/api/v1/auth/tokens', [
+            'name' => 'unsafe',
+            'current_password' => 'secret-password',
+            'abilities' => ['root'],
+        ])->assertUnprocessable();
+    }
+
+    public function test_sensitive_account_changes_require_password_and_revoke_tokens(): void
+    {
+        $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/email', [
+            'email' => 'new@example.com',
+            'current_password' => 'wrong-password',
+        ])->assertUnprocessable();
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/email', [
+            'email' => 'new@example.com',
+            'current_password' => 'secret-password',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'new@example.com',
+            'email_verified_at' => null,
+        ]);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_profile_update_cannot_change_identity_credentials(): void
+    {
+        $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
+        $user = User::query()->firstOrFail();
+
+        $this->withToken($token)->putJson("/api/v1/users/{$user->uuid}", [
+            'name' => 'Updated',
+            'email' => 'attacker@example.com',
+            'password' => 'attacker-password',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Updated',
+            'email' => 'alice@example.com',
+        ]);
+        $this->assertTrue(password_verify('secret-password', $user->fresh()->password));
     }
 }

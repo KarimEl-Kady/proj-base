@@ -2,19 +2,27 @@
 
 namespace App\Modules\Auth\Controllers\Api;
 
+use App\Modules\Auth\Requests\ConfirmSensitiveActionRequest;
 use App\Modules\Auth\Requests\TwoFactorCodeRequest;
+use App\Modules\Auth\Services\AuthService;
 use App\Modules\Auth\Support\Totp;
 use App\Modules\Core\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class TwoFactorController extends Controller
 {
-    public function enable(Request $request): JsonResponse
+    public function __construct(protected AuthService $authService) {}
+
+    public function enable(ConfirmSensitiveActionRequest $request): JsonResponse
     {
         $this->ensureFeatureEnabled();
 
         $user = $request->user();
+        $this->authService->confirmSensitiveAction(
+            $user,
+            $request->validated('current_password'),
+            $request->validated('code'),
+        );
 
         if ($user->hasTwoFactorEnabled()) {
             return $this->failedResponse('Two-factor authentication is already enabled.', 422);

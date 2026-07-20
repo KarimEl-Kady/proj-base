@@ -31,7 +31,7 @@ class EmailVerificationEnforcementTest extends TestCase
 
         Sanctum::actingAs($model::factory()->create([
             'email_verified_at' => $verified ? now() : null,
-        ]));
+        ]), ['*']);
     }
 
     public function test_unverified_users_pass_while_the_feature_is_off(): void

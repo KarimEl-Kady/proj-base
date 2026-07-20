@@ -2,10 +2,13 @@
 
 namespace Local\Media\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Local\Media\Contracts\TenantResolver;
+use RuntimeException;
 
 /**
  * @property int $id
@@ -17,13 +20,14 @@ use Illuminate\Support\Str;
  * @property string $disk
  * @property string $path
  * @property int $size
+ * @property int|string|null $tenant_id
  * @property array $custom_properties
  */
 class Media extends Model
 {
     protected $table = 'media';
 
-    protected $guarded = ['id', 'uuid'];
+    protected $guarded = ['id', 'uuid', 'tenant_id'];
 
     protected function casts(): array
     {
@@ -35,7 +39,31 @@ class Media extends Model
 
     protected static function booted(): void
     {
+        static::addGlobalScope('tenant', function (Builder $builder): void {
+            $resolver = app(TenantResolver::class);
+
+            if (! $resolver->enabled()) {
+                return;
+            }
+
+            $tenantId = $resolver->id();
+
+            if ($tenantId === null) {
+                throw new RuntimeException('A tenant context is required to query media.');
+            }
+
+            $builder->where($builder->qualifyColumn('tenant_id'), $tenantId);
+        });
+
         static::creating(function (Media $media) {
+            $resolver = app(TenantResolver::class);
+            $tenantId = $resolver->id();
+
+            if ($resolver->enabled() && $tenantId === null) {
+                throw new RuntimeException('A tenant context is required to create media.');
+            }
+
+            $media->tenant_id = $tenantId;
             $media->uuid ??= (string) Str::uuid();
         });
 
@@ -43,6 +71,8 @@ class Media extends Model
         static::deleted(function (Media $media) {
             Storage::disk($media->disk)->delete($media->path);
         });
+
+        static::deleting(fn (Media $media) => $media->ensureTenantAccess());
     }
 
     public function mediable(): MorphTo
@@ -52,11 +82,23 @@ class Media extends Model
 
     public function url(): string
     {
-        return Storage::disk($this->disk)->url($this->path);
+        $this->ensureTenantAccess();
+        $disk = Storage::disk($this->disk);
+
+        if (config('media.temporary_urls', true)) {
+            return $disk->temporaryUrl(
+                $this->path,
+                now()->addMinutes(max(1, (int) config('media.temporary_url_ttl', 5))),
+            );
+        }
+
+        return $disk->url($this->path);
     }
 
     public function contents(): ?string
     {
+        $this->ensureTenantAccess();
+
         return Storage::disk($this->disk)->get($this->path);
     }
 
@@ -72,5 +114,14 @@ class Media extends Model
         }
 
         return round($size, 2).' '.$units[$step];
+    }
+
+    protected function ensureTenantAccess(): void
+    {
+        $resolver = app(TenantResolver::class);
+
+        if ($resolver->enabled() && (string) $resolver->id() !== (string) $this->tenant_id) {
+            throw new RuntimeException('Media belongs to a different tenant.');
+        }
     }
 }

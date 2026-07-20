@@ -10,12 +10,9 @@ use Illuminate\Queue\InteractsWithQueue;
  * the HTTP request. Retry behavior comes from config('project.events') so
  * every async listener in the project fails and retries the same way.
  *
- * Queue name comes from $lane — see config('project.events.lanes'). Every
- * lane is null (the connection's default queue) out of the box, and the
- * shipped workers (docker-compose `queue` service, `composer dev`) already
- * listen on all three lane names, so overriding $lane in a subclass is
- * enough by itself once a lane's env var is set to a real, distinct queue
- * name — no worker redeploy needed.
+ * Queue name comes from $lane — see config('project.events.lanes'). The
+ * shipped runtime starts an independent worker for each lane, so overriding
+ * $lane in a subclass changes both routing and reserved worker capacity.
  */
 abstract class QueuedListener implements ShouldQueue
 {

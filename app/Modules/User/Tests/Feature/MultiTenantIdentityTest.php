@@ -31,6 +31,7 @@ class MultiTenantIdentityTest extends TestCase
 
     public function test_each_tenant_can_register_the_same_email(): void
     {
+        config(['project.tenancy.registration' => 'open']);
         Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);
         Tenant::query()->create(['name' => 'Globex', 'slug' => 'globex']);
         $payload = [
@@ -45,6 +46,19 @@ class MultiTenantIdentityTest extends TestCase
             ->assertCreated();
 
         $this->assertDatabaseCount('users', 2);
+    }
+
+    public function test_multi_tenant_self_registration_is_fail_closed(): void
+    {
+        Tenant::query()->create(['name' => 'Acme', 'slug' => 'acme']);
+
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Owner',
+            'email' => 'owner@example.com',
+            'password' => 'secret-password',
+        ], ['X-Tenant-ID' => 'acme'])->assertForbidden();
+
+        $this->assertDatabaseCount('users', 0);
     }
 
     public function test_password_reset_token_cannot_cross_tenant_boundaries(): void

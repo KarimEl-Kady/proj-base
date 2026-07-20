@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proj-base-outbox
+  labels:
+    app.kubernetes.io/name: proj-base
+    app.kubernetes.io/component: outbox
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: proj-base
+      app.kubernetes.io/component: outbox
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: proj-base
+        app.kubernetes.io/component: outbox
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: outbox
+          image: ghcr.io/ORG/proj-base:TAG
+          command:
+            - php
+            - artisan
+            - outbox:publish
+            - --loop
+            - --limit=500
+            - --sleep=1
+          envFrom:
+            - secretRef:
+                name: proj-base-env
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

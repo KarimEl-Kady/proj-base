@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Auth\Controllers\Api\AccountSecurityController;
 use App\Modules\Auth\Controllers\Api\AuthController;
 use App\Modules\Auth\Controllers\Api\EmailVerificationController;
 use App\Modules\Auth\Controllers\Api\PasswordResetController;
@@ -41,7 +42,7 @@ Route::prefix('auth/password')->middleware('throttle:6,1')->group(function () {
 
 Route::prefix('auth/email')->group(function () {
     Route::post('/resend', [EmailVerificationController::class, 'resend'])
-        ->middleware(['auth:sanctum', 'throttle:6,1'])
+        ->middleware(['auth:sanctum', 'abilities:account:manage', 'throttle:6,1'])
         ->name('api.auth.email.resend');
 
     Route::get('/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
@@ -49,7 +50,7 @@ Route::prefix('auth/email')->group(function () {
         ->name('verification.verify');
 });
 
-Route::prefix('auth/2fa')->middleware('auth:sanctum')->group(function () {
+Route::prefix('auth/2fa')->middleware(['auth:sanctum', 'abilities:account:manage'])->group(function () {
     Route::post('/enable', [TwoFactorController::class, 'enable'])->name('api.auth.2fa.enable');
 
     Route::post('/confirm', [TwoFactorController::class, 'confirm'])
@@ -61,7 +62,14 @@ Route::prefix('auth/2fa')->middleware('auth:sanctum')->group(function () {
         ->name('api.auth.2fa.disable');
 });
 
-Route::prefix('auth/tokens')->middleware('auth:sanctum')->group(function () {
+Route::prefix('auth/account')->middleware(['auth:sanctum', 'abilities:account:manage', 'throttle:6,1'])->group(function () {
+    Route::put('/email', [AccountSecurityController::class, 'changeEmail'])
+        ->name('api.auth.account.email');
+    Route::put('/password', [AccountSecurityController::class, 'changePassword'])
+        ->name('api.auth.account.password');
+});
+
+Route::prefix('auth/tokens')->middleware(['auth:sanctum', 'abilities:account:manage'])->group(function () {
     Route::get('/', [TokenController::class, 'index'])->name('api.auth.tokens.index');
     Route::post('/', [TokenController::class, 'store'])->name('api.auth.tokens.store');
     Route::delete('/{id}', [TokenController::class, 'destroy'])->name('api.auth.tokens.destroy');

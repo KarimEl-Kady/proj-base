@@ -11,13 +11,31 @@ use Throwable;
 
 class PublishOutboxCommand extends Command
 {
-    protected $signature = 'outbox:publish {--limit=100 : Maximum messages to publish}';
+    protected $signature = 'outbox:publish
+        {--limit=100 : Maximum messages to publish per batch}
+        {--loop : Keep polling as a dedicated publisher process}
+        {--sleep=1 : Seconds to wait between polling batches}';
 
     protected $description = 'Publish pending transactional outbox messages';
 
     public function handle(): int
     {
         $limit = max(1, min((int) $this->option('limit'), 1000));
+        $failed = 0;
+
+        do {
+            $failed += $this->publishBatch($limit);
+
+            if ($this->option('loop')) {
+                sleep(max(1, min((int) $this->option('sleep'), 60)));
+            }
+        } while ($this->option('loop'));
+
+        return $failed === 0 ? self::SUCCESS : self::FAILURE;
+    }
+
+    protected function publishBatch(int $limit): int
+    {
         $failed = 0;
 
         OutboxMessage::query()
@@ -39,7 +57,7 @@ class PublishOutboxCommand extends Command
                 }
             });
 
-        return $failed === 0 ? self::SUCCESS : self::FAILURE;
+        return $failed;
     }
 
     protected function claim(int $id): ?OutboxMessage

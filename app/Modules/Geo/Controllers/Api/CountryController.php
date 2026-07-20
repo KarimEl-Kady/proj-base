@@ -20,8 +20,9 @@ class CountryController extends Controller
     {
         $records = $this->countryService->fetch($request);
 
-        return $this->successResponse(
-            CountryResource::collection($records)->response()->getData(true),
+        return $this->successCollectionResponse(
+            CountryResource::collection($records),
+            $request,
             'Countries retrieved successfully.'
         );
     }

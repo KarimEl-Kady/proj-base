@@ -133,8 +133,11 @@ if [ "$1" = "php-fpm" ]; then
 
     # Cache configuration & routes in production
     if [ "${APP_ENV:-local}" = "production" ]; then
-        echo "📦 Caching configuration and routes..."
+        echo "🔒 Validating production configuration..."
+        php artisan project:validate
+        echo "📦 Caching configuration, events, routes, and views..."
         php artisan config:cache
+        php artisan event:cache
         php artisan route:cache
         php artisan view:cache
     fi

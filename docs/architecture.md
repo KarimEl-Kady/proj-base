@@ -128,12 +128,10 @@ separate CI run per mode:
   `withTestTenant()` yourself) so a tenant-scoped-model test doesn't depend
   on `none` being the active mode to pass.
 
-Known gap: the `local/permission` and `local/media` packages' own test
-suites, and a few Auth module tests, still create `User`/fixture models
-directly and assume `none` mode — they only fail if the project actually
-runs those suites under `single`/`multi`, which nothing in CI does today.
-Route the failure through `withTestTenant()` the same way when touching one
-of those files, rather than reintroducing an env-specific workaround.
+Package tests that use host models should create them through
+`withTestTenant()`. The media package additionally has its own tenant resolver
+seam and an explicit cross-tenant isolation test; standalone consumers bind
+their own resolver without importing host classes.
 
 ## Routing
 
@@ -154,9 +152,10 @@ API routes but preserves liveness/readiness endpoints.
    is the seam for the last part — see `App\Modules\Core\Repositories\Search`
    (`LikeSearch` default, `FullTextSearch` opt-in) rather than editing
    `BaseRepository::fetch()` per module.
-3. Split queues by workload and define latency/backlog SLOs.
-   `QueuedListener::$lane` (`config('project.events.lanes')`) is the seam —
-   every lane resolves to the same queue until one is actually named.
+3. Tune the already-separated default/bulk/notification workers and define
+   latency/backlog SLOs. `QueuedListener::$lane`
+   (`config('project.events.lanes')`) is the routing seam; Compose, local dev,
+   and the Kubernetes reference give each lane independent worker capacity.
 4. Extract a module only when ownership, load, deployment cadence, or data
    isolation justifies the distributed-system cost. Durable messages form the
    extraction boundary.

@@ -20,6 +20,8 @@ class HealthCheckTest extends TestCase
 
         // Deliberately not the success/message/data envelope.
         $response->assertJsonMissing(['success' => true]);
+        $response->assertJsonMissingPath('checks.database.driver');
+        $response->assertJsonMissingPath('checks.queue.backlog');
     }
 
     public function test_health_check_reports_healthy_when_all_checks_pass(): void
@@ -29,5 +31,15 @@ class HealthCheckTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('status', 'healthy');
         $response->assertJsonPath('version', config('project.version'));
+    }
+
+    public function test_dependency_details_require_an_explicit_internal_setting(): void
+    {
+        config(['project.health.expose_details' => true]);
+
+        $this->getJson('/api/health')
+            ->assertOk()
+            ->assertJsonPath('checks.database.driver', config('database.default'))
+            ->assertJsonPath('checks.queue.connection', config('queue.default'));
     }
 }

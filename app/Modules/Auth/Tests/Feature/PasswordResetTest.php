@@ -7,9 +7,11 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -98,6 +100,35 @@ class PasswordResetTest extends TestCase
             'email' => $user->email,
         ]);
         $this->assertTrue(Schema::hasColumn('password_reset_tokens', 'user_uuid'));
+    }
+
+    public function test_reset_mutation_revocation_and_token_consumption_are_atomic(): void
+    {
+        $user = $this->makeUser();
+        $user->createToken('existing');
+        $resetToken = Password::createToken($user);
+
+        try {
+            Password::reset([
+                'token' => $resetToken,
+                'email' => $user->email,
+                'password' => 'new-password-123',
+            ], function (User $resetUser, string $password): void {
+                $resetUser->password = $password;
+                $resetUser->save();
+                $resetUser->tokens()->delete();
+
+                throw new RuntimeException('Simulated reset failure.');
+            });
+
+            $this->fail('The simulated reset failure was not thrown.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Simulated reset failure.', $exception->getMessage());
+        }
+
+        $this->assertTrue(Hash::check('old-password', $user->fresh()->password));
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->assertDatabaseCount('password_reset_tokens', 1);
     }
 
     public function test_security_upgrade_rebuilds_the_legacy_email_token_table(): void

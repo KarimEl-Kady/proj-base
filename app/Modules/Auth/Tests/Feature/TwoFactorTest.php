@@ -37,7 +37,7 @@ class TwoFactorTest extends TestCase
     protected function enableTwoFactor(string $token): string
     {
         $secret = $this->withToken($token)
-            ->postJson('/api/v1/auth/2fa/enable')
+            ->postJson('/api/v1/auth/2fa/enable', ['current_password' => 'secret-password'])
             ->json('data.secret');
 
         $this->withToken($token)
@@ -51,7 +51,9 @@ class TwoFactorTest extends TestCase
     {
         $token = $this->registerAndGetToken();
 
-        $response = $this->withToken($token)->postJson('/api/v1/auth/2fa/enable');
+        $response = $this->withToken($token)->postJson('/api/v1/auth/2fa/enable', [
+            'current_password' => 'secret-password',
+        ]);
         $response->assertOk()->assertJsonStructure(['data' => ['secret', 'uri']]);
 
         $secret = $response->json('data.secret');
@@ -66,7 +68,9 @@ class TwoFactorTest extends TestCase
     public function test_confirm_rejects_invalid_code(): void
     {
         $token = $this->registerAndGetToken();
-        $this->withToken($token)->postJson('/api/v1/auth/2fa/enable');
+        $this->withToken($token)->postJson('/api/v1/auth/2fa/enable', [
+            'current_password' => 'secret-password',
+        ]);
 
         $this->withToken($token)
             ->postJson('/api/v1/auth/2fa/confirm', ['code' => '000000'])
@@ -105,6 +109,8 @@ class TwoFactorTest extends TestCase
         $token = $this->registerAndGetToken();
         config(['project.features.two_factor_auth' => false]);
 
-        $this->withToken($token)->postJson('/api/v1/auth/2fa/enable')->assertForbidden();
+        $this->withToken($token)->postJson('/api/v1/auth/2fa/enable', [
+            'current_password' => 'secret-password',
+        ])->assertForbidden();
     }
 }

@@ -28,6 +28,12 @@ class HealthController extends Controller
 
         $healthy = collect($checks)->every(fn (array $check) => $check['status'] === 'ok');
 
+        if (! config('project.health.expose_details', false)) {
+            $checks = collect($checks)
+                ->map(fn (array $check): array => ['status' => $check['status']])
+                ->all();
+        }
+
         // Deliberately not the success/message/data envelope — health
         // check tooling (uptime monitors, k8s probes) expects this flat
         // shape, so it goes through DataResponse::raw() instead.
@@ -104,19 +110,30 @@ class HealthController extends Controller
             $connection = config('queue.default');
             $driver = config("queue.connections.{$connection}.driver", $connection);
             $backlog = Queue::connection($connection)->size();
-            $heartbeat = Cache::get('project.queue_worker_heartbeat');
             $requiresWorker = (bool) config('project.health.require_queue_worker', false);
-            $workerAlive = $driver === 'sync' || $heartbeat !== null;
+            $lanes = array_values(array_unique(array_filter(
+                (array) config('project.events.lanes', ['default' => 'default']),
+                'is_string',
+            )));
+            $lanes = $lanes === [] ? ['default'] : $lanes;
+            $heartbeats = collect($lanes)->mapWithKeys(
+                fn (string $lane): array => [$lane => Cache::get("project.queue_worker_heartbeat.{$lane}")]
+            );
+            $workersAlive = $driver === 'sync' || $heartbeats->every(fn (mixed $heartbeat): bool => $heartbeat !== null);
             $warningAt = max(1, (int) config('project.health.queue_backlog_warning', 1000));
 
             return [
-                'status' => $requiresWorker && ! $workerAlive ? 'error' : 'ok',
+                'status' => $requiresWorker && ! $workersAlive ? 'error' : 'ok',
                 'connection' => $connection,
                 'driver' => $driver,
                 'backlog' => $backlog,
                 'backlog_status' => $backlog >= $warningAt ? 'warning' : 'ok',
-                'worker_alive' => $workerAlive,
-                'heartbeat_at' => $heartbeat === null ? null : now()->setTimestamp((int) $heartbeat)->toIso8601String(),
+                'workers_alive' => $workersAlive,
+                'heartbeats' => $heartbeats->map(
+                    fn (mixed $heartbeat): ?string => $heartbeat === null
+                        ? null
+                        : now()->setTimestamp((int) $heartbeat)->toIso8601String()
+                )->all(),
             ];
         } catch (\Throwable $e) {
             return [

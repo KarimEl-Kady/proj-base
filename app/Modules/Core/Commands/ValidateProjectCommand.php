@@ -17,8 +17,9 @@ class ValidateProjectCommand extends Command
 
         $this->enum($errors, 'project.tenancy.mode', ['none', 'single', 'multi']);
         $this->enum($errors, 'project.tenancy.tenant_identification', ['subdomain', 'header', 'path']);
+        $this->enum($errors, 'project.tenancy.registration', ['closed', 'open']);
         $this->enum($errors, 'project.platform', ['web', 'api', 'hybrid']);
-        $this->enum($errors, 'project.auth.driver', ['sanctum', 'token', 'session']);
+        $this->enum($errors, 'project.auth.driver', ['sanctum', 'token']);
         $this->enum($errors, 'database.default', ['mysql', 'pgsql', 'sqlite']);
 
         $this->integer($errors, 'project.api.rate_limit', 1, 10000);
@@ -65,6 +66,12 @@ class ValidateProjectCommand extends Command
 
         if (app()->isProduction() && config('app.debug')) {
             $errors[] = 'APP_DEBUG must be false in production.';
+        }
+
+        if (app()->isProduction()
+            && config('project.storage.require_shared_in_production', true)
+            && ! in_array(config('filesystems.default'), config('project.storage.shared_drivers', ['s3']), true)) {
+            $errors[] = 'Production storage must use a shared filesystem driver (for example s3).';
         }
 
         if ($errors !== []) {

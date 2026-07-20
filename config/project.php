@@ -89,6 +89,9 @@ return [
         'tenant_column' => env('PROJECT_TENANT_COLUMN', 'tenant_id'),
         'tenant_identification' => env('PROJECT_TENANT_IDENTIFICATION', 'subdomain'),
         'tenant_model' => env('PROJECT_TENANT_MODEL', 'App\Models\Tenant'),
+        // Multi-tenant admission is fail-closed. Set "open" only when the
+        // product intentionally permits arbitrary self-service sign-up.
+        'registration' => env('PROJECT_TENANT_REGISTRATION', 'closed'),
         'default_tenant' => [
             'name' => env('PROJECT_TENANT_DEFAULT_NAME', 'Default'),
             'slug' => env('PROJECT_TENANT_DEFAULT_SLUG', 'default'),
@@ -202,11 +205,8 @@ return [
     | Authentication
     |--------------------------------------------------------------------------
     |
-    | driver: "session", "token", "sanctum"
+    | driver: "token" or "sanctum"
     |   sanctum (default) issues Bearer tokens — what the API routes expect.
-    |   session authenticates on the web guard; it only works on routes that
-    |   have session state (the "web" group / statefulApi), not the plain
-    |   "api" group.
     | token_expiration: login token lifetime in minutes
     | personal_token_expiration: named integration token lifetime in minutes
     |
@@ -216,6 +216,8 @@ return [
         'driver' => env('PROJECT_AUTH_DRIVER', 'sanctum'),
         'token_expiration' => env('PROJECT_AUTH_TOKEN_EXPIRATION', 1440),
         'personal_token_expiration' => env('PROJECT_AUTH_PERSONAL_TOKEN_EXPIRATION', 43200),
+        'personal_token_abilities' => ['api', 'account:manage'],
+        'personal_token_default_abilities' => ['api'],
 
         // Role (from local/permission) assigned to every newly registered
         // user by Auth's AssignDefaultRole listener. null = don't assign.
@@ -302,9 +304,8 @@ return [
     | Async Events
     |--------------------------------------------------------------------------
     |
-    | Defaults for queued listeners extending Core's QueuedListener.
-    | queue: null = the default queue (what the shipped workers consume);
-    | if you set a named queue here, add it to the workers' --queue= list.
+    | Defaults for queued listeners extending Core's QueuedListener. Each
+    | lane has a distinct name and its own worker process by default.
     |
     */
 
@@ -312,20 +313,13 @@ return [
         'tries' => (int) env('PROJECT_EVENTS_TRIES', 3),
         'backoff' => [10, 60, 300],
 
-        // Named lanes so one workload can't starve another sharing the same
-        // worker pool — e.g. a bulk import job delaying a password-reset
-        // email queued right behind it. QueuedListener::$lane picks one of
-        // these (default: "default"); every lane is null (the connection's
-        // default queue) out of the box, so this changes nothing until a
-        // project actually needs isolation. The shipped workers
-        // (docker-compose `queue` service, `composer dev`) already listen
-        // on all three names — set a lane's env var to a distinct queue
-        // name and jobs on it start draining separately with no worker
-        // redeploy needed.
+        // QueuedListener::$lane picks one of these (default: "default").
+        // Compose, composer dev, and the Kubernetes reference run separate
+        // workers so bulk work cannot consume notification/default capacity.
         'lanes' => [
-            'default' => env('PROJECT_EVENTS_QUEUE_DEFAULT'),
-            'bulk' => env('PROJECT_EVENTS_QUEUE_BULK'),
-            'notifications' => env('PROJECT_EVENTS_QUEUE_NOTIFICATIONS'),
+            'default' => env('PROJECT_EVENTS_QUEUE_DEFAULT', 'default'),
+            'bulk' => env('PROJECT_EVENTS_QUEUE_BULK', 'bulk'),
+            'notifications' => env('PROJECT_EVENTS_QUEUE_NOTIFICATIONS', 'notifications'),
         ],
     ],
 
@@ -372,9 +366,18 @@ return [
     ],
 
     'health' => [
+        'expose_details' => env('PROJECT_HEALTH_EXPOSE_DETAILS', false),
         'require_queue_worker' => env('PROJECT_HEALTH_REQUIRE_QUEUE_WORKER', false),
         'queue_heartbeat_ttl' => (int) env('PROJECT_HEALTH_QUEUE_HEARTBEAT_TTL', 120),
         'queue_backlog_warning' => (int) env('PROJECT_HEALTH_QUEUE_BACKLOG_WARNING', 1000),
+    ],
+
+    'storage' => [
+        // Horizontal production replicas require a shared/object disk.
+        // Disable only when an external validation guarantees equivalent
+        // shared storage for a custom filesystem driver.
+        'require_shared_in_production' => env('PROJECT_REQUIRE_SHARED_STORAGE', true),
+        'shared_drivers' => ['s3'],
     ],
 
     /*

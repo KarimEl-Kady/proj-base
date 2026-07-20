@@ -3,7 +3,9 @@
 namespace Local\Media;
 
 use Illuminate\Support\ServiceProvider;
+use Local\Media\Contracts\TenantResolver;
 use Local\Media\Services\MediaService;
+use Local\Media\Support\NullTenantResolver;
 
 class MediaServiceProvider extends ServiceProvider
 {
@@ -11,6 +13,7 @@ class MediaServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/media.php', 'media');
 
+        $this->app->singleton(TenantResolver::class, NullTenantResolver::class);
         $this->app->singleton(MediaService::class);
     }
 

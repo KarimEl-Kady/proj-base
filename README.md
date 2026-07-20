@@ -84,7 +84,7 @@ app/Modules/{Module}/
 | **Static analysis** | PHPStan/Larastan level 5 at zero errors, enforced in CI (`composer analyse`) alongside Pint and the boundary check |
 | **Country/City reference data** | `Geo` module (full CRUD API for both) + `local/geo-seeder` package with data for Egypt, Kuwait, UAE, KSA — `php artisan geo:seed` |
 | **Multi-tenancy** | Toggle `PROJECT_TENANCY_MODE` — subdomain, header, or `/{tenant}/...` path resolution, cached and fail-closed. Active request context is authoritative on writes; deliberate cross-tenant work uses explicit helpers |
-| **Operations** | Separate liveness/readiness probes, request IDs propagated through Context, JSON stderr logging, queue heartbeat/backlog visibility, scheduled pruning, and fail-fast deployment validation |
+| **Operations** | Separate liveness/readiness probes, request and tenant IDs propagated through Context, JSON stderr logging, private-by-default readiness details, isolated queue lanes, continuous outbox publishing, scheduled pruning, and fail-fast deployment validation |
 | **Feature flags** | Registration, email verification, 2FA, personal access tokens — togglable via env and actually implemented by the Auth module |
 
 ## Generators
@@ -233,13 +233,15 @@ Living examples: `Auth\Listeners\AssignDefaultRole` (sync — assigns `PROJECT_A
 
 ### Authentication (Auth module)
 
-Token-based (Sanctum) when `PROJECT_AUTH_DRIVER=sanctum|token`, session when
-`session`. With default API prefix/version settings, endpoints are under
-`/api/v1/auth`:
+Token-based authentication uses Sanctum when
+`PROJECT_AUTH_DRIVER=sanctum|token`. Session authentication is intentionally
+not exposed by the API-only auth routes. With default API prefix/version
+settings, endpoints are under `/api/v1/auth`:
 
 | Endpoint | Description |
 |----------|-------------|
 | `POST /register`, `POST /login`, `POST /logout`, `GET /me` | Core flow — login returns a Bearer token with `PROJECT_AUTH_TOKEN_EXPIRATION` lifetime |
+| `PUT /account/email`, `PUT /account/password` | Sensitive identity changes; require the current password (and TOTP when enabled), then revoke existing tokens |
 | `POST /password/forgot`, `POST /password/reset` | Password reset via email (non-enumerating) |
 | `POST /email/resend`, `GET /email/verify/{id}/{hash}` | Email verification (signed URLs) — `PROJECT_FEATURE_EMAIL_VERIFICATION` |
 | `POST /2fa/enable`, `/2fa/confirm`, `/2fa/disable` | TOTP 2FA (Google Authenticator-compatible, dependency-free) — `PROJECT_FEATURE_2FA`; login then requires `code` |
@@ -367,15 +369,16 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `config/project_modules.php` | `['User' => true]` | Module registry (file, not env) |
+| `config/project_modules.php` | Auth, User, Geo enabled | Module registry (file, not env) |
 | `PROJECT_TENANCY_MODE` | `none` | `none`, `single`, or `multi` |
 | `PROJECT_TENANT_COLUMN` | `tenant_id` | Tenant column; the referenced table comes from `PROJECT_TENANT_MODEL` |
+| `PROJECT_TENANT_REGISTRATION` | `closed` | Multi-tenant self-service admission; provision explicitly with `tenant:create` unless deliberately set to `open` |
 | `PROJECT_PLATFORM` | `web` | `web`, `api`, or `hybrid` |
 | `PROJECT_API_ENABLED` | `true` | Register business API routes; health routes remain available |
 | `PROJECT_API_PREFIX` / `PROJECT_API_VERSION` | `api` / `v1` | Central prefix applied to every module API |
 | `PROJECT_DASHBOARD_PREFIX` | `dashboard` | URL prefix for every module's `Routes/dashboard.php` |
 | `PROJECT_AUTH_DEFAULT_ROLE` | *(unset)* | Role auto-assigned to new registrations by Auth's `AssignDefaultRole` listener |
-| `PROJECT_EVENTS_QUEUE_DEFAULT` / `_BULK` / `_NOTIFICATIONS` | *(default queue, all three)* | Named lanes for listeners extending `QueuedListener` — see `QueuedListener::$lane` |
+| `PROJECT_EVENTS_QUEUE_DEFAULT` / `_BULK` / `_NOTIFICATIONS` | `default` / `bulk` / `notifications` | Independently worked lanes for listeners extending `QueuedListener` |
 | `PROJECT_EVENTS_TRIES` | `3` | Retries for listeners extending `QueuedListener` |
 | `DB_CONNECTION` | `sqlite` locally / `mysql` in Docker | Single driver authority: `mysql`, `pgsql`, or `sqlite` |
 | `PROJECT_PAGINATION_PER_PAGE` | `15` | Default page size |
@@ -383,7 +386,9 @@ Project settings live in `config/project.php` (`PROJECT_*` env vars); active mod
 | `PROJECT_PAGINATION_UNPAGINATED_CAP` | `1000` | Hard cap for `?pagination=false` |
 | `PROJECT_AUTH_PERSONAL_TOKEN_EXPIRATION` | `43200` | Named token lifetime in minutes (30 days) |
 | `PROJECT_OUTBOX_MAX_ATTEMPTS` / `PROJECT_OUTBOX_CLAIM_TTL` | `10` / `300` | Dead-letter threshold and crashed-publisher claim expiry |
-| `MEDIA_DISK` / `MEDIA_MAX_FILE_SIZE` | `public` / `10240` KB | Media package |
+| `PROJECT_HEALTH_EXPOSE_DETAILS` | `false` | Expose readiness drivers, latency, backlog, and heartbeat metadata |
+| `PROJECT_REQUIRE_SHARED_STORAGE` | `true` | Reject node-local production storage during `project:validate` |
+| `MEDIA_DISK` / `MEDIA_MAX_FILE_SIZE` | `local` / `10240` KB | Private media storage (production must use shared/object storage) |
 | `GEO_SEED_COUNTRIES` | `EG,KW,AE,SA` | ISO2 codes the `geo:seed` command / seeders act on |
 | `PERMISSION_CACHE_ENABLED` / `PERMISSION_CACHE_TTL` | `true` / `3600` | Permission package's role→permission map cache |
 
@@ -394,10 +399,10 @@ Run `php artisan project:validate` after changing environment configuration. It 
 ## Operations
 
 - `GET /api/health/live` proves the Laravel process can answer.
-- `GET /api/health/ready` (and `/api/health`) checks database, cache, Redis, queue backlog, and optional worker heartbeat.
-- Every API/web response includes `X-Request-ID`; a valid incoming ID is preserved and propagated through Laravel Context into queued work and logs.
+- `GET /api/health/ready` (and `/api/health`) checks database, cache, Redis, queue backlog, and optional worker heartbeat. Only check status is public by default; set `PROJECT_HEALTH_EXPOSE_DETAILS=true` for a protected internal deployment.
+- Every API/web response includes `X-Request-ID`; request and tenant IDs are propagated through Laravel Context into queued work and structured logs.
 - Docker logs use structured JSON on stderr by default.
-- The scheduler prunes failed jobs, tokens, reset records, outbox history, and Inbox deduplication records; it also publishes pending outbox messages.
+- Dedicated publishers continuously drain the transactional outbox; the scheduler retains a once-per-minute recovery pass and prunes failed jobs, tokens, reset records, outbox history, and Inbox deduplication records.
 - Container migrations are opt-in (`AUTO_MIGRATE=false`) and fail startup when enabled and unsuccessful. Production releases should run migrations as a dedicated release step.
 
 ## Testing

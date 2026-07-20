@@ -50,16 +50,23 @@ abstract class BaseService
 
     public function update(int|string $id, array $data): Model
     {
-        $model = $this->repository->findOrFail($id);
+        return $this->updateModel($this->repository->findOrFail($id), $data);
+    }
+
+    public function updateModel(Model $model, array $data): Model
+    {
         $this->repository->update($model, $data);
 
-        return $model->fresh();
+        return $model->refresh();
     }
 
     public function delete(int|string $id): bool
     {
-        $model = $this->repository->findOrFail($id);
+        return $this->deleteModel($this->repository->findOrFail($id));
+    }
 
+    public function deleteModel(Model $model): bool
+    {
         return (bool) $this->repository->delete($model);
     }
 }

@@ -53,4 +53,18 @@ class PlatformSafetyTest extends TestCase
             File::deleteDirectory(app_path('Vendor/BoundaryProbe'));
         }
     }
+
+    public function test_production_validation_rejects_node_local_storage(): void
+    {
+        $this->app['env'] = 'production';
+        config([
+            'app.debug' => false,
+            'filesystems.default' => 'local',
+            'project.storage.require_shared_in_production' => true,
+        ]);
+
+        $this->artisan('project:validate')
+            ->expectsOutputToContain('Production storage must use a shared filesystem')
+            ->assertFailed();
+    }
 }

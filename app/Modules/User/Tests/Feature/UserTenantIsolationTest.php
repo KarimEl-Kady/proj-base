@@ -49,7 +49,7 @@ class UserTenantIsolationTest extends TestCase
     {
         $admin = with_tenant($tenant->id, fn () => User::factory()->create());
         $admin->givePermissionTo(['users.view', 'users.create', 'users.update', 'users.delete']);
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*']);
 
         return $admin;
     }

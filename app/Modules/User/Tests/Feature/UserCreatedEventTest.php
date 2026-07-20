@@ -66,7 +66,9 @@ class UserCreatedEventTest extends TestCase
             ->withArgs(function (string $message, array $context) {
                 return $message === 'user.created'
                     && isset($context['event_id'], $context['occurred_at'], $context['user_uuid'])
-                    && $context['email'] === 'carol@example.com';
+                    && ! array_key_exists('email', $context)
+                    && array_key_exists('tenant_id', $context)
+                    && array_key_exists('request_id', $context);
             });
 
         // Sync queue in tests — the queued listener runs inline.

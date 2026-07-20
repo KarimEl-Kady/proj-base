@@ -5,6 +5,7 @@ namespace App\Modules\Auth\Controllers\Api;
 use App\Modules\Auth\Requests\LoginRequest;
 use App\Modules\Auth\Requests\RegisterRequest;
 use App\Modules\Auth\Services\AuthService;
+use App\Modules\Auth\Support\TenantRegistrationPolicy;
 use App\Modules\Core\Controllers\Controller;
 use App\Modules\User\Models\User;
 use App\Modules\User\Resources\UserResource;
@@ -14,12 +15,14 @@ use Illuminate\Http\Request;
 class AuthController extends Controller
 {
     public function __construct(
-        protected AuthService $authService
+        protected AuthService $authService,
+        protected TenantRegistrationPolicy $tenantRegistrationPolicy,
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
         abort_unless(config('project.features.registration', true), 403, 'Registration is disabled.');
+        $this->tenantRegistrationPolicy->ensureAllowed();
 
         $result = $this->authService->register($request->validated());
 
@@ -58,7 +61,7 @@ class AuthController extends Controller
     }
 
     /**
-     * @param  array{user: User, token: ?string}  $result
+     * @param  array{user: User, token: string}  $result
      */
     protected function authPayload(array $result): array
     {

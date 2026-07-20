@@ -17,6 +17,14 @@ class PathTenancyTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // These tests exercise path routing, not admission policy.
+        config(['project.tenancy.registration' => 'open']);
+    }
+
     public static function setUpBeforeClass(): void
     {
         putenv('PROJECT_TENANCY_MODE=multi');

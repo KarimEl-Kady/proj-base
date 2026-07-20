@@ -5,6 +5,7 @@ namespace App\Modules\User\Services;
 use App\Modules\Core\Services\BaseService;
 use App\Modules\User\Models\User;
 use App\Modules\User\Repositories\UserRepository;
+use Illuminate\Database\Eloquent\Model;
 
 class UserService extends BaseService
 {
@@ -29,6 +30,12 @@ class UserService extends BaseService
     {
         /** @var User */
         return parent::update($id, $data);
+    }
+
+    public function updateModel(Model $model, array $data): User
+    {
+        /** @var User */
+        return parent::updateModel($model, $data);
     }
 
     public function findByEmail(string $email): ?User

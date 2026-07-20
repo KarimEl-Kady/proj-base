@@ -7,6 +7,7 @@ use App\Modules\Auth\Requests\ResetPasswordRequest;
 use App\Modules\Core\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
@@ -29,7 +30,7 @@ class PasswordResetController extends Controller
                 $user->setRememberToken(Str::random(60));
                 $user->save();
                 $user->tokens()->delete();
-                event(new PasswordReset($user));
+                DB::afterCommit(fn () => event(new PasswordReset($user)));
             }
         );
 

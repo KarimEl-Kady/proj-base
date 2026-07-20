@@ -52,7 +52,7 @@ abstract class TestCase extends BaseTestCase
             $user->givePermissionTo($permissions);
         }
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['*']);
 
         return $user;
     }

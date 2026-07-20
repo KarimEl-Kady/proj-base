@@ -3,9 +3,10 @@
 namespace App\Modules\Auth\Services;
 
 use App\Modules\Auth\Events\UserRegistered;
+use App\Modules\Auth\Jobs\SendEmailVerification;
+use App\Modules\Auth\Jobs\SendSecurityAlert;
 use App\Modules\Auth\Support\Totp;
 use App\Modules\User\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -14,7 +15,7 @@ class AuthService
 {
     /**
      * @param  array{name: string, email: string, password: string}  $data
-     * @return array{user: User, token: ?string}
+     * @return array{user: User, token: string}
      */
     public function register(array $data): array
     {
@@ -26,14 +27,14 @@ class AuthService
         });
 
         if (config('project.features.email_verification', false)) {
-            $result['user']->sendEmailVerificationNotification();
+            SendEmailVerification::dispatchAfterResponse($result['user']);
         }
 
         return $result;
     }
 
     /**
-     * @return array{user: User, token: ?string}
+     * @return array{user: User, token: string}
      */
     public function login(string $email, string $password, ?string $code = null, string $device = 'api'): array
     {
@@ -47,29 +48,66 @@ class AuthService
 
         $this->verifyTwoFactor($user, $code);
 
-        if (config('project.auth.driver', 'session') === 'session') {
-            Auth::guard('web')->login($user);
-
-            // New session id on privilege change — prevents session fixation.
-            if (request()->hasSession()) {
-                request()->session()->regenerate();
-            }
-
-            return ['user' => $user, 'token' => null];
-        }
-
         return ['user' => $user, 'token' => $this->issueToken($user, $device)];
     }
 
     public function logout(User $user): void
     {
-        if (config('project.auth.driver', 'session') === 'session') {
-            Auth::guard('web')->logout();
+        $user->currentAccessToken()?->delete();
+    }
 
-            return;
+    public function confirmSensitiveAction(User $user, string $password, ?string $code = null): void
+    {
+        if (! Hash::check($password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => __('The password is incorrect.'),
+            ]);
         }
 
-        $user->currentAccessToken()?->delete();
+        $this->verifyTwoFactor($user, $code);
+    }
+
+    public function changeEmail(User $user, string $email, string $password, ?string $code = null): void
+    {
+        $this->confirmSensitiveAction($user, $password, $code);
+        $oldEmail = $user->email;
+        $email = mb_strtolower(trim($email));
+
+        DB::transaction(function () use ($user, $email): void {
+            $user->forceFill([
+                'email' => $email,
+                'email_verified_at' => null,
+            ])->save();
+            $user->tokens()->delete();
+        });
+
+        SendSecurityAlert::dispatchAfterResponse(
+            $oldEmail,
+            'Your email address was changed',
+            "Your account email address was changed to {$email}.",
+        );
+
+        if (config('project.features.email_verification', false)) {
+            dispatch(function () use ($user): void {
+                $user->sendEmailVerificationNotification();
+            })->afterResponse();
+        }
+    }
+
+    public function changePassword(User $user, string $password, string $newPassword, ?string $code = null): void
+    {
+        $this->confirmSensitiveAction($user, $password, $code);
+
+        DB::transaction(function () use ($user, $newPassword): void {
+            $user->forceFill(['password' => $newPassword])->save();
+            $user->tokens()->delete();
+        });
+
+        SendSecurityAlert::dispatchAfterResponse(
+            $user->email,
+            'Your password was changed',
+            'Your account password was changed and existing access tokens were revoked.',
+        );
     }
 
     protected function verifyTwoFactor(User $user, ?string $code): void
@@ -91,12 +129,8 @@ class AuthService
         }
     }
 
-    protected function issueToken(User $user, string $device = 'api'): ?string
+    protected function issueToken(User $user, string $device = 'api'): string
     {
-        if (config('project.auth.driver', 'session') === 'session') {
-            return null;
-        }
-
         $expiration = (int) config('project.auth.token_expiration', 1440);
 
         return $user->createToken(

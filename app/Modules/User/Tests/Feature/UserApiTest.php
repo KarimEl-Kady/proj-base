@@ -48,7 +48,7 @@ class UserApiTest extends TestCase
             $user->givePermissionTo($permissions);
         }
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, ['*']);
 
         return $user;
     }
