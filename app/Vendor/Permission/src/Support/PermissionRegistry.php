@@ -15,6 +15,16 @@ use Illuminate\Support\Facades\DB;
 class PermissionRegistry
 {
     /**
+     * Bound as a singleton (see PermissionServiceProvider), so this survives
+     * for the life of one request/process — short-circuits every call after
+     * the first instead of hitting the cache store again on every single
+     * permission check within the same request.
+     *
+     * @var ?Collection<int, Collection<int, string>>
+     */
+    protected ?Collection $resolved = null;
+
+    /**
      * @return Collection<int, string> permission names for one role id
      */
     public function permissionNamesForRole(int $roleId): Collection
@@ -27,6 +37,10 @@ class PermissionRegistry
      */
     protected function map(): Collection
     {
+        if ($this->resolved !== null) {
+            return $this->resolved;
+        }
+
         $plain = config('permission.cache.enabled', true)
             ? Cache::remember(
                 config('permission.cache.key', 'local.permission.role_permission_map'),
@@ -35,7 +49,7 @@ class PermissionRegistry
             )
             : $this->loadFromDatabase();
 
-        return collect($plain)
+        return $this->resolved = collect($plain)
             ->map(fn (array $names) => collect($names));
     }
 
@@ -63,5 +77,6 @@ class PermissionRegistry
     public function forgetCache(): void
     {
         Cache::forget(config('permission.cache.key', 'local.permission.role_permission_map'));
+        $this->resolved = null;
     }
 }

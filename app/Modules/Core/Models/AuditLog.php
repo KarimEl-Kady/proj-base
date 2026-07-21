@@ -37,7 +37,17 @@ class AuditLog extends Model
             $tenantId = Context::get('tenant_id');
 
             if ($tenantId === null) {
-                throw MissingTenantContextException::for(self::class, 'query');
+                // Matches HasTenantScope's strict-mode escape hatch — without
+                // this check, PROJECT_TENANCY_STRICT=false stops being a
+                // legacy fail-open switch the moment any Auditable model is
+                // queried, since this scope would still throw regardless of
+                // the flag the exception message itself tells the operator
+                // to set.
+                if (config('project.tenancy.strict', true)) {
+                    throw MissingTenantContextException::for(self::class, 'query');
+                }
+
+                return;
             }
 
             $builder->where($builder->qualifyColumn('tenant_id'), $tenantId);

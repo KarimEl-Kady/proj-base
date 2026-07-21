@@ -10,10 +10,12 @@ use Local\Permission\Support\PermissionRegistry;
 
 /**
  * @property int $id
- * @property int|string|null $tenant_id Null = global role (the only value
- *                                      anything sets today). A host app may use this to scope a role
- *                                      to one tenant once it needs custom per-tenant roles — this
- *                                      package makes no assumption about tenancy being enabled at all.
+ * @property int|string|null $tenant_id Null = global role. findOrCreate()/
+ *                                      findByName() only ever resolve global roles; a host app that
+ *                                      wants per-tenant custom roles uses findOrCreateForTenant()/
+ *                                      findByNameForTenant() instead — this package makes no
+ *                                      assumption about tenancy being enabled at all, so nothing
+ *                                      infers a tenant from ambient context on its own.
  * @property string $name
  * @property string $guard_name
  * @property ?string $description
@@ -89,11 +91,18 @@ class Role extends Model
         return $this->permissions->contains('name', $name);
     }
 
+    /**
+     * Global roles only (tenant_id IS NULL) — explicit in the query, not
+     * just "whatever the default column value happens to be", so this
+     * can't accidentally resolve to a tenant-scoped role of the same
+     * name/guard once those can exist. See findByNameForTenant() for the
+     * tenant-scoped lookup.
+     */
     public static function findByName(string $name, ?string $guardName = null): self
     {
         $guardName ??= static::defaultGuardName();
 
-        $role = static::query()->where('name', $name)->where('guard_name', $guardName)->first();
+        $role = static::query()->whereNull('tenant_id')->where('name', $name)->where('guard_name', $guardName)->first();
 
         if ($role === null) {
             throw new InvalidArgumentException("Role [{$name}] does not exist.");
@@ -102,12 +111,58 @@ class Role extends Model
         return $role;
     }
 
+    /**
+     * Global roles only (tenant_id IS NULL) — see findByName()'s docblock.
+     */
     public static function findOrCreate(string $name, ?string $guardName = null): self
     {
         $guardName ??= static::defaultGuardName();
 
         return static::query()->firstOrCreate(
-            ['name' => $name, 'guard_name' => $guardName]
+            ['tenant_id' => null, 'name' => $name, 'guard_name' => $guardName]
+        );
+    }
+
+    /**
+     * The tenant-scoped counterpart to findByName(): looks up a role
+     * belonging to exactly $tenantId (pass null for the global role,
+     * equivalent to findByName() itself). A host app opts into per-tenant
+     * roles by calling this explicitly — nothing here infers a tenant from
+     * ambient request context on its own, matching the rest of this
+     * package's host-agnostic, nothing-assumed-about-tenancy design.
+     */
+    public static function findByNameForTenant(int|string|null $tenantId, string $name, ?string $guardName = null): self
+    {
+        $guardName ??= static::defaultGuardName();
+
+        $role = static::query()
+            ->where('tenant_id', $tenantId)
+            ->where('name', $name)
+            ->where('guard_name', $guardName)
+            ->first();
+
+        if ($role === null) {
+            $scope = $tenantId === null ? 'global' : "tenant [{$tenantId}]";
+
+            throw new InvalidArgumentException("Role [{$name}] does not exist for {$scope}.");
+        }
+
+        return $role;
+    }
+
+    /**
+     * The tenant-scoped counterpart to findOrCreate(): two different
+     * tenants (or a tenant and the global scope) can each own a role named
+     * "admin" without colliding — see the 2026_07_21_000001 migration for
+     * why that requires a composite unique index, not just this column
+     * existing.
+     */
+    public static function findOrCreateForTenant(int|string|null $tenantId, string $name, ?string $guardName = null): self
+    {
+        $guardName ??= static::defaultGuardName();
+
+        return static::query()->firstOrCreate(
+            ['tenant_id' => $tenantId, 'name' => $name, 'guard_name' => $guardName]
         );
     }
 

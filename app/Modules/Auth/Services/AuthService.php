@@ -88,9 +88,7 @@ class AuthService
         );
 
         if (config('project.features.email_verification', false)) {
-            dispatch(function () use ($user): void {
-                $user->sendEmailVerificationNotification();
-            })->afterResponse();
+            SendEmailVerification::dispatchAfterResponse($user);
         }
     }
 

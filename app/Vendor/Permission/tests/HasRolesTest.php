@@ -98,4 +98,31 @@ class HasRolesTest extends TestCase
 
         $this->assertSame(1, Role::query()->where('name', 'brand-new-role')->count());
     }
+
+    public function test_assign_role_for_tenant_resolves_that_tenants_role_not_the_global_one(): void
+    {
+        $userA = $this->makeUser();
+        $userB = $this->makeUser();
+
+        $userA->assignRoleForTenant(1, 'admin');
+        $userB->assignRoleForTenant(2, 'admin');
+
+        $roleA = Role::findByNameForTenant(1, 'admin');
+        $roleB = Role::findByNameForTenant(2, 'admin');
+
+        $this->assertNotSame($roleA->id, $roleB->id);
+        $this->assertTrue($userA->fresh()->roles->contains('id', $roleA->id));
+        $this->assertTrue($userB->fresh()->roles->contains('id', $roleB->id));
+        $this->assertFalse($userA->fresh()->roles->contains('id', $roleB->id));
+    }
+
+    public function test_assign_role_for_tenant_accepts_a_role_instance_directly(): void
+    {
+        $user = $this->makeUser();
+        $role = Role::findOrCreateForTenant(5, 'inspector');
+
+        $user->assignRoleForTenant(5, $role);
+
+        $this->assertTrue($user->fresh()->hasRole($role));
+    }
 }

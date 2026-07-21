@@ -69,14 +69,85 @@ class RoleModelTest extends TestCase
         $this->assertDatabaseMissing('role_has_permissions', ['role_id' => $roleId]);
     }
 
-    public function test_tenant_id_defaults_to_null_and_is_a_bare_seam_not_a_feature(): void
+    public function test_find_or_create_defaults_to_a_global_role(): void
     {
         $role = Role::findOrCreate('unscoped');
 
         $this->assertNull($role->tenant_id);
+    }
 
-        $role->update(['tenant_id' => 42]);
+    public function test_find_or_create_for_tenant_scopes_a_role_to_one_tenant(): void
+    {
+        $role = Role::findOrCreateForTenant(7, 'reviewer');
 
-        $this->assertSame(42, $role->fresh()->tenant_id);
+        $this->assertSame(7, $role->tenant_id);
+        $this->assertSame(1, Role::query()->where('name', 'reviewer')->count());
+    }
+
+    public function test_find_or_create_for_tenant_is_idempotent_per_tenant(): void
+    {
+        $first = Role::findOrCreateForTenant(7, 'reviewer');
+        $second = Role::findOrCreateForTenant(7, 'reviewer');
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame(1, Role::query()->where('name', 'reviewer')->count());
+    }
+
+    public function test_two_different_tenants_can_each_own_a_role_with_the_same_name(): void
+    {
+        $tenantA = Role::findOrCreateForTenant(1, 'admin');
+        $tenantB = Role::findOrCreateForTenant(2, 'admin');
+
+        $this->assertNotSame($tenantA->id, $tenantB->id);
+        $this->assertSame(1, $tenantA->tenant_id);
+        $this->assertSame(2, $tenantB->tenant_id);
+        $this->assertSame(2, Role::query()->where('name', 'admin')->count());
+    }
+
+    public function test_a_tenant_scoped_role_does_not_collide_with_a_same_named_global_role(): void
+    {
+        $global = Role::findOrCreate('admin');
+        $tenantScoped = Role::findOrCreateForTenant(1, 'admin');
+
+        $this->assertNotSame($global->id, $tenantScoped->id);
+        $this->assertNull($global->tenant_id);
+        $this->assertSame(1, $tenantScoped->tenant_id);
+    }
+
+    public function test_global_find_by_name_never_resolves_a_tenant_scoped_role(): void
+    {
+        Role::findOrCreateForTenant(1, 'only-scoped');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        Role::findByName('only-scoped');
+    }
+
+    public function test_find_by_name_for_tenant_resolves_the_correct_tenants_role(): void
+    {
+        $tenantA = Role::findOrCreateForTenant(1, 'manager');
+        Role::findOrCreateForTenant(2, 'manager');
+
+        $found = Role::findByNameForTenant(1, 'manager');
+
+        $this->assertSame($tenantA->id, $found->id);
+    }
+
+    public function test_find_by_name_for_tenant_throws_when_missing_for_that_tenant(): void
+    {
+        Role::findOrCreateForTenant(2, 'manager');
+
+        $this->expectException(InvalidArgumentException::class);
+
+        Role::findByNameForTenant(1, 'manager');
+    }
+
+    public function test_find_by_name_for_tenant_with_null_resolves_the_global_role(): void
+    {
+        $global = Role::findOrCreate('super-admin');
+
+        $found = Role::findByNameForTenant(null, 'super-admin');
+
+        $this->assertSame($global->id, $found->id);
     }
 }

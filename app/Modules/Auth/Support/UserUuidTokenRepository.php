@@ -30,10 +30,20 @@ class UserUuidTokenRepository extends DatabaseTokenRepository
         return $this->getTable()->where('user_uuid', $this->userUuid($user))->delete();
     }
 
+    /**
+     * lockForUpdate() only does real work when called inside a transaction —
+     * TransactionalPasswordBroker::reset() wraps the whole validate-callback-
+     * delete sequence in one, specifically so this blocks a second concurrent
+     * reset attempt on the same token until the first either commits (and
+     * has already deleted the row, so the second correctly finds nothing) or
+     * rolls back. Without the lock, both could pass this check before either
+     * had deleted the token.
+     */
     public function exists(CanResetPasswordContract $user, #[\SensitiveParameter] $token)
     {
         $record = (array) $this->getTable()
             ->where('user_uuid', $this->userUuid($user))
+            ->lockForUpdate()
             ->first();
 
         return $record

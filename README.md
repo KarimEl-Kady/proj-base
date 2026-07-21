@@ -357,6 +357,16 @@ php artisan permission:list              # what's actually in the database
 
 The role → permission map is cached as a single unit (it's small, read on every check) and auto-flushed whenever a role's permissions change — no manual cache-busting anywhere.
 
+**Per-tenant custom roles** — `assignRole`/`findOrCreate`/`findByName` above are global-only by design; a project with per-tenant roles opts in explicitly with the tenant-scoped counterparts:
+
+```php
+Role::findOrCreateForTenant($tenantId, 'admin');      // distinct from a global "admin", and from another tenant's
+Role::findByNameForTenant($tenantId, 'admin');
+$user->assignRoleForTenant($tenantId, 'admin');       // resolves/creates through the tenant-scoped finder
+```
+
+Two tenants (or a tenant and the global scope) can each own a role named `admin` without colliding — enforced by a composite `unique(['tenant_id', 'name', 'guard_name'])` index. Permissions themselves stay a global, fixed vocabulary; only which permissions a role bundles is tenant-customizable.
+
 **Bootstrapping the first admin** is one command — it seeds the definitions if needed, creates the user if the email is unknown (interactive, or `--name=`/`--password=` for scripting), and grants the role:
 
 ```bash

@@ -53,6 +53,28 @@ trait HasRoles
     }
 
     /**
+     * assignRole()'s tenant-scoped counterpart: string role names resolve
+     * (creating if missing) through Role::findOrCreateForTenant($tenantId,
+     * ...) instead of the global-only findOrCreate(). Role instances passed
+     * directly are assigned as-is, same as assignRole() — this only changes
+     * how bare strings are resolved.
+     *
+     * @param  string|Role|array<int, string|Role>  ...$roles
+     */
+    public function assignRoleForTenant(int|string|null $tenantId, ...$roles): static
+    {
+        $ids = Collection::make($roles)
+            ->flatten()
+            ->map(fn (string|Role $role) => $role instanceof Role ? $role->id : Role::findOrCreateForTenant($tenantId, $role)->id)
+            ->all();
+
+        $this->roles()->syncWithoutDetaching($ids);
+        $this->unsetRelation('roles');
+
+        return $this;
+    }
+
+    /**
      * @param  string|Role|array<int, string|Role>  ...$roles
      */
     public function removeRole(...$roles): static

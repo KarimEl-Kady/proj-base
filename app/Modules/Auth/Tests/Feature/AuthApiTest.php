@@ -2,9 +2,11 @@
 
 namespace App\Modules\Auth\Tests\Feature;
 
+use App\Modules\Auth\Jobs\SendSecurityAlert;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AuthApiTest extends TestCase
@@ -172,6 +174,7 @@ class AuthApiTest extends TestCase
 
     public function test_sensitive_account_changes_require_password_and_revoke_tokens(): void
     {
+        Queue::fake();
         $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
 
         $this->withToken($token)->putJson('/api/v1/auth/account/email', [
@@ -189,6 +192,40 @@ class AuthApiTest extends TestCase
             'email_verified_at' => null,
         ]);
         $this->assertDatabaseCount('personal_access_tokens', 0);
+        Queue::assertPushed(SendSecurityAlert::class, fn (SendSecurityAlert $job) => $job->email === 'alice@example.com');
+    }
+
+    public function test_change_password_requires_current_password_and_revokes_tokens(): void
+    {
+        Queue::fake();
+        $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/password', [
+            'current_password' => 'wrong-password',
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])->assertUnprocessable();
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/password', [
+            'current_password' => 'secret-password',
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertTrue(password_verify('a-brand-new-password', User::query()->firstOrFail()->password));
+        Queue::assertPushed(SendSecurityAlert::class, fn (SendSecurityAlert $job) => $job->email === 'alice@example.com');
+    }
+
+    public function test_change_password_rejects_reusing_the_current_password(): void
+    {
+        $token = $this->postJson('/api/v1/auth/register', $this->registerPayload())->json('data.token');
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/password', [
+            'current_password' => 'secret-password',
+            'password' => 'secret-password',
+            'password_confirmation' => 'secret-password',
+        ])->assertUnprocessable()->assertJsonValidationErrors('password');
     }
 
     public function test_profile_update_cannot_change_identity_credentials(): void

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Auth\Controllers\Api;
 
+use App\Modules\Auth\Jobs\SendSecurityAlert;
 use App\Modules\Auth\Requests\ConfirmSensitiveActionRequest;
 use App\Modules\Auth\Requests\TwoFactorCodeRequest;
 use App\Modules\Auth\Services\AuthService;
@@ -57,6 +58,12 @@ class TwoFactorController extends Controller
 
         $user->forceFill(['two_factor_confirmed_at' => now()])->save();
 
+        SendSecurityAlert::dispatchAfterResponse(
+            $user->email,
+            'Two-factor authentication was enabled',
+            'Two-factor authentication was turned on for your account. If this wasn\'t you, secure your account immediately.',
+        );
+
         return $this->successResponse(null, 'Two-factor authentication enabled.');
     }
 
@@ -78,6 +85,12 @@ class TwoFactorController extends Controller
             'two_factor_secret' => null,
             'two_factor_confirmed_at' => null,
         ])->save();
+
+        SendSecurityAlert::dispatchAfterResponse(
+            $user->email,
+            'Two-factor authentication was disabled',
+            'Two-factor authentication was turned off for your account. If this wasn\'t you, secure your account immediately.',
+        );
 
         return $this->successResponse(null, 'Two-factor authentication disabled.');
     }

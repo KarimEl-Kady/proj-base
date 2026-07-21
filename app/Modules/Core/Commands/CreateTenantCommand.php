@@ -4,6 +4,7 @@ namespace App\Modules\Core\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class CreateTenantCommand extends Command
 {
@@ -39,12 +40,23 @@ class CreateTenantCommand extends Command
             return self::FAILURE;
         }
 
-        $tenant = $tenantModel::query()->create([
-            'name' => $this->option('name') ?: str($slug)->replace('-', ' ')->title()->toString(),
-            'slug' => $slug,
-            'subdomain' => $this->option('subdomain'),
-            'is_active' => ! $this->option('inactive'),
-        ]);
+        // The check above is a courtesy, not the guarantee — it can't close
+        // a race between two concurrent runs (two deploy scripts, a retried
+        // CI step). The unique constraint on `slug` is the real guarantee;
+        // catch its violation here so that race surfaces the same clean
+        // error instead of a raw QueryException.
+        try {
+            $tenant = $tenantModel::query()->create([
+                'name' => $this->option('name') ?: str($slug)->replace('-', ' ')->title()->toString(),
+                'slug' => $slug,
+                'subdomain' => $this->option('subdomain'),
+                'is_active' => ! $this->option('inactive'),
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            $this->error("Tenant [{$slug}] already exists.");
+
+            return self::FAILURE;
+        }
 
         $this->info("Tenant [{$slug}] provisioned with id [{$tenant->getKey()}].");
 

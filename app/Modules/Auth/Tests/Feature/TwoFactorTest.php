@@ -2,9 +2,11 @@
 
 namespace App\Modules\Auth\Tests\Feature;
 
+use App\Modules\Auth\Jobs\SendSecurityAlert;
 use App\Modules\Auth\Support\Totp;
 use App\Modules\User\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class TwoFactorTest extends TestCase
@@ -112,5 +114,52 @@ class TwoFactorTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/auth/2fa/enable', [
             'current_password' => 'secret-password',
         ])->assertForbidden();
+    }
+
+    public function test_confirming_two_factor_sends_a_security_alert(): void
+    {
+        Queue::fake();
+        $token = $this->registerAndGetToken();
+
+        $secret = $this->withToken($token)
+            ->postJson('/api/v1/auth/2fa/enable', ['current_password' => 'secret-password'])
+            ->json('data.secret');
+
+        $this->withToken($token)
+            ->postJson('/api/v1/auth/2fa/confirm', ['code' => Totp::code($secret)])
+            ->assertOk();
+
+        Queue::assertPushed(SendSecurityAlert::class, fn (SendSecurityAlert $job) => $job->email === 'alice@example.com');
+    }
+
+    public function test_disabling_two_factor_sends_a_security_alert(): void
+    {
+        $token = $this->registerAndGetToken();
+        $secret = $this->enableTwoFactor($token);
+
+        Queue::fake();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/auth/2fa/disable', ['code' => Totp::code($secret)])
+            ->assertOk();
+
+        Queue::assertPushed(SendSecurityAlert::class, fn (SendSecurityAlert $job) => $job->email === 'alice@example.com');
+    }
+
+    public function test_account_email_and_password_changes_require_a_code_once_two_factor_is_enabled(): void
+    {
+        $token = $this->registerAndGetToken();
+        $this->enableTwoFactor($token);
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/email', [
+            'email' => 'new@example.com',
+            'current_password' => 'secret-password',
+        ])->assertUnprocessable()->assertJsonValidationErrors('code');
+
+        $this->withToken($token)->putJson('/api/v1/auth/account/password', [
+            'current_password' => 'secret-password',
+            'password' => 'a-brand-new-password',
+            'password_confirmation' => 'a-brand-new-password',
+        ])->assertUnprocessable()->assertJsonValidationErrors('code');
     }
 }
