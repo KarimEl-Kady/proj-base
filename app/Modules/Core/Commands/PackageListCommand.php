@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Commands;
 
+use App\Modules\Core\Support\VendorGit;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
@@ -28,17 +29,20 @@ class PackageListCommand extends Command
                 $composerFile = "{$dir}/composer.json";
 
                 if (! File::exists($composerFile)) {
-                    return [basename($dir), '<fg=red>missing composer.json</>', '—', '—'];
+                    return [basename($dir), '<fg=red>missing composer.json</>', '—', '—', '—', '—'];
                 }
 
                 $composer = json_decode(File::get($composerFile), true) ?: [];
                 $name = $composer['name'] ?? basename($dir);
+                $source = VendorGit::readVendorSource($composerFile);
 
                 return [
                     $name,
                     $composer['version'] ?? 'dev',
                     array_key_first($composer['autoload']['psr-4'] ?? []) ?? '—',
                     isset($required[$name]) ? '<fg=green>installed</>' : '<fg=yellow>not required</>',
+                    $source['repo'] ?? 'local',
+                    $source['ref'] ?? '—',
                 ];
             })
             ->values();
@@ -49,7 +53,7 @@ class PackageListCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->table(['Package', 'Version', 'Namespace', 'Status'], $rows->all());
+        $this->table(['Package', 'Version', 'Namespace', 'Status', 'Source', 'Ref'], $rows->all());
 
         return self::SUCCESS;
     }

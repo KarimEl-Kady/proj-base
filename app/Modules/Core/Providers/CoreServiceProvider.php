@@ -22,6 +22,10 @@ use App\Modules\Core\Commands\RetryOutboxCommand;
 use App\Modules\Core\Commands\TenantClassifyCommand;
 use App\Modules\Core\Commands\TenantMigrationsCommand;
 use App\Modules\Core\Commands\ValidateProjectCommand;
+use App\Modules\Core\Commands\VendorInstallCommand;
+use App\Modules\Core\Commands\VendorPublishCommand;
+use App\Modules\Core\Commands\VendorRemoveCommand;
+use App\Modules\Core\Commands\VendorUpdateCommand;
 use App\Modules\Core\Support\RuntimeRegistrar;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Model;
@@ -67,6 +71,10 @@ class CoreServiceProvider extends ServiceProvider
                 TenantClassifyCommand::class,
                 TenantMigrationsCommand::class,
                 ValidateProjectCommand::class,
+                VendorInstallCommand::class,
+                VendorPublishCommand::class,
+                VendorRemoveCommand::class,
+                VendorUpdateCommand::class,
             ]);
 
             $this->registerModuleCommands();

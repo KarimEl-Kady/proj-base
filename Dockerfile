@@ -19,6 +19,7 @@ ARG GID=1000
 RUN apk add --no-cache \
     curl \
     git \
+    git-subtree \
     unzip \
     libpng-dev \
     libjpeg-turbo-dev \
