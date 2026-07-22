@@ -16,6 +16,7 @@
     ],
     "require": {
         "php": "^8.3",
+        "elkady/activity-logger": "^2.1",
         "laravel/framework": "^13.7",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^3.0",

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5d5733abd85aefde15531630e17ffc98",
+    "content-hash": "4ef17e5a791447554899bca264167f4a",
     "packages": [
         {
             "name": "brick/math",
@@ -506,6 +506,52 @@
                 }
             ],
             "time": "2025-03-06T22:45:56+00:00"
+        },
+        {
+            "name": "elkady/activity-logger",
+            "version": "v2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/KarimEl-Kady/activity-logger.git",
+                "reference": "e1207e4777bff1c97fe2d637daf51af4295b5a8d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/KarimEl-Kady/activity-logger/zipball/e1207e4777bff1c97fe2d637daf51af4295b5a8d",
+                "reference": "e1207e4777bff1c97fe2d637daf51af4295b5a8d",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/database": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/routing": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "illuminate/view": "^9.0|^10.0|^11.0|^12.0|^13.0",
+                "php": ">=8.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Elkady\\ActivityLogger\\ActivityLoggerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Elkady\\ActivityLogger\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A Laravel package for logging auths activities.",
+            "support": {
+                "issues": "https://github.com/KarimEl-Kady/activity-logger/issues",
+                "source": "https://github.com/KarimEl-Kady/activity-logger/tree/v2.2.0"
+            },
+            "time": "2026-07-22T09:04:54+00:00"
         },
         {
             "name": "fruitcake/php-cors",
@@ -8792,12 +8838,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.3"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }
