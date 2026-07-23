@@ -11,10 +11,11 @@
 | Managed by hand; there's no artisan command for this file, same as
 | module_structure/boundaries above in config/project.php.
 |
-| 'wallet' => ['repo' => 'git@github.com:your-org/wallet-package.git', 'ref' => 'main'],
 |
 */
 
 return [
+
+    // 'blog' => ['repo' => 'git@github.com:KarimEl-Kady/base-blog.git', 'ref' => 'main'],
 
 ];
